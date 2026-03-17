@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="grau">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WarEra Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ========== RESET ========== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ========== THEME: GRAU ========== */
+    :root[data-theme="grau"] {
+      --bg-gradient: linear-gradient(135deg, #0a0e1a 0%, #111827 40%, #0f172a 100%);
+      --accent: #f0b429;
+      --accent-glow: rgba(240,180,41,0.25);
+      --accent-dim: rgba(240,180,41,0.6);
+      --green: #34d399;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --text: #f0f0ec;
+      --text-dim: #a0a8b4;
+      --text-muted: #556070;
+      --glass-bg: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.1);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+      --tab-active-bg: rgba(240,180,41,0.15);
+      --tab-hover-bg: rgba(255,255,255,0.08);
+      --font-heading: 'Rajdhani', sans-serif;
+      --font-mono: 'Source Code Pro', monospace;
+      --orb1-color: rgba(240,180,41,0.04);
+      --orb2-color: rgba(96,165,250,0.03);
+      --reload-bg: rgba(255,255,255,0.08);
+      --reload-hover: rgba(240,180,41,0.3);
+    }
+
+    /* ========== THEME: PINK ========== */
+    :root[data-theme="pink"] {
+      --bg-gradient: linear-gradient(135deg, #1f001f 0%, #300040 40%, #1a001a 100%);
+      --accent: #ff00ff;
+      --accent-glow: rgba(255,0,255,0.35);
+      --accent-dim: rgba(255,0,255,0.6);
+      --green: #00ffcc;
+      --blue: #00ccff;
+      --purple: #cc66ff;
+      --text: #ffffff;
+      --text-dim: #ffccff;
+      --text-muted: #996699;
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,0,255,0.2);
+      --glass-shadow: 0 8px 32px rgba(100,0,100,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+      --tab-active-bg: rgba(255,0,255,0.15);
+      --tab-hover-bg: rgba(255,0,255,0.08);
+      --font-heading: 'Quicksand', sans-serif;
+      --font-mono: 'Source Code Pro', monospace;
+      --orb1-color: rgba(255,0,255,0.06);
+      --orb2-color: rgba(0,255,255,0.04);
+      --reload-bg: rgba(255,0,255,0.1);
+      --reload-hover: rgba(255,0,255,0.3);
+    }
+
+    /* ========== BASE ========== */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-gradient);
+      color: var(--text);
+      font-family: var(--font-heading);
+      transition: background 0.5s ease, color 0.3s ease;
+    }
+
+    /* ========== DECORATIVE ORBS ========== */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      top: -150px; left: -100px;
+      background: radial-gradient(circle, var(--orb1-color) 0%, transparent 70%);
+    }
+    body::after {
+      width: 500px; height: 500px;
+      bottom: -100px; right: -50px;
+      background: radial-gradient(circle, var(--orb2-color) 0%, transparent 70%);
+    }
+
+    /* ========== APP LAYOUT ========== */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ========== TOOLBAR ========== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 12px;
+      flex-shrink: 0;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ========== WARERA BUTTON ========== */
+    .btn-warera {
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--accent-dim);
+      background: var(--tab-active-bg);
+      color: var(--accent);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-warera:hover {
+      background: var(--accent-glow);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* ========== SEPARATOR ========== */
+    .toolbar-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--glass-border);
+      flex-shrink: 0;
+    }
+
+    /* ========== TOOL TABS ========== */
+    .tool-tab {
+      padding: 5px 12px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .tool-tab:hover {
+      background: var(--tab-hover-bg);
+      color: var(--text);
+    }
+    .tool-tab.active {
+      background: var(--tab-active-bg);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .tool-tab .tab-emoji {
+      margin-right: 4px;
+    }
+
+    /* ========== TOOLBAR RIGHT ========== */
+    .toolbar-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ========== RELOAD BUTTON ========== */
+    .btn-reload {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border);
+      background: var(--reload-bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-reload:hover {
+      background: var(--reload-hover);
+      color: var(--accent);
+      border-color: var(--accent-dim);
+      transform: rotate(90deg);
+    }
+
+    /* ========== OPEN IN TAB BUTTON ========== */
+    .btn-newtab {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--glass-border);
+      background: var(--reload-bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-newtab:hover {
+      background: var(--reload-hover);
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+
+    /* ========== THEME TOGGLE ========== */
+    .btn-theme {
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+    }
+    .btn-theme:hover {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* ========== CONTENT PANEL ========== */
+    .content-panel {
+      flex: 1;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .content-panel iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #0d1117;
+    }
+
+    /* ========== EMBED ERROR FALLBACK ========== */
+    .embed-fallback {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+    .embed-fallback.active {
+      display: flex;
+    }
+    .embed-fallback a {
+      color: var(--accent);
+      text-decoration: none;
+      padding: 8px 20px;
+      border: 1px solid var(--accent-dim);
+      border-radius: 20px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      transition: all 0.2s ease;
+    }
+    .embed-fallback a:hover {
+      background: var(--accent-glow);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* ========== KEYBOARD HINT ========== */
+    .kbd-hint {
+      position: fixed;
+      bottom: 10px;
+      right: 16px;
+      z-index: 100;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      user-select: none;
+      opacity: 0.6;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .toolbar { gap: 4px; padding: 5px 6px; }
+      .tool-tab { font-size: 11px; padding: 4px 8px; }
+      .btn-warera { font-size: 11px; padding: 4px 10px; }
+      .kbd-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <a class="btn-warera" href="https://app.warera.io" target="_blank">&#x1F3AE; WarEra</a>
+      <div class="toolbar-sep"></div>
+      <div id="tool-tabs"></div>
+      <div class="toolbar-right">
+        <a class="btn-newtab" id="btn-newtab" href="#" target="_blank" title="In neuem Tab öffnen">&#x2197;</a>
+        <button class="btn-reload" id="btn-reload" title="Reload (Alt+R)">&#x21bb;</button>
+        <div class="toolbar-sep"></div>
+        <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-panel">
+      <div class="embed-fallback" id="tool-fallback">
+        <span>Diese Seite kann nicht eingebettet werden.</span>
+        <a id="tool-fallback-link" href="#" target="_blank">In neuem Tab öffnen &#x2197;</a>
+      </div>
+      <iframe id="tool-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+  </div>
+
+  <!-- KEYBOARD HINTS -->
+  <div class="kbd-hint">Alt+1-9 Tools &middot; Alt+R Reload &middot; Alt+T Theme</div>
+
+  <script>
+    /* ========== STATE ========== */
+    const state = {
+      theme: localStorage.getItem('wl-theme') || 'grau',
+      activeTool: parseInt(localStorage.getItem('wl-active-tool') || '0', 10),
+      tools: []
+    };
+
+    /* ========== DOM REFS ========== */
+    const $ = id => document.getElementById(id);
+    const toolIframe = $('tool-iframe');
+    const toolTabsEl = $('tool-tabs');
+    const toolFallback = $('tool-fallback');
+    const toolFallbackLink = $('tool-fallback-link');
+    const btnNewtab = $('btn-newtab');
+    const themeToggle = $('theme-toggle');
+
+    /* ========== INIT ========== */
+    async function init() {
+      applyTheme(state.theme);
+
+      try {
+        const res = await fetch('./tools.json');
+        state.tools = await res.json();
+      } catch (e) {
+        console.error('Failed to load tools.json:', e);
+        state.tools = [];
+      }
+
+      renderTabs();
+      if (state.tools.length > 0) {
+        if (state.activeTool >= state.tools.length) state.activeTool = 0;
+        switchTool(state.activeTool);
+      }
+    }
+
+    /* ========== THEME ========== */
+    function applyTheme(theme) {
+      state.theme = theme;
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('wl-theme', theme);
+      themeToggle.innerHTML = theme === 'pink' ? '&#x2665; PINK' : '&#x25C9; GRAU';
+    }
+
+    function toggleTheme() {
+      applyTheme(state.theme === 'grau' ? 'pink' : 'grau');
+    }
+
+    themeToggle.addEventListener('click', toggleTheme);
+
+    /* ========== TABS ========== */
+    function renderTabs() {
+      toolTabsEl.innerHTML = '';
+      state.tools.forEach((tool, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'tool-tab';
+        btn.innerHTML = `<span class="tab-emoji">${tool.emoji}</span>${tool.name}`;
+        btn.addEventListener('click', () => switchTool(i));
+        btn.title = `${tool.name} (Alt+${i + 1})`;
+        toolTabsEl.appendChild(btn);
+      });
+    }
+
+    /* ========== TOOL SWITCHING ========== */
+    function switchTool(index) {
+      state.activeTool = index;
+      localStorage.setItem('wl-active-tool', index);
+      const tool = state.tools[index];
+
+      // Update active tab
+      toolTabsEl.querySelectorAll('.tool-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+      });
+
+      // Update newtab link
+      btnNewtab.href = tool.url;
+
+      // Hide fallback
+      toolFallback.classList.remove('active');
+      toolFallbackLink.href = tool.url;
+
+      // Load iframe
+      toolIframe.src = tool.url;
+    }
+
+    /* ========== RELOAD BUTTON ========== */
+    $('btn-reload').addEventListener('click', () => {
+      toolIframe.src = toolIframe.src;
+    });
+
+    /* ========== KEYBOARD SHORTCUTS ========== */
+    document.addEventListener('keydown', (e) => {
+      if (!e.altKey) return;
+
+      // Alt+1 to Alt+9: switch tool
+      if (e.key >= '1' && e.key <= '9') {
+        const idx = parseInt(e.key) - 1;
+        if (idx < state.tools.length) {
+          e.preventDefault();
+          switchTool(idx);
+        }
+      }
+
+      // Alt+R: reload tool iframe
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        toolIframe.src = toolIframe.src;
+      }
+
+      // Alt+W: open warera in new tab
+      if (e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        window.open('https://app.warera.io', '_blank');
+      }
+
+      // Alt+T: toggle theme
+      if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        toggleTheme();
+      }
+    });
+
+    /* ========== START ========== */
+    init();
+  </script>
+</body>
+</html>
