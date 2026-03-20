@@ -2,5 +2,9 @@
   { "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "\ud83d\udcb0" },
   { "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "\ud83c\udfed" },
   { "name": "Map", "url": "https://war-era.vercel.app", "emoji": "\ud83d\uddfa\ufe0f" },
-  { "name": "StackEdit", "url": "https://stackedit.io", "emoji": "\ud83d\udcdd" }
+  { "name": "StackEdit", "url": "https://stackedit.io", "emoji": "\ud83d\udcdd" },
+  { "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊" },
+  { "name": "Wealthrate", "url": "https://wealthrate.vercel.app/", "emoji": "💎" },
+  { "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️" },
+  { "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️" }
 ]
