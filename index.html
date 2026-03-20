@@ -180,6 +180,28 @@
       margin-right: 4px;
     }
 
+    /* ========== CATEGORY SELECT ========== */
+    .nav-select {
+      background: var(--glass-bg);
+      color: var(--text);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      appearance: auto;
+    }
+    .nav-select:focus {
+      border-color: var(--accent-dim);
+    }
+    .nav-select option {
+      background: #111827;
+      color: #fff;
+    }
+
     /* ========== TOOLBAR RIGHT ========== */
     .toolbar-right {
       margin-left: auto;
@@ -341,6 +363,8 @@
     <div class="toolbar">
       <a class="btn-warera" href="https://app.warera.io" target="_blank">&#x1F3AE; WarEra</a>
       <div class="toolbar-sep"></div>
+      <select id="category-select" class="nav-select"></select>
+      <div class="toolbar-sep"></div>
       <div id="tool-tabs"></div>
       <div class="toolbar-right">
         <a class="btn-newtab" id="btn-newtab" href="#" target="_blank" title="In neuem Tab öffnen">&#x2197;</a>
@@ -367,13 +391,15 @@
     /* ========== STATE ========== */
     const state = {
       theme: localStorage.getItem('wl-theme') || 'grau',
+      activeCategory: parseInt(localStorage.getItem('wl-active-cat') || '0', 10),
       activeTool: parseInt(localStorage.getItem('wl-active-tool') || '0', 10),
-      tools: []
+      categories: []
     };
 
     /* ========== DOM REFS ========== */
     const $ = id => document.getElementById(id);
     const toolIframe = $('tool-iframe');
+    const categorySelectEl = $('category-select');
     const toolTabsEl = $('tool-tabs');
     const toolFallback = $('tool-fallback');
     const toolFallbackLink = $('tool-fallback-link');
@@ -386,15 +412,22 @@
 
       try {
         const res = await fetch('./tools.json');
-        state.tools = await res.json();
+        state.categories = await res.json();
       } catch (e) {
         console.error('Failed to load tools.json:', e);
-        state.tools = [];
+        state.categories = [];
       }
 
-      renderTabs();
-      if (state.tools.length > 0) {
-        if (state.activeTool >= state.tools.length) state.activeTool = 0;
+      renderCategories();
+      
+      if (state.categories.length > 0) {
+        if (state.activeCategory >= state.categories.length) state.activeCategory = 0;
+        categorySelectEl.value = state.activeCategory;
+        
+        const cat = state.categories[state.activeCategory];
+        if (state.activeTool >= cat.tools.length) state.activeTool = 0;
+        
+        renderTabs();
         switchTool(state.activeTool);
       }
     }
@@ -413,10 +446,30 @@
 
     themeToggle.addEventListener('click', toggleTheme);
 
-    /* ========== TABS ========== */
+    /* ========== TABS & CATEGORIES ========== */
+    categorySelectEl.addEventListener('change', (e) => {
+      state.activeCategory = parseInt(e.target.value, 10);
+      localStorage.setItem('wl-active-cat', state.activeCategory);
+      state.activeTool = 0;
+      renderTabs();
+      switchTool(state.activeTool);
+    });
+
+    function renderCategories() {
+      categorySelectEl.innerHTML = '';
+      state.categories.forEach((cat, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = cat.category;
+        categorySelectEl.appendChild(opt);
+      });
+    }
+
     function renderTabs() {
       toolTabsEl.innerHTML = '';
-      state.tools.forEach((tool, i) => {
+      if (state.categories.length === 0) return;
+      const cat = state.categories[state.activeCategory];
+      cat.tools.forEach((tool, i) => {
         const btn = document.createElement('button');
         btn.className = 'tool-tab';
         btn.innerHTML = `<span class="tab-emoji">${tool.emoji}</span>${tool.name}`;
@@ -428,9 +481,10 @@
 
     /* ========== TOOL SWITCHING ========== */
     function switchTool(index) {
+      if (state.categories.length === 0) return;
       state.activeTool = index;
       localStorage.setItem('wl-active-tool', index);
-      const tool = state.tools[index];
+      const tool = state.categories[state.activeCategory].tools[index];
 
       // Update active tab
       toolTabsEl.querySelectorAll('.tool-tab').forEach((tab, i) => {
@@ -460,9 +514,12 @@
       // Alt+1 to Alt+9: switch tool
       if (e.key >= '1' && e.key <= '9') {
         const idx = parseInt(e.key) - 1;
-        if (idx < state.tools.length) {
-          e.preventDefault();
-          switchTool(idx);
+        if (state.categories.length > 0) {
+          const cat = state.categories[state.activeCategory];
+          if (idx < cat.tools.length) {
+            e.preventDefault();
+            switchTool(idx);
+          }
         }
       }
 

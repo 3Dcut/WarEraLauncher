@@ -1,19 +1,38 @@
 [
-  { "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "\ud83d\udcb0" },
-  { "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "\ud83c\udfed" },
-  { "name": "Map", "url": "https://war-era.vercel.app", "emoji": "\ud83d\uddfa\ufe0f" },
-  { "name": "StackEdit", "url": "https://stackedit.io", "emoji": "\ud83d\udcdd" },
-  { "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊" },
-  { "name": "Wealthrate", "url": "https://wealthrate.vercel.app/", "emoji": "💎" },
-  { "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️" },
-  { "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️" },
-  { "name": "WE Calculator", "url": "https://war-era-calculator.netlify.app", "emoji": "🧮" },
-  { "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍" },
-  { "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨" },
-  { "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢" },
-  { "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜" },
-  { "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵" },
-  { "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒" },
-  { "name": "Battle Simulator", "url": "https://warera-battle-simulator.netlify.app", "emoji": "⚔️" },
-  { "name": "ArcanaEra", "url": "https://arcanaera.vercel.app", "emoji": "🔮" }
+  {
+    "category": "Wirtschaft",
+    "tools": [
+      { "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵" },
+      { "name": "WE Calculator", "url": "https://war-era-calculator.netlify.app", "emoji": "🧮" },
+      { "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭" },
+      { "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨" },
+      { "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️" },
+      { "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰" }
+    ]
+  },
+  {
+    "category": "Maps & Kampf",
+    "tools": [
+      { "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️" },
+      { "name": "Battle Sim", "url": "https://warera-battle-simulator.netlify.app", "emoji": "⚔️" },
+      { "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜" }
+    ]
+  },
+  {
+    "category": "Statistiken",
+    "tools": [
+      { "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊" },
+      { "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍" },
+      { "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒" },
+      { "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢" }
+    ]
+  },
+  {
+    "category": "Misc",
+    "tools": [
+      { "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️" },
+      { "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝" },
+      { "name": "ArcanaEra", "url": "https://arcanaera.vercel.app", "emoji": "🔮" }
+    ]
+  }
 ]
