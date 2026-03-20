@@ -17,9 +17,6 @@
       --accent: #f0b429;
       --accent-glow: rgba(240,180,41,0.25);
       --accent-dim: rgba(240,180,41,0.6);
-      --green: #34d399;
-      --blue: #60a5fa;
-      --purple: #a78bfa;
       --text: #f0f0ec;
       --text-dim: #a0a8b4;
       --text-muted: #556070;
@@ -30,10 +27,8 @@
       --tab-hover-bg: rgba(255,255,255,0.08);
       --font-heading: 'Rajdhani', sans-serif;
       --font-mono: 'Source Code Pro', monospace;
-      --orb1-color: rgba(240,180,41,0.04);
-      --orb2-color: rgba(96,165,250,0.03);
-      --reload-bg: rgba(255,255,255,0.08);
       --reload-hover: rgba(240,180,41,0.3);
+      --danger: #ef4444;
     }
 
     /* ========== THEME: PINK ========== */
@@ -42,9 +37,6 @@
       --accent: #ff00ff;
       --accent-glow: rgba(255,0,255,0.35);
       --accent-dim: rgba(255,0,255,0.6);
-      --green: #00ffcc;
-      --blue: #00ccff;
-      --purple: #cc66ff;
       --text: #ffffff;
       --text-dim: #ffccff;
       --text-muted: #996699;
@@ -55,10 +47,8 @@
       --tab-hover-bg: rgba(255,0,255,0.08);
       --font-heading: 'Quicksand', sans-serif;
       --font-mono: 'Source Code Pro', monospace;
-      --orb1-color: rgba(255,0,255,0.06);
-      --orb2-color: rgba(0,255,255,0.04);
-      --reload-bg: rgba(255,0,255,0.1);
       --reload-hover: rgba(255,0,255,0.3);
+      --danger: #ff3366;
     }
 
     /* ========== BASE ========== */
@@ -68,26 +58,6 @@
       background: var(--bg-gradient);
       color: var(--text);
       font-family: var(--font-heading);
-      transition: background 0.5s ease, color 0.3s ease;
-    }
-
-    /* ========== DECORATIVE ORBS ========== */
-    body::before, body::after {
-      content: '';
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-    }
-    body::before {
-      width: 600px; height: 600px;
-      top: -150px; left: -100px;
-      background: radial-gradient(circle, var(--orb1-color) 0%, transparent 70%);
-    }
-    body::after {
-      width: 500px; height: 500px;
-      bottom: -100px; right: -50px;
-      background: radial-gradient(circle, var(--orb2-color) 0%, transparent 70%);
     }
 
     /* ========== APP LAYOUT ========== */
@@ -96,8 +66,6 @@
       flex-direction: column;
       height: 100vh;
       padding: 8px;
-      position: relative;
-      z-index: 1;
     }
 
     /* ========== TOOLBAR ========== */
@@ -117,7 +85,6 @@
       flex-wrap: wrap;
     }
 
-    /* ========== WARERA BUTTON ========== */
     .btn-warera {
       padding: 5px 14px;
       border-radius: 16px;
@@ -128,11 +95,9 @@
       font-family: var(--font-heading);
       font-weight: 700;
       font-size: 13px;
-      letter-spacing: 0.08em;
       text-transform: uppercase;
       text-decoration: none;
       transition: all 0.2s ease;
-      white-space: nowrap;
       display: flex;
       align-items: center;
       gap: 5px;
@@ -142,42 +107,10 @@
       box-shadow: 0 0 12px var(--accent-glow);
     }
 
-    /* ========== SEPARATOR ========== */
     .toolbar-sep {
       width: 1px;
       height: 22px;
       background: var(--glass-border);
-      flex-shrink: 0;
-    }
-
-    /* ========== TOOL TABS ========== */
-    .tool-tab {
-      padding: 5px 12px;
-      border-radius: 16px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-dim);
-      cursor: pointer;
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 12px;
-      letter-spacing: 0.05em;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-      user-select: none;
-    }
-    .tool-tab:hover {
-      background: var(--tab-hover-bg);
-      color: var(--text);
-    }
-    .tool-tab.active {
-      background: var(--tab-active-bg);
-      border-color: var(--accent-dim);
-      color: var(--accent);
-    }
-
-    .tool-tab .tab-emoji {
-      margin-right: 4px;
     }
 
     /* ========== CATEGORY SELECT ========== */
@@ -192,17 +125,39 @@
       font-size: 13px;
       cursor: pointer;
       outline: none;
-      appearance: auto;
-    }
-    .nav-select:focus {
-      border-color: var(--accent-dim);
     }
     .nav-select option {
       background: #111827;
       color: #fff;
     }
 
-    /* ========== TOOLBAR RIGHT ========== */
+    /* ========== TOOL TABS ========== */
+    .tool-tab {
+      padding: 5px 12px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .tool-tab:hover {
+      background: var(--tab-hover-bg);
+      color: var(--text);
+    }
+    .tool-tab.active {
+      background: var(--tab-active-bg);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+    .tool-tab .tab-emoji {
+      margin-right: 4px;
+    }
+
     .toolbar-right {
       margin-left: auto;
       display: flex;
@@ -210,53 +165,6 @@
       gap: 6px;
     }
 
-    /* ========== RELOAD BUTTON ========== */
-    .btn-reload {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      border: 1px solid var(--glass-border);
-      background: var(--reload-bg);
-      color: var(--text-dim);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-    .btn-reload:hover {
-      background: var(--reload-hover);
-      color: var(--accent);
-      border-color: var(--accent-dim);
-      transform: rotate(90deg);
-    }
-
-    /* ========== OPEN IN TAB BUTTON ========== */
-    .btn-newtab {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      border: 1px solid var(--glass-border);
-      background: var(--reload-bg);
-      color: var(--text-dim);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-    .btn-newtab:hover {
-      background: var(--reload-hover);
-      color: var(--accent);
-      border-color: var(--accent-dim);
-    }
-
-    /* ========== THEME TOGGLE ========== */
     .btn-theme {
       padding: 5px 14px;
       border-radius: 16px;
@@ -267,146 +175,130 @@
       font-family: var(--font-heading);
       font-weight: 700;
       font-size: 11px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      transition: all 0.3s ease;
-    }
-    .btn-theme:hover {
-      border-color: var(--accent-dim);
-      color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
     }
 
-    /* ========== CONTENT PANEL ========== */
+    /* ========== CONTENT PANEL (GRID) ========== */
     .content-panel {
       flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 1px;
       background: var(--glass-bg);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--glass-border);
       box-shadow: var(--glass-shadow);
       border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
 
-    .content-panel iframe {
+    /* ========== TOOL WINDOW ========== */
+    .tool-window {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 380px;
+      background: #0d1117;
+      border-right: 1px solid var(--glass-border);
+    }
+    .tool-window:last-child {
+      border-right: none;
+    }
+    .tool-header {
+      display: flex;
+      align-items: center;
+      padding: 6px 10px;
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      gap: 8px;
+    }
+    .tool-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tw-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .tw-btn:hover {
+      background: var(--tab-hover-bg);
+      color: var(--text);
+    }
+    .tw-btn-close:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+    .tool-iframe-wrapper {
+      flex: 1;
+      position: relative;
+    }
+    .tool-iframe-wrapper iframe {
       width: 100%;
       height: 100%;
       border: none;
-      background: #0d1117;
+      display: block;
     }
 
-    /* ========== EMBED ERROR FALLBACK ========== */
-    .embed-fallback {
-      display: none;
-      position: absolute;
-      inset: 0;
-      z-index: 5;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
+    .empty-state {
+      display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      color: var(--text-dim);
-      font-size: 14px;
-    }
-    .embed-fallback.active {
-      display: flex;
-    }
-    .embed-fallback a {
-      color: var(--accent);
-      text-decoration: none;
-      padding: 8px 20px;
-      border: 1px solid var(--accent-dim);
-      border-radius: 20px;
-      font-family: var(--font-heading);
-      font-weight: 600;
-      font-size: 13px;
-      letter-spacing: 0.06em;
-      transition: all 0.2s ease;
-    }
-    .embed-fallback a:hover {
-      background: var(--accent-glow);
-      box-shadow: 0 0 16px var(--accent-glow);
-    }
-
-    /* ========== KEYBOARD HINT ========== */
-    .kbd-hint {
-      position: fixed;
-      bottom: 10px;
-      right: 16px;
-      z-index: 100;
-      font-family: var(--font-mono);
-      font-size: 10px;
+      flex: 1;
       color: var(--text-muted);
-      letter-spacing: 0.05em;
-      user-select: none;
-      opacity: 0.6;
+      font-size: 16px;
+      text-align: center;
     }
 
-    /* ========== RESPONSIVE ========== */
     @media (max-width: 768px) {
-      .toolbar { gap: 4px; padding: 5px 6px; }
-      .tool-tab { font-size: 11px; padding: 4px 8px; }
-      .btn-warera { font-size: 11px; padding: 4px 10px; }
-      .kbd-hint { display: none; }
+      .content-panel { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+      .tool-window { border-right: none; border-bottom: 1px solid var(--glass-border); min-height: 400px; width: 100%; }
     }
   </style>
 </head>
 <body>
 
   <div id="app">
-    <!-- TOOLBAR -->
     <div class="toolbar">
       <a class="btn-warera" href="https://app.warera.io" target="_blank">&#x1F3AE; WarEra</a>
       <div class="toolbar-sep"></div>
       <select id="category-select" class="nav-select"></select>
       <div class="toolbar-sep"></div>
-      <div id="tool-tabs"></div>
+      <div id="tool-launchers"></div>
       <div class="toolbar-right">
-        <a class="btn-newtab" id="btn-newtab" href="#" target="_blank" title="In neuem Tab öffnen">&#x2197;</a>
-        <button class="btn-reload" id="btn-reload" title="Reload (Alt+R)">&#x21bb;</button>
-        <div class="toolbar-sep"></div>
         <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
       </div>
     </div>
 
-    <!-- CONTENT -->
-    <div class="content-panel">
-      <div class="embed-fallback" id="tool-fallback">
-        <span>Diese Seite kann nicht eingebettet werden.</span>
-        <a id="tool-fallback-link" href="#" target="_blank">In neuem Tab öffnen &#x2197;</a>
-      </div>
-      <iframe id="tool-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-    </div>
+    <div class="content-panel" id="content-panel"></div>
   </div>
 
-  <!-- KEYBOARD HINTS -->
-  <div class="kbd-hint">Alt+1-9 Tools &middot; Alt+R Reload &middot; Alt+T Theme</div>
-
   <script>
-    /* ========== STATE ========== */
     const state = {
       theme: localStorage.getItem('wl-theme') || 'grau',
       activeCategory: parseInt(localStorage.getItem('wl-active-cat') || '0', 10),
-      activeTool: parseInt(localStorage.getItem('wl-active-tool') || '0', 10),
-      categories: []
+      categories: [],
+      openTools: []
     };
 
-    /* ========== DOM REFS ========== */
     const $ = id => document.getElementById(id);
-    const toolIframe = $('tool-iframe');
+    const toolLaunchersEl = $('tool-launchers');
     const categorySelectEl = $('category-select');
-    const toolTabsEl = $('tool-tabs');
-    const toolFallback = $('tool-fallback');
-    const toolFallbackLink = $('tool-fallback-link');
-    const btnNewtab = $('btn-newtab');
+    const contentPanelEl = $('content-panel');
     const themeToggle = $('theme-toggle');
 
-    /* ========== INIT ========== */
     async function init() {
       applyTheme(state.theme);
 
@@ -414,25 +306,29 @@
         const res = await fetch('./tools.json');
         state.categories = await res.json();
       } catch (e) {
-        console.error('Failed to load tools.json:', e);
         state.categories = [];
       }
+
+      try {
+        const saved = JSON.parse(localStorage.getItem('wl-open-tools'));
+        if (Array.isArray(saved) && saved.length > 0) state.openTools = saved;
+      } catch(e) {}
 
       renderCategories();
       
       if (state.categories.length > 0) {
         if (state.activeCategory >= state.categories.length) state.activeCategory = 0;
         categorySelectEl.value = state.activeCategory;
+        renderLauncherButtons();
         
-        const cat = state.categories[state.activeCategory];
-        if (state.activeTool >= cat.tools.length) state.activeTool = 0;
-        
-        renderTabs();
-        switchTool(state.activeTool);
+        if (state.openTools.length === 0) {
+          launchTool(0, 0, true);
+        } else {
+          renderOpenTools();
+        }
       }
     }
 
-    /* ========== THEME ========== */
     function applyTheme(theme) {
       state.theme = theme;
       document.documentElement.dataset.theme = theme;
@@ -440,19 +336,14 @@
       themeToggle.innerHTML = theme === 'pink' ? '&#x2665; PINK' : '&#x25C9; GRAU';
     }
 
-    function toggleTheme() {
+    themeToggle.addEventListener('click', () => {
       applyTheme(state.theme === 'grau' ? 'pink' : 'grau');
-    }
+    });
 
-    themeToggle.addEventListener('click', toggleTheme);
-
-    /* ========== TABS & CATEGORIES ========== */
     categorySelectEl.addEventListener('change', (e) => {
       state.activeCategory = parseInt(e.target.value, 10);
       localStorage.setItem('wl-active-cat', state.activeCategory);
-      state.activeTool = 0;
-      renderTabs();
-      switchTool(state.activeTool);
+      renderLauncherButtons();
     });
 
     function renderCategories() {
@@ -465,84 +356,83 @@
       });
     }
 
-    function renderTabs() {
-      toolTabsEl.innerHTML = '';
+    function renderLauncherButtons() {
+      toolLaunchersEl.innerHTML = '';
       if (state.categories.length === 0) return;
       const cat = state.categories[state.activeCategory];
+      
       cat.tools.forEach((tool, i) => {
         const btn = document.createElement('button');
         btn.className = 'tool-tab';
+        
+        if (state.openTools.some(t => t.url === tool.url)) btn.classList.add('active');
+        
         btn.innerHTML = `<span class="tab-emoji">${tool.emoji}</span>${tool.name}`;
-        btn.addEventListener('click', () => switchTool(i));
-        btn.title = `${tool.name} (Alt+${i + 1})`;
-        toolTabsEl.appendChild(btn);
+        btn.addEventListener('click', () => launchTool(state.activeCategory, i));
+        btn.title = `${tool.name} hinzufügen`;
+        toolLaunchersEl.appendChild(btn);
       });
     }
 
-    /* ========== TOOL SWITCHING ========== */
-    function switchTool(index) {
-      if (state.categories.length === 0) return;
-      state.activeTool = index;
-      localStorage.setItem('wl-active-tool', index);
-      const tool = state.categories[state.activeCategory].tools[index];
-
-      // Update active tab
-      toolTabsEl.querySelectorAll('.tool-tab').forEach((tab, i) => {
-        tab.classList.toggle('active', i === index);
-      });
-
-      // Update newtab link
-      btnNewtab.href = tool.url;
-
-      // Hide fallback
-      toolFallback.classList.remove('active');
-      toolFallbackLink.href = tool.url;
-
-      // Load iframe
-      toolIframe.src = tool.url;
+    function saveOpenTools() {
+      localStorage.setItem('wl-open-tools', JSON.stringify(state.openTools));
     }
 
-    /* ========== RELOAD BUTTON ========== */
-    $('btn-reload').addEventListener('click', () => {
-      toolIframe.src = toolIframe.src;
-    });
-
-    /* ========== KEYBOARD SHORTCUTS ========== */
-    document.addEventListener('keydown', (e) => {
-      if (!e.altKey) return;
-
-      // Alt+1 to Alt+9: switch tool
-      if (e.key >= '1' && e.key <= '9') {
-        const idx = parseInt(e.key) - 1;
-        if (state.categories.length > 0) {
-          const cat = state.categories[state.activeCategory];
-          if (idx < cat.tools.length) {
-            e.preventDefault();
-            switchTool(idx);
-          }
-        }
+    function launchTool(catIdx, toolIdx, bypassSave = false) {
+      const tool = state.categories[catIdx].tools[toolIdx];
+      const existing = state.openTools.find(t => t.url === tool.url);
+      
+      if (!existing) {
+        state.openTools.push({ ...tool, id: Date.now() + Math.random().toString() });
+      } else {
+         // Optionally close it if clicked again, acting like a toggle?
+         // Let's just focus/keep it for now.
       }
 
-      // Alt+R: reload tool iframe
-      if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        toolIframe.src = toolIframe.src;
+      if (!bypassSave) saveOpenTools();
+      renderOpenTools();
+      renderLauncherButtons();
+    }
+
+    window.closeTool = function(id) {
+      state.openTools = state.openTools.filter(t => t.id !== id);
+      saveOpenTools();
+      renderOpenTools();
+      renderLauncherButtons();
+    };
+
+    window.reloadTool = function(id) {
+      const iframe = document.getElementById('iframe-' + id);
+      if (iframe) iframe.src = iframe.src;
+    };
+
+    function renderOpenTools() {
+      contentPanelEl.innerHTML = '';
+
+      if (state.openTools.length === 0) {
+        contentPanelEl.innerHTML = `<div class="empty-state">Wähle ein Tool aus der Leiste aus, um es hier zu öffnen.<br>Du kannst mehrere Tools nebeneinander nutzen!</div>`;
+        return;
       }
 
-      // Alt+W: open warera in new tab
-      if (e.key === 'w' || e.key === 'W') {
-        e.preventDefault();
-        window.open('https://app.warera.io', '_blank');
-      }
+      state.openTools.forEach(tool => {
+        const win = document.createElement('div');
+        win.className = 'tool-window';
+        
+        win.innerHTML = `
+          <div class="tool-header">
+            <div class="tool-title"><span class="tab-emoji">${tool.emoji}</span> ${tool.name}</div>
+            <a class="tw-btn" href="${tool.url}" target="_blank" title="In neuem Tab öffnen">&#x2197;</a>
+            <button class="tw-btn" onclick="reloadTool('${tool.id}')" title="Neu laden">&#x21bb;</button>
+            <button class="tw-btn tw-btn-close" onclick="closeTool('${tool.id}')" title="Schließen">&#x2715;</button>
+          </div>
+          <div class="tool-iframe-wrapper">
+            <iframe id="iframe-${tool.id}" src="${tool.url}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+          </div>
+        `;
+        contentPanelEl.appendChild(win);
+      });
+    }
 
-      // Alt+T: toggle theme
-      if (e.key === 't' || e.key === 'T') {
-        e.preventDefault();
-        toggleTheme();
-      }
-    });
-
-    /* ========== START ========== */
     init();
   </script>
 </body>
