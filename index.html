@@ -183,6 +183,61 @@
       font-weight: 700;
       font-size: 11px;
     }
+    .btn-theme:hover {
+      background: var(--tab-hover-bg);
+      color: var(--text);
+    }
+
+    /* ========== RADIO DROPDOWN ========== */
+    .radio-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .radio-dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 305px;
+      padding: 10px;
+      background: rgba(10, 14, 26, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 12px;
+      z-index: 9999;
+    }
+    :root[data-theme="pink"] .radio-dropdown-content {
+      background: rgba(48, 0, 64, 0.95);
+    }
+    .radio-dropdown-content.show {
+      display: block;
+      animation: dropFade 0.2s ease;
+    }
+    @keyframes dropFade {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .radio-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .radio-iframe-wrapper {
+      width: 285px; 
+      height: 150px; 
+      border-radius: 8px; 
+      overflow: hidden; 
+      background: #000;
+      margin-bottom: 12px;
+    }
+    .radio-iframe-wrapper:last-child {
+      margin-bottom: 0;
+    }
 
     /* ========== CONTENT PANEL (GRID) ========== */
     .content-panel {
@@ -284,6 +339,20 @@
       <div class="toolbar-sep"></div>
       <div id="category-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
       <div class="toolbar-right">
+        <div class="radio-dropdown">
+          <button class="btn-theme" id="radio-dropdown-btn">&#x1F4FB; RADIO</button>
+          <div class="radio-dropdown-content" id="radio-dropdown-content">
+            <div class="radio-title">War Era DE</div>
+            <div class="radio-iframe-wrapper">
+              <iframe width="285" height="150" style="border:0px;" allowtransparency="true" scrolling="no" src="//widget.laut.fm/widgets/player_for/war-era-de"></iframe>
+            </div>
+            
+            <div class="radio-title">Nachtwache</div>
+            <div class="radio-iframe-wrapper" style="margin-bottom: 0;">
+              <iframe width="285" height="150" style="border:0px;" allowtransparency="true" scrolling="no" src="//widget.laut.fm/widgets/player_for/warera-nachtwache"></iframe>
+            </div>
+          </div>
+        </div>
         <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
       </div>
     </div>
@@ -347,6 +416,22 @@
 
     themeToggle.addEventListener('click', () => {
       applyTheme(state.theme === 'grau' ? 'pink' : 'grau');
+    });
+
+    const radioDropdownBtn = $('radio-dropdown-btn');
+    const radioDropdownContent = $('radio-dropdown-content');
+
+    // Toggle Dropdown
+    radioDropdownBtn.addEventListener('click', (e) => {
+      radioDropdownContent.classList.toggle('show');
+      e.stopPropagation(); // Verhindert sofortiges Schließen durch document-click
+    });
+
+    // Close Dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!radioDropdownContent.contains(e.target) && e.target !== radioDropdownBtn) {
+        radioDropdownContent.classList.remove('show');
+      }
     });
 
     function renderCategories() {
