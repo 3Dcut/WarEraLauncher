@@ -187,6 +187,11 @@
       background: var(--tab-hover-bg);
       color: var(--text);
     }
+    .btn-theme.active {
+      background: var(--tab-active-bg);
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
 
 
     /* ========== RADIO SIDEBAR ========== */
@@ -362,6 +367,10 @@
       <div class="toolbar-right">
         <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE">&#x1F3B5; WARERA DE</button>
         <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache">&#x1F3B5; NACHTWACHE</button>
+        <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
+        <button class="btn-theme stream-btn" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream WarEra (Audio)"><span class="stream-icon">&#x25B6;</span> ST: WARERA</button>
+        <button class="btn-theme stream-btn" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwache (Audio)"><span class="stream-icon">&#x25B6;</span> ST: NACHTW.</button>
+        <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
       </div>
     </div>
@@ -459,6 +468,49 @@
 
     radioSidebarClose.addEventListener('click', () => {
       radioSidebar.classList.remove('open');
+    });
+
+    // Native Stream Logic
+    let currentStreamAudio = null;
+    let currentStreamBtn = null;
+
+    document.querySelectorAll('.stream-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const streamUrl = btn.getAttribute('data-stream');
+        const iconSpan = btn.querySelector('.stream-icon');
+        
+        // If clicking the same active button
+        if (currentStreamAudio && currentStreamBtn === btn) {
+          if (!currentStreamAudio.paused) {
+            currentStreamAudio.pause();
+            iconSpan.innerHTML = '&#x25B6;'; // Play
+            btn.classList.remove('active');
+          } else {
+            currentStreamAudio.play();
+            iconSpan.innerHTML = '&#x23F8;'; // Pause
+            btn.classList.add('active');
+          }
+          return;
+        }
+
+        // Stop existing
+        if (currentStreamAudio) {
+          currentStreamAudio.pause();
+          currentStreamAudio.src = '';
+          currentStreamAudio = null;
+          if (currentStreamBtn) {
+            currentStreamBtn.querySelector('.stream-icon').innerHTML = '&#x25B6;';
+            currentStreamBtn.classList.remove('active');
+          }
+        }
+
+        // Play new
+        currentStreamAudio = new Audio(streamUrl + "?t=" + Date.now());
+        currentStreamAudio.play();
+        currentStreamBtn = btn;
+        iconSpan.innerHTML = '&#x23F8;'; // Pause
+        btn.classList.add('active');
+      });
     });
 
     function renderCategories() {
