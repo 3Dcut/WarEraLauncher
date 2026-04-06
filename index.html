@@ -188,46 +188,7 @@
       color: var(--text);
     }
 
-    /* ========== RADIO DROPDOWN ========== */
-    .radio-dropdown {
-      position: relative;
-      display: inline-block;
-    }
-    .radio-dropdown-content {
-      display: none;
-      position: absolute;
-      right: 0;
-      top: calc(100% + 8px);
-      width: 305px;
-      padding: 10px;
-      background: rgba(10, 14, 26, 0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--glass-shadow);
-      border-radius: 12px;
-      z-index: 9999;
-    }
-    :root[data-theme="pink"] .radio-dropdown-content {
-      background: rgba(48, 0, 64, 0.95);
-    }
-    .radio-dropdown-content.show {
-      display: block;
-      animation: dropFade 0.2s ease;
-    }
-    @keyframes dropFade {
-      from { opacity: 0; transform: translateY(-5px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .radio-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
+
     /* ========== RADIO SIDEBAR ========== */
     .radio-sidebar {
       position: fixed;
@@ -297,17 +258,6 @@
       height: 100%;
       border: none;
       display: block;
-    }
-    .radio-iframe-wrapper {
-      width: 285px; 
-      height: 200px; 
-      border-radius: 8px; 
-      overflow: hidden; 
-      background: #000;
-      margin-bottom: 12px;
-    }
-    .radio-iframe-wrapper:last-child {
-      margin-bottom: 0;
     }
 
     /* ========== CONTENT PANEL (GRID) ========== */
@@ -410,21 +360,8 @@
       <div class="toolbar-sep"></div>
       <div id="category-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
       <div class="toolbar-right">
-        <button class="btn-theme" id="radio-sidebar-btn" title="Laut.fm Radio Sidebar">&#x1F3B5; RADIO (SIDE)</button>
-        <div class="radio-dropdown">
-          <button class="btn-theme" id="radio-dropdown-btn">&#x1F4FB; RADIO (DROP)</button>
-          <div class="radio-dropdown-content" id="radio-dropdown-content">
-            <div class="radio-title">War Era DE</div>
-            <div class="radio-iframe-wrapper">
-              <iframe width="285" height="200" style="border:0px;" allowtransparency="true" scrolling="no" src="https://laut.fm/widgets/player_for/war-era-de,?player%5Bstations%5D=war-era-de%2C&player%5Bcolor%5D%5Bcolor%5D=white&player%5Bshadow%5D=true&player%5Bdisplay%5D%5Bborder%5D%5Bradius%5D=8px&player%5Bcolor%5D%5Bbackground_to%5D=%23111827&player%5Bcolor%5D%5Bbackground_from%5D=%230a0e1a&player%5Bborder%5D%5Bwidth%5D=0px"></iframe>
-            </div>
-            
-            <div class="radio-title">Nachtwache</div>
-            <div class="radio-iframe-wrapper" style="margin-bottom: 0;">
-              <iframe width="285" height="200" style="border:0px;" allowtransparency="true" scrolling="no" src="https://laut.fm/widgets/player_for/warera-nachtwache,?player%5Bstations%5D=warera-nachtwache%2C&player%5Bcolor%5D%5Bcolor%5D=white&player%5Bshadow%5D=true&player%5Bdisplay%5D%5Bborder%5D%5Bradius%5D=8px&player%5Bcolor%5D%5Bbackground_to%5D=%23111827&player%5Bcolor%5D%5Bbackground_from%5D=%230a0e1a&player%5Bborder%5D%5Bwidth%5D=0px"></iframe>
-            </div>
-          </div>
-        </div>
+        <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE">&#x1F3B5; WARERA DE</button>
+        <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache">&#x1F3B5; NACHTWACHE</button>
         <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
       </div>
     </div>
@@ -440,11 +377,11 @@
   <!-- RADIO SIDEBAR (2. Implementierung) -->
   <div class="radio-sidebar" id="radio-sidebar">
     <div class="radio-sidebar-header">
-      <div class="radio-sidebar-title">&#x1F3B5; Laut.fm WarEra (Test)</div>
+      <div class="radio-sidebar-title" id="radio-sidebar-title-text">&#x1F3B5; Laut.fm Radio</div>
       <button class="radio-sidebar-close" id="radio-sidebar-close" title="Schließen">&#x2715;</button>
     </div>
     <div class="radio-sidebar-content">
-      <iframe src="https://laut.fm/war-era-de?autoplay=1" allow="autoplay" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+      <iframe src="about:blank" allow="autoplay" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
     </div>
   </div>
 
@@ -501,29 +438,23 @@
       applyTheme(state.theme === 'grau' ? 'pink' : 'grau');
     });
 
-    const radioDropdownBtn = $('radio-dropdown-btn');
-    const radioDropdownContent = $('radio-dropdown-content');
-
-    // Toggle Dropdown
-    radioDropdownBtn.addEventListener('click', (e) => {
-      radioDropdownContent.classList.toggle('show');
-      e.stopPropagation(); // Verhindert sofortiges Schließen durch document-click
-    });
-
-    // Close Dropdown on outside click
-    document.addEventListener('click', (e) => {
-      if (!radioDropdownContent.contains(e.target) && e.target !== radioDropdownBtn) {
-        radioDropdownContent.classList.remove('show');
-      }
-    });
-
     // Sidebar Logic
-    const radioSidebarBtn = $('radio-sidebar-btn');
     const radioSidebar = $('radio-sidebar');
+    const radioSidebarTitle = $('radio-sidebar-title-text');
+    const radioIframe = radioSidebar.querySelector('iframe');
     const radioSidebarClose = $('radio-sidebar-close');
 
-    radioSidebarBtn.addEventListener('click', () => {
-      radioSidebar.classList.add('open');
+    document.querySelectorAll('.radio-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-url');
+        const title = btn.getAttribute('data-title');
+        
+        radioSidebarTitle.innerHTML = '&#x1F3B5; Laut.fm ' + title;
+        if (radioIframe.src !== url) {
+          radioIframe.src = url;
+        }
+        radioSidebar.classList.add('open');
+      });
     });
 
     radioSidebarClose.addEventListener('click', () => {
