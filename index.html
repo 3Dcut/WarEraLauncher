@@ -662,9 +662,10 @@
 
     async function pollStationData() {
       try {
+        const timestamp = Date.now();
         const [resMain, resNacht] = await Promise.all([
-          fetch('https://api.laut.fm/station/war-era-de'),
-          fetch('https://api.laut.fm/station/warera-nachtwache')
+          fetch(`https://api.laut.fm/station/war-era-de?t=${timestamp}`),
+          fetch(`https://api.laut.fm/station/warera-nachtwache?t=${timestamp}`)
         ]);
         
         if (!resMain.ok || !resNacht.ok) return;
