@@ -674,7 +674,7 @@
     const streamVolume = $('stream-volume');
 
     streamVolume.addEventListener('input', (e) => {
-      if (currentStreamAudio) {
+      if (currentStreamAudio && !insertPlaying) {
         currentStreamAudio.volume = e.target.value;
       }
       if (insertPlaying) {
@@ -1051,11 +1051,12 @@
       insertAudio.volume = savedVolume;
 
       try {
-        await insertAudio.play();
-        await new Promise((resolve, reject) => {
+        const endedPromise = new Promise((resolve, reject) => {
           insertAudio.addEventListener('ended', resolve, { once: true });
           insertAudio.addEventListener('error', reject, { once: true });
         });
+        await insertAudio.play();
+        await endedPromise;
       } catch (e) {
         console.error('Einspieler-Fehler:', e);
       }
@@ -1110,7 +1111,7 @@
         return;
       }
 
-      const msUntilEnd = await getSecondsUntilSongEnd(station);
+      let msUntilEnd = await getSecondsUntilSongEnd(station);
 
       if (msUntilEnd <= 2000) {
         // Song endet in <2s oder Fehler → sofort abspielen
