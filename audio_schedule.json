@@ -150,6 +150,12 @@
       "time": "00:05",
       "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
       "name": "Feuerbefehl Donbass"
+    },
+    {
+      "date": "2026-04-08",
+      "time": "00:00",
+      "file": "audio/wie_geht_krieg_bdm.mp3",
+      "name": "Wie geht Krieg"
     }
   ]
 }

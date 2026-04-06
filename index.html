@@ -1141,23 +1141,25 @@
         await endedPromise;
       } catch (e) {
         console.error('Einspieler-Fehler:', e);
-      }
+      } finally {
+        insertAudio.src = '';
 
-      insertAudio.src = '';
-
-      // Fade stream back to slider volume
-      if (streamActive && currentStreamAudio && !currentStreamAudio.paused) {
-        await fadeAudio(currentStreamAudio, 0, savedVolume, 500);
-        // Restore stream info
-        if (currentStreamBtn) {
-          const station = currentStreamBtn.getAttribute('data-station');
-          fetchStreamInfo(station);
+        // Stream wiederherstellen — auch wenn er während des Inserts pausiert wurde
+        if (streamActive && currentStreamAudio) {
+          if (currentStreamAudio.paused) {
+            try { await currentStreamAudio.play(); } catch (e) { /* Autoplay blocked */ }
+          }
+          await fadeAudio(currentStreamAudio, 0, savedVolume, 500);
+          if (currentStreamBtn) {
+            const station = currentStreamBtn.getAttribute('data-station');
+            fetchStreamInfo(station);
+          }
+        } else {
+          streamInfoBox.classList.add('hidden');
         }
-      } else {
-        streamInfoBox.classList.add('hidden');
-      }
 
-      insertPlaying = false;
+        insertPlaying = false;
+      }
     }
 
     let pendingInsertTimeout = null;
