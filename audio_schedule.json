@@ -6,9 +6,19 @@
       "name": "Wie geht Krieg"
     },
     {
+      "time": "14:00",
+      "file": "audio/fundament_der_ordnung.mp3",
+      "name": "Fundament der Ordnung"
+    },
+    {
       "time": "16:05",
       "file": "audio/wie_geht_krieg_bdm.mp3",
       "name": "Wie geht Krieg"
+    },
+    {
+      "time": "17:45",
+      "file": "audio/fundament_der_ordnung.mp3",
+      "name": "Fundament der Ordnung"
     },
     {
       "date": "2026-04-06",
