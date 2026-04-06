@@ -1032,12 +1032,11 @@
       insertPlaying = true;
 
       const savedVolume = currentStreamAudio ? currentStreamAudio.volume : parseFloat(streamVolume.value);
-      const wasPlaying = currentStreamAudio && !currentStreamAudio.paused;
+      const streamActive = currentStreamAudio && !currentStreamAudio.paused;
 
-      // Fade out stream
-      if (wasPlaying && currentStreamAudio) {
+      // Fade stream to 0 but keep it playing
+      if (streamActive) {
         await fadeAudio(currentStreamAudio, savedVolume, 0, 500);
-        currentStreamAudio.pause();
       }
 
       // Show insert info
@@ -1045,7 +1044,7 @@
       siSong.innerHTML = '&#x1F399; Einspieler: ' + insert.name;
       siListeners.innerHTML = '';
 
-      // Play insert
+      // Play insert as separate audio stream
       insertAudio = new Audio(insert.file + '?t=' + Date.now());
       insertAudio.volume = savedVolume;
 
@@ -1061,15 +1060,9 @@
 
       insertAudio = null;
 
-      // Resume stream
-      if (wasPlaying && currentStreamAudio) {
-        currentStreamAudio.volume = 0;
-        try {
-          await currentStreamAudio.play();
-          await fadeAudio(currentStreamAudio, 0, savedVolume, 500);
-        } catch (e) {
-          console.error('Stream-Resume-Fehler:', e);
-        }
+      // Fade stream back to slider volume
+      if (streamActive && currentStreamAudio && !currentStreamAudio.paused) {
+        await fadeAudio(currentStreamAudio, 0, savedVolume, 500);
         // Restore stream info
         if (currentStreamBtn) {
           const station = currentStreamBtn.getAttribute('data-station');
@@ -1123,6 +1116,9 @@
         playInsert(insert);
         return;
       }
+
+      // 2s Puffer damit der Song wirklich vorbei ist bevor der Einspieler startet
+      msUntilEnd += 2000;
 
       // Warten bis Song endet, dann Einspieler starten
       console.log(`Warte ${Math.round(msUntilEnd / 1000)}s auf Song-Ende, dann Einspieler: ${insert.name}`);
