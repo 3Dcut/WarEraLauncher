@@ -574,7 +574,9 @@
       activeCategory: parseInt(localStorage.getItem('wl-active-cat') || '0', 10),
       categories: [],
       openTools: [],
-      radioSchedule: null
+      radioSchedule: null,
+      audioSchedule: null,
+      playedInserts: new Set()
     };
 
     const $ = id => document.getElementById(id);
@@ -598,6 +600,13 @@
         state.radioSchedule = await schedRes.json();
       } catch (e) {
         console.warn('Kein Zeitplan gefunden');
+      }
+
+      try {
+        const audioRes = await fetch('./audio_schedule.json');
+        state.audioSchedule = await audioRes.json();
+      } catch (e) {
+        console.warn('Kein Audio-Einspieler-Zeitplan gefunden');
       }
 
       try {
@@ -960,6 +969,183 @@
     }
 
     init();
+
+    // ========== EINSPIELER / INSERT SCHEDULING ==========
+    let insertAudio = null;
+    let insertPlaying = false;
+
+    function getCurrentTimeKey() {
+      const now = new Date();
+      return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    }
+
+    function getTodayKey() {
+      const now = new Date();
+      return now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+    }
+
+    function fadeAudio(audio, from, to, duration) {
+      return new Promise(resolve => {
+        const steps = 20;
+        const stepTime = duration / steps;
+        const stepVal = (to - from) / steps;
+        let current = from;
+        let step = 0;
+        const interval = setInterval(() => {
+          step++;
+          current += stepVal;
+          audio.volume = Math.max(0, Math.min(1, current));
+          if (step >= steps) {
+            clearInterval(interval);
+            audio.volume = Math.max(0, Math.min(1, to));
+            resolve();
+          }
+        }, stepTime);
+      });
+    }
+
+    async function playInsert(insert) {
+      if (insertPlaying) return;
+      insertPlaying = true;
+
+      const savedVolume = currentStreamAudio ? currentStreamAudio.volume : parseFloat(streamVolume.value);
+      const wasPlaying = currentStreamAudio && !currentStreamAudio.paused;
+
+      // Fade out stream
+      if (wasPlaying && currentStreamAudio) {
+        await fadeAudio(currentStreamAudio, savedVolume, 0, 500);
+        currentStreamAudio.pause();
+      }
+
+      // Show insert info
+      streamInfoBox.classList.remove('hidden');
+      siSong.innerHTML = '&#x1F399; Einspieler: ' + insert.name;
+      siListeners.innerHTML = '';
+
+      // Play insert
+      insertAudio = new Audio(insert.file + '?t=' + Date.now());
+      insertAudio.volume = savedVolume;
+
+      try {
+        await insertAudio.play();
+        await new Promise((resolve, reject) => {
+          insertAudio.addEventListener('ended', resolve, { once: true });
+          insertAudio.addEventListener('error', reject, { once: true });
+        });
+      } catch (e) {
+        console.error('Einspieler-Fehler:', e);
+      }
+
+      insertAudio = null;
+
+      // Resume stream
+      if (wasPlaying && currentStreamAudio) {
+        currentStreamAudio.volume = 0;
+        try {
+          await currentStreamAudio.play();
+          await fadeAudio(currentStreamAudio, 0, savedVolume, 500);
+        } catch (e) {
+          console.error('Stream-Resume-Fehler:', e);
+        }
+        // Restore stream info
+        if (currentStreamBtn) {
+          const station = currentStreamBtn.getAttribute('data-station');
+          fetchStreamInfo(station);
+        }
+      } else {
+        streamInfoBox.classList.add('hidden');
+      }
+
+      insertPlaying = false;
+    }
+
+    let pendingInsertTimeout = null;
+
+    async function getSecondsUntilSongEnd(station) {
+      try {
+        const res = await fetch(`https://api.laut.fm/station/${station}/current_song?t=${Date.now()}`);
+        if (!res.ok) return 0;
+        const song = await res.json();
+        if (!song.ends_at) return 0;
+
+        // Parse "2026-04-06 16:56:53 +0200" format
+        const endsAt = new Date(song.ends_at.replace(' ', 'T').replace(/ ([+-])/, '$1'));
+        const now = new Date();
+        const diffMs = endsAt.getTime() - now.getTime();
+
+        console.log(`Song "${song.artist?.name} - ${song.title}" endet in ${Math.round(diffMs / 1000)}s`);
+        return Math.max(0, diffMs);
+      } catch (e) {
+        console.error('Song-Ende konnte nicht ermittelt werden:', e);
+        return 0;
+      }
+    }
+
+    async function scheduleInsertAfterSong(insert) {
+      // Aktuellen Sender ermitteln
+      const station = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
+
+      if (!station || !currentStreamAudio || currentStreamAudio.paused) {
+        // Kein Stream aktiv → sofort abspielen
+        console.log('Kein aktiver Stream, Einspieler sofort:', insert.name);
+        playInsert(insert);
+        return;
+      }
+
+      const msUntilEnd = await getSecondsUntilSongEnd(station);
+
+      if (msUntilEnd <= 2000) {
+        // Song endet in <2s oder Fehler → sofort abspielen
+        console.log('Song endet gleich, Einspieler sofort:', insert.name);
+        playInsert(insert);
+        return;
+      }
+
+      // Warten bis Song endet, dann Einspieler starten
+      console.log(`Warte ${Math.round(msUntilEnd / 1000)}s auf Song-Ende, dann Einspieler: ${insert.name}`);
+
+      // Info anzeigen, dass Einspieler wartet
+      streamInfoBox.classList.remove('hidden');
+      siListeners.innerHTML = `&#x23F3; Einspieler "${insert.name}" wartet auf Song-Ende...`;
+
+      if (pendingInsertTimeout) clearTimeout(pendingInsertTimeout);
+      pendingInsertTimeout = setTimeout(() => {
+        pendingInsertTimeout = null;
+        console.log('Song vorbei, starte Einspieler:', insert.name);
+        playInsert(insert);
+      }, msUntilEnd);
+    }
+
+    function checkInsertSchedule() {
+      if (!state.audioSchedule || !state.audioSchedule.inserts) return;
+      if (insertPlaying || pendingInsertTimeout) return; // Bereits aktiv oder wartend
+
+      const timeKey = getCurrentTimeKey();
+      const todayKey = getTodayKey();
+
+      for (const insert of state.audioSchedule.inserts) {
+        const insertId = todayKey + '_' + insert.time;
+        if (insert.time === timeKey && !state.playedInserts.has(insertId)) {
+          state.playedInserts.add(insertId);
+          console.log('Einspieler geplant:', insert.name, 'um', timeKey);
+          scheduleInsertAfterSong(insert);
+          break;
+        }
+      }
+    }
+
+    // Alle 15 Sekunden prüfen
+    setInterval(checkInsertSchedule, 15000);
+
+    // Täglich played-Set zurücksetzen (um Mitternacht)
+    let lastDay = getTodayKey();
+    setInterval(() => {
+      const today = getTodayKey();
+      if (today !== lastDay) {
+        state.playedInserts.clear();
+        lastDay = today;
+      }
+    }, 60000);
   </script>
 </body>
 </html>
