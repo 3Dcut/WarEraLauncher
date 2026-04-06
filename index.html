@@ -677,7 +677,7 @@
       if (currentStreamAudio) {
         currentStreamAudio.volume = e.target.value;
       }
-      if (insertAudio) {
+      if (insertPlaying) {
         insertAudio.volume = e.target.value;
       }
     });
@@ -994,7 +994,9 @@
     init();
 
     // ========== EINSPIELER / INSERT SCHEDULING ==========
-    let insertAudio = null;
+    const insertAudio = document.createElement('audio');
+    insertAudio.preload = 'auto';
+    document.body.appendChild(insertAudio);
     let insertPlaying = false;
 
     function getCurrentTimeKey() {
@@ -1044,8 +1046,8 @@
       siSong.innerHTML = '&#x1F399; Einspieler: ' + insert.name;
       siListeners.innerHTML = '';
 
-      // Play insert as separate audio stream
-      insertAudio = new Audio(insert.file + '?t=' + Date.now());
+      // Play insert as separate audio stream (reuse persistent element)
+      insertAudio.src = insert.file + '?t=' + Date.now();
       insertAudio.volume = savedVolume;
 
       try {
@@ -1058,7 +1060,7 @@
         console.error('Einspieler-Fehler:', e);
       }
 
-      insertAudio = null;
+      insertAudio.src = '';
 
       // Fade stream back to slider volume
       if (streamActive && currentStreamAudio && !currentStreamAudio.paused) {
