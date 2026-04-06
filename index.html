@@ -676,6 +676,9 @@
       if (currentStreamAudio) {
         currentStreamAudio.volume = e.target.value;
       }
+      if (insertAudio) {
+        insertAudio.volume = e.target.value;
+      }
     });
 
     async function fetchStreamInfo(station) {
@@ -1115,6 +1118,18 @@
         playInsert(insert);
       }, msUntilEnd);
     }
+
+    async function reloadAudioSchedule() {
+      try {
+        const audioRes = await fetch('./audio_schedule.json?t=' + Date.now());
+        state.audioSchedule = await audioRes.json();
+      } catch (e) {
+        console.warn('Audio-Zeitplan konnte nicht neu geladen werden');
+      }
+    }
+
+    // Alle 60 Sekunden audio_schedule.json neu laden
+    setInterval(reloadAudioSchedule, 60000);
 
     function checkInsertSchedule() {
       if (!state.audioSchedule || !state.audioSchedule.inserts) return;
