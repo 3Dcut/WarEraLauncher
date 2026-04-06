@@ -666,6 +666,7 @@
     let currentStreamAudio = null;
     let currentStreamBtn = null;
     let streamInfoInterval = null;
+    let autoSwitching = false; // Flag um programmatische Klicks von manuellen zu unterscheiden
 
     const streamInfoBox = $('stream-info');
     const siSong = $('si-song');
@@ -715,10 +716,26 @@
       streamInfoInterval = setInterval(() => fetchStreamInfo(station), 15000);
     }
 
+    /**
+     * Startet einen Stream programmatisch (ohne Auto auszuschalten).
+     * Wird von der Auto-Logik und beim Seitenstart verwendet.
+     */
+    function startStationStream(station) {
+      const targetBtn = document.querySelector(`.stream-btn[data-station="${station}"]`);
+      if (!targetBtn) return;
+
+      // Bereits aktiv? Nichts tun.
+      if (targetBtn.classList.contains('active') && currentStreamAudio && !currentStreamAudio.paused) return;
+
+      autoSwitching = true;
+      targetBtn.click();
+      autoSwitching = false;
+    }
+
     document.querySelectorAll('.stream-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        // Wenn der Klick von einem Menschen (und nicht per JS) kam, AUTO ausschalten
-        if (e.isTrusted && autoRadioActive) {
+        // Nur bei manuellem Klick (nicht programmatisch durch Auto) → AUTO ausschalten
+        if (!autoSwitching && autoRadioActive) {
           autoRadioActive = false;
           localStorage.setItem('wl-auto-radio', 'false');
           autoRadioToggle.classList.remove('active');
@@ -736,11 +753,13 @@
             iconSpan.innerHTML = '&#x25B6;'; // Play
             btn.classList.remove('active');
             stopStreamInfo();
+            localStorage.removeItem('wl-last-station');
           } else {
             currentStreamAudio.play();
             iconSpan.innerHTML = '&#x23F8;'; // Pause
             btn.classList.add('active');
             startStreamInfo(station);
+            localStorage.setItem('wl-last-station', station);
           }
           return;
         }
@@ -765,6 +784,9 @@
         iconSpan.innerHTML = '&#x23F8;'; // Pause
         btn.classList.add('active');
         startStreamInfo(station);
+
+        // Letzten aktiven Sender merken
+        localStorage.setItem('wl-last-station', station);
       });
     });
 
@@ -851,8 +873,8 @@
           let targetStation = null;
           
           if (isNachtOnline && isMainOnline) {
-             // Wenn beide eingetragen sind: nichts tun
-             targetStation = null;
+             // Wenn beide online: letzten Sender als Fallback nehmen
+             targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
           } else if (isNachtOnline) {
              targetStation = 'warera-nachtwache';
           } else if (isMainOnline) {
@@ -863,10 +885,7 @@
           }
           
           if (targetStation) {
-            const targetBtn = document.querySelector(`.stream-btn[data-station="${targetStation}"]`);
-            if (targetBtn && !targetBtn.classList.contains('active')) {
-              targetBtn.click();
-            }
+            startStationStream(targetStation);
           }
         }
       } catch (err) {
@@ -875,6 +894,7 @@
     }
 
     // Sofort beim Start poll aufrufen, danach jede Minute
+    // Wenn Auto aktiv ist, wird pollStationData den richtigen Sender starten
     pollStationData();
     setInterval(pollStationData, 60000);
 
