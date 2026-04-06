@@ -708,6 +708,7 @@
         // Wenn der Klick von einem Menschen (und nicht per JS) kam, AUTO ausschalten
         if (e.isTrusted && autoRadioActive) {
           autoRadioActive = false;
+          localStorage.setItem('wl-auto-radio', 'false');
           autoRadioToggle.classList.remove('active');
           autoRadioToggle.innerHTML = '&#x1F916; AUTO: OFF';
         }
@@ -759,10 +760,17 @@
     const autoRadioToggle = $('auto-radio-toggle');
     const dotMain = $('dot-war-era-de');
     const dotNacht = $('dot-warera-nachtwache');
-    let autoRadioActive = false;
+    let autoRadioActive = localStorage.getItem('wl-auto-radio') === 'true';
+
+    // Beim Laden: gespeicherten Auto-Zustand wiederherstellen
+    if (autoRadioActive) {
+      autoRadioToggle.classList.add('active');
+      autoRadioToggle.innerHTML = '&#x1F916; AUTO: ON';
+    }
 
     autoRadioToggle.addEventListener('click', () => {
       autoRadioActive = !autoRadioActive;
+      localStorage.setItem('wl-auto-radio', autoRadioActive);
       if (autoRadioActive) {
         autoRadioToggle.classList.add('active');
         autoRadioToggle.innerHTML = '&#x1F916; AUTO: ON';
