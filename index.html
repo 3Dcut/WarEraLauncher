@@ -382,6 +382,81 @@
       text-align: center;
     }
 
+    /* ========== SCHEDULE POPUP ========== */
+    .btn-schedule {
+      padding: 5px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 11px;
+      position: relative;
+    }
+    .btn-schedule:hover {
+      background: var(--tab-hover-bg);
+      color: var(--text);
+    }
+    .schedule-popup {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      min-width: 280px;
+      background: rgba(10, 14, 26, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      z-index: 9999;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+    :root[data-theme="pink"] .schedule-popup {
+      background: rgba(48, 0, 64, 0.96);
+    }
+    .schedule-popup.open {
+      display: block;
+    }
+    .schedule-popup-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .schedule-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .schedule-item:last-child {
+      border-bottom: none;
+    }
+    .schedule-time {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--accent);
+      min-width: 44px;
+    }
+    .schedule-name {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .schedule-empty {
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
     /* ========== MOBILE: TABLET ========== */
     @media (max-width: 768px) {
       html, body {
@@ -536,6 +611,13 @@
         <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO <span class="status-dot" id="dot-warera-nachtwache" title="Offline (AutoDJ)"></span></button>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <button class="btn-theme" id="auto-radio-toggle" title="Automatischer Sender-Wechsel (prüft minütlich den Claim)">&#x1F916; AUTO: OFF</button>
+        <div style="position:relative;display:inline-block;">
+          <button class="btn-schedule" id="btn-schedule-preview" title="Nächste geplante Einspieler">&#x1F4CB; PLAN</button>
+          <div class="schedule-popup" id="schedule-popup">
+            <div class="schedule-popup-title">Nächste Einspieler</div>
+            <div id="schedule-popup-list"></div>
+          </div>
+        </div>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <div class="stream-info hidden" id="stream-info">
           <span id="si-song"></span>
@@ -1186,6 +1268,64 @@
         lastDay = today;
       }
     }, 60000);
+
+    // ========== SCHEDULE PREVIEW POPUP ==========
+    const btnSchedulePreview = $('btn-schedule-preview');
+    const schedulePopup = $('schedule-popup');
+    const schedulePopupList = $('schedule-popup-list');
+
+    function getNextInserts(count) {
+      if (!state.audioSchedule || !state.audioSchedule.inserts) return [];
+      const now = new Date();
+      const todayKey = getTodayKey();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      const upcoming = [];
+
+      for (const insert of state.audioSchedule.inserts) {
+        // Nur heute relevante oder tägliche Einträge
+        if (insert.date && insert.date !== todayKey) continue;
+
+        const parts = insert.time.split(':').map(Number);
+        const insertMinutes = parts[0] * 60 + parts[1];
+
+        if (insertMinutes > nowMinutes) {
+          upcoming.push({ time: insert.time, name: insert.name, minutes: insertMinutes });
+        }
+      }
+
+      // Nach Zeit sortieren
+      upcoming.sort((a, b) => a.minutes - b.minutes);
+      return upcoming.slice(0, count);
+    }
+
+    function renderSchedulePopup() {
+      const items = getNextInserts(3);
+      if (items.length === 0) {
+        schedulePopupList.innerHTML = '<div class="schedule-empty">Keine weiteren Einspieler heute geplant.</div>';
+        return;
+      }
+      schedulePopupList.innerHTML = items.map(it =>
+        `<div class="schedule-item"><span class="schedule-time">${it.time}</span><span class="schedule-name">${it.name}</span></div>`
+      ).join('');
+    }
+
+    btnSchedulePreview.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = schedulePopup.classList.contains('open');
+      if (isOpen) {
+        schedulePopup.classList.remove('open');
+      } else {
+        renderSchedulePopup();
+        schedulePopup.classList.add('open');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!schedulePopup.contains(e.target) && e.target !== btnSchedulePreview) {
+        schedulePopup.classList.remove('open');
+      }
+    });
   </script>
 </body>
 </html>
