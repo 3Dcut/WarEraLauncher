@@ -6,6 +6,11 @@
       "name": "BDM Wirtschaftsnews"
     },
     {
+      "time": "17:15",
+      "file": "audio/bdm_news.mp3",
+      "name": "BDM News"
+    },
+    {
       "time": "18:30",
       "file": "audio/bdm_news.mp3",
       "name": "BDM News"
