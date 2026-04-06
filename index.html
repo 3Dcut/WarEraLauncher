@@ -408,7 +408,7 @@
           const songData = await songRes.json();
           const listText = await listRes.text();
           siSong.innerHTML = `&#x1F3B5; ${songData.artist.name} - ${songData.title}`;
-          siListeners.innerHTML = `&#x1F3A7; ${listText.trim()} Hörer`;
+          siListeners.innerHTML = `&#x1F3A7; ${listText.trim()} Kartoffelschäler`;
         }
       } catch (e) {
         console.error("Fehler beim Laden der API-Daten", e);
