@@ -138,6 +138,18 @@
       "time": "23:45",
       "file": "audio/nachtwache_jingle.mp3",
       "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "23:50",
+      "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
+      "name": "Feuerbefehl Donbass"
+    },
+    {
+      "date": "2026-04-07",
+      "time": "00:05",
+      "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
+      "name": "Feuerbefehl Donbass"
     }
   ]
 }
