@@ -671,21 +671,21 @@
       applyTheme(state.theme);
 
       try {
-        const res = await fetch('./tools.json');
+        const res = await fetch('./tools.json?t=' + Date.now());
         state.categories = await res.json();
       } catch (e) {
         state.categories = [];
       }
 
       try {
-        const schedRes = await fetch('./radio_schedule.json');
+        const schedRes = await fetch('./radio_schedule.json?t=' + Date.now());
         state.radioSchedule = await schedRes.json();
       } catch (e) {
         console.warn('Kein Zeitplan gefunden');
       }
 
       try {
-        const audioRes = await fetch('./audio_schedule.json');
+        const audioRes = await fetch('./audio_schedule.json?t=' + Date.now());
         state.audioSchedule = await audioRes.json();
       } catch (e) {
         console.warn('Kein Audio-Einspieler-Zeitplan gefunden');
