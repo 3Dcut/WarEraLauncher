@@ -47,6 +47,27 @@
       "time": "20:30",
       "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
       "name": "Feuerbefehl Donbass"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "18:45",
+      "file": "audio/wie_geht_krieg_bdm.mp3",
+      "name": "Wie geht Krieg"
+    },
+    {
+      "time": "16:05",
+      "file": "audio/wie_geht_krieg_bdm.mp3",
+      "name": "Wie geht Krieg"
+    },
+    {
+      "time": "09:05",
+      "file": "audio/wie_geht_krieg_bdm.mp3",
+      "name": "Wie geht Krieg"
+    },
+    {
+      "time": "19:00",
+      "file": "audio/fundament_der_ordnung.mp3",
+      "name": "Fundament der Ordnung"
     }
   ]
 }
