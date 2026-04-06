@@ -382,9 +382,129 @@
       text-align: center;
     }
 
+    /* ========== MOBILE: TABLET ========== */
     @media (max-width: 768px) {
-      .content-panel { flex-direction: column; overflow-y: auto; overflow-x: hidden; }
-      .tool-window { border-right: none; border-bottom: 1px solid var(--glass-border); min-height: 400px; width: 100%; }
+      html, body {
+        overflow: auto;
+        overflow-x: hidden;
+      }
+
+      #app {
+        height: auto;
+        min-height: 100vh;
+        padding: 4px;
+      }
+
+      .toolbar {
+        padding: 6px 8px;
+        gap: 4px;
+        border-radius: 8px;
+      }
+
+      .toolbar-right {
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 4px;
+      }
+
+      .content-panel {
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 8px;
+        min-height: 60vh;
+      }
+
+      .tool-window {
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+        min-width: 0;
+        min-height: 70vh;
+        width: 100%;
+      }
+
+      .radio-sidebar {
+        width: 85vw;
+        right: -85vw;
+      }
+    }
+
+    /* ========== MOBILE: SMARTPHONE ========== */
+    @media (max-width: 480px) {
+      #app {
+        padding: 2px;
+      }
+
+      .toolbar {
+        padding: 5px 6px;
+        gap: 3px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+      }
+
+      .btn-warera {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+
+      .cat-tab {
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 12px;
+      }
+
+      .tool-tab {
+        font-size: 11px;
+        padding: 6px 10px;
+        border-radius: 12px;
+      }
+
+      .btn-theme {
+        font-size: 10px;
+        padding: 6px 10px;
+      }
+
+      .stream-info {
+        font-size: 10px;
+        flex-wrap: wrap;
+        gap: 4px;
+        width: 100%;
+      }
+
+      .toolbar-right {
+        gap: 3px;
+      }
+
+      .toolbar-sep {
+        display: none;
+      }
+
+      .content-panel {
+        border-radius: 6px;
+        min-height: 50vh;
+      }
+
+      .tool-window {
+        min-height: 80vh;
+      }
+
+      .tool-header {
+        padding: 6px 8px;
+        font-size: 13px;
+      }
+
+      .radio-sidebar {
+        width: 100vw;
+        right: -100vw;
+      }
+
+      .empty-state {
+        font-size: 14px;
+        padding: 16px;
+      }
     }
   </style>
 </head>
