@@ -214,6 +214,77 @@
 
 
 
+    /* ========== RADIO SIDEBAR ========== */
+    .radio-sidebar {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 400px;
+      height: 100%;
+      background: rgba(10, 14, 26, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-left: 1px solid var(--glass-border);
+      box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+      z-index: 10000;
+      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    :root[data-theme="pink"] .radio-sidebar {
+      background: rgba(48, 0, 64, 0.95);
+    }
+    .radio-sidebar.open {
+      right: 0;
+    }
+    .radio-sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+    }
+    .radio-sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .radio-sidebar-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .radio-sidebar-close:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+    .radio-sidebar-content {
+      flex: 1;
+      position: relative;
+      background: #0d1117;
+    }
+    .radio-sidebar-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
     /* ========== CONTENT PANEL (GRID) ========== */
     .content-panel {
       flex: 1;
@@ -314,12 +385,17 @@
       <div class="toolbar-sep"></div>
       <div id="category-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
       <div class="toolbar-right">
+        <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE (Sidebar)">&#x1F4FB; HAUPTRADIO (SB)</button>
+        <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache (Sidebar)">&#x1F4FB; NACHTW. (SB)</button>
         <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO</button>
         <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO</button>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <div class="stream-info hidden" id="stream-info">
           <span id="si-song"></span>
           <span id="si-listeners"></span>
+          <span title="Lautstärke" style="display:flex; align-items:center; gap: 4px; margin-left: 6px;">
+            &#x1F50A; <input type="range" id="stream-volume" min="0" max="1" step="0.05" value="0.5" style="width: 50px; cursor: pointer; accent-color: var(--accent);">
+          </span>
         </div>
         <button class="btn-theme" id="theme-toggle">&#x25C9; GRAU</button>
       </div>
@@ -333,6 +409,17 @@
     <div class="content-panel" id="content-panel"></div>
   </div>
 
+
+  <!-- RADIO SIDEBAR (2. Implementierung) -->
+  <div class="radio-sidebar" id="radio-sidebar">
+    <div class="radio-sidebar-header">
+      <div class="radio-sidebar-title" id="radio-sidebar-title-text">&#x1F3B5; Laut.fm Radio</div>
+      <button class="radio-sidebar-close" id="radio-sidebar-close" title="Schließen">&#x2715;</button>
+    </div>
+    <div class="radio-sidebar-content">
+      <iframe src="about:blank" allow="autoplay" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+    </div>
+  </div>
 
   <script>
     const state = {
@@ -388,6 +475,29 @@
     });
 
 
+    // Sidebar Logic
+    const radioSidebar = $('radio-sidebar');
+    const radioSidebarTitle = $('radio-sidebar-title-text');
+    const radioIframe = radioSidebar.querySelector('iframe');
+    const radioSidebarClose = $('radio-sidebar-close');
+
+    document.querySelectorAll('.radio-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-url');
+        const title = btn.getAttribute('data-title');
+        
+        radioSidebarTitle.innerHTML = '&#x1F3B5; Laut.fm ' + title;
+        if (radioIframe.src !== url) {
+          radioIframe.src = url;
+        }
+        radioSidebar.classList.add('open');
+      });
+    });
+
+    radioSidebarClose.addEventListener('click', () => {
+      radioSidebar.classList.remove('open');
+    });
+
     // Native Stream Logic
     let currentStreamAudio = null;
     let currentStreamBtn = null;
@@ -396,6 +506,13 @@
     const streamInfoBox = $('stream-info');
     const siSong = $('si-song');
     const siListeners = $('si-listeners');
+    const streamVolume = $('stream-volume');
+
+    streamVolume.addEventListener('input', (e) => {
+      if (currentStreamAudio) {
+        currentStreamAudio.volume = e.target.value;
+      }
+    });
 
     async function fetchStreamInfo(station) {
       if (!currentStreamAudio || currentStreamAudio.paused) return;
@@ -467,6 +584,7 @@
 
         // Play new
         currentStreamAudio = new Audio(streamUrl + "?t=" + Date.now());
+        currentStreamAudio.volume = streamVolume.value;
         currentStreamAudio.play();
         currentStreamBtn = btn;
         iconSpan.innerHTML = '&#x23F8;'; // Pause
