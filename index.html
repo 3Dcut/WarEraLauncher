@@ -212,7 +212,19 @@
       display: none !important;
     }
 
-
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      margin-left: 6px;
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .status-dot.online {
+      background-color: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
 
     /* ========== RADIO SIDEBAR ========== */
     .radio-sidebar {
@@ -387,8 +399,10 @@
       <div class="toolbar-right">
         <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE (Sidebar)">&#x1F4FB; HAUPTRADIO (SB)</button>
         <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache (Sidebar)">&#x1F4FB; NACHTW. (SB)</button>
-        <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO</button>
-        <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO</button>
+        <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO <span class="status-dot" id="dot-war-era-de" title="Offline (AutoDJ)"></span></button>
+        <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO <span class="status-dot" id="dot-warera-nachtwache" title="Offline (AutoDJ)"></span></button>
+        <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
+        <button class="btn-theme" id="auto-radio-toggle" title="Automatischer Sender-Wechsel (prüft minütlich den Claim)">&#x1F916; AUTO: OFF</button>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <div class="stream-info hidden" id="stream-info">
           <span id="si-song"></span>
@@ -426,7 +440,8 @@
       theme: localStorage.getItem('wl-theme') || 'grau',
       activeCategory: parseInt(localStorage.getItem('wl-active-cat') || '0', 10),
       categories: [],
-      openTools: []
+      openTools: [],
+      radioSchedule: null
     };
 
     const $ = id => document.getElementById(id);
@@ -443,6 +458,13 @@
         state.categories = await res.json();
       } catch (e) {
         state.categories = [];
+      }
+
+      try {
+        const schedRes = await fetch('./radio_schedule.json');
+        state.radioSchedule = await schedRes.json();
+      } catch (e) {
+        console.warn('Kein Zeitplan gefunden');
       }
 
       try {
@@ -549,7 +571,14 @@
     }
 
     document.querySelectorAll('.stream-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        // Wenn der Klick von einem Menschen (und nicht per JS) kam, AUTO ausschalten
+        if (e.isTrusted && autoRadioActive) {
+          autoRadioActive = false;
+          autoRadioToggle.classList.remove('active');
+          autoRadioToggle.innerHTML = '&#x1F916; AUTO: OFF';
+        }
+
         const streamUrl = btn.getAttribute('data-stream');
         const station = btn.getAttribute('data-station');
         const iconSpan = btn.querySelector('.stream-icon');
@@ -592,6 +621,108 @@
         startStreamInfo(station);
       });
     });
+
+    // ========== AUTO RADIO & STATUS LOGIC ==========
+    const autoRadioToggle = $('auto-radio-toggle');
+    const dotMain = $('dot-war-era-de');
+    const dotNacht = $('dot-warera-nachtwache');
+    let autoRadioActive = false;
+
+    autoRadioToggle.addEventListener('click', () => {
+      autoRadioActive = !autoRadioActive;
+      if (autoRadioActive) {
+        autoRadioToggle.classList.add('active');
+        autoRadioToggle.innerHTML = '&#x1F916; AUTO: ON';
+        pollStationData(); // sofort einmal ausführen
+      } else {
+        autoRadioToggle.classList.remove('active');
+        autoRadioToggle.innerHTML = '&#x1F916; AUTO: OFF';
+      }
+    });
+
+    function getScheduledStation() {
+      if (!state.radioSchedule || !state.radioSchedule.schedule) return null;
+      const now = new Date();
+      const timeFloat = now.getHours() + (now.getMinutes() / 60);
+      
+      for (let item of state.radioSchedule.schedule) {
+        const startParts = item.start.split(':').map(Number);
+        const endParts = item.end.split(':').map(Number);
+        const startF = startParts[0] + (startParts[1] || 0) / 60;
+        const endF = endParts[0] + (endParts[1] || 0) / 60;
+
+        if (startF > endF) {
+           if (timeFloat >= startF || timeFloat < endF) return item.station;
+        } else {
+           if (timeFloat >= startF && timeFloat < endF) return item.station;
+        }
+      }
+      return null;
+    }
+
+    async function pollStationData() {
+      try {
+        const [resMain, resNacht] = await Promise.all([
+          fetch('https://api.laut.fm/station/war-era-de'),
+          fetch('https://api.laut.fm/station/warera-nachtwache')
+        ]);
+        
+        if (!resMain.ok || !resNacht.ok) return;
+        
+        const dataMain = await resMain.json();
+        const dataNacht = await resNacht.json();
+        
+        const isMainOnline = dataMain.format && dataMain.format.toLowerCase().includes('online');
+        const isNachtOnline = dataNacht.format && dataNacht.format.toLowerCase().includes('online');
+        
+        // Dots aktualisieren
+        if (isMainOnline) {
+          dotMain.classList.add('online');
+          dotMain.title = "Live/Online";
+        } else {
+          dotMain.classList.remove('online');
+          dotMain.title = "Offline (AutoDJ)";
+        }
+        
+        if (isNachtOnline) {
+          dotNacht.classList.add('online');
+          dotNacht.title = "Live/Online";
+        } else {
+          dotNacht.classList.remove('online');
+          dotNacht.title = "Offline (AutoDJ)";
+        }
+        
+        // Auto-Wechsel Logik
+        if (autoRadioActive) {
+          let targetStation = null;
+          
+          if (isNachtOnline && isMainOnline) {
+             // Wenn beide eingetragen sind: nichts tun
+             targetStation = null;
+          } else if (isNachtOnline) {
+             targetStation = 'warera-nachtwache';
+          } else if (isMainOnline) {
+             targetStation = 'war-era-de';
+          } else {
+             // Wenn keiner online ist: Zeitplan als Fallback
+             targetStation = getScheduledStation();
+          }
+          
+          if (targetStation) {
+            const targetBtn = document.querySelector(`.stream-btn[data-station="${targetStation}"]`);
+            if (targetBtn && !targetBtn.classList.contains('active')) {
+              targetBtn.click();
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Fehler beim Radio Status Polling:", err);
+      }
+    }
+
+    // Sofort beim Start poll aufrufen, danach jede Minute
+    pollStationData();
+    setInterval(pollStationData, 60000);
 
     function renderCategories() {
       categoryTabsEl.innerHTML = '';
