@@ -41,8 +41,8 @@
     {
       "date": "2026-04-06",
       "time": "20:00",
-      "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
-      "name": "Feuerbefehl Donbass"
+      "file": "audio/adav Werbung.mp3",
+      "name": "ADAV Werbung"
     },
     {
       "date": "2026-04-06",
@@ -53,8 +53,80 @@
     {
       "date": "2026-04-06",
       "time": "21:00",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "21:05",
       "file": "audio/Feuerbefehl Donbass_sponsored by BDM.mp3",
       "name": "Feuerbefehl Donbass"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "21:15",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "21:30",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "21:45",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "22:00",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "22:15",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "22:30",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "22:45",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "23:00",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "23:15",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "23:30",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
+    },
+    {
+      "date": "2026-04-06",
+      "time": "23:45",
+      "file": "audio/nachtwache_jingle.mp3",
+      "name": "Nachtwache Jingle"
     }
   ]
 }
