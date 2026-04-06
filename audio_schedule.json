@@ -2,13 +2,13 @@
   "inserts": [
     {
       "time": "17:00",
-      "file": "audio/bdm_news.mp3",
-      "name": "BDM News"
+      "file": "audio/BDM_Wirtschaftsnews_30sek.mp3",
+      "name": "BDM Wirtschaftsnews"
     },
     {
       "time": "17:15",
-      "file": "audio/BDM_Wirtschaftsnews_30sek.mp3",
-      "name": "BDM Wirtschaftsnews"
+      "file": "audio/bdm_news.mp3",
+      "name": "BDM News"
     }
   ]
 }
