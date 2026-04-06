@@ -1004,7 +1004,7 @@
 
     function getTodayKey() {
       const now = new Date();
-      return now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+      return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     }
 
     function fadeAudio(audio, from, to, duration) {
@@ -1159,10 +1159,16 @@
       const todayKey = getTodayKey();
 
       for (const insert of state.audioSchedule.inserts) {
-        const insertId = todayKey + '_' + insert.time;
+        // Datum-Prüfung: Hat der Einspieler ein "date"-Feld, nur an diesem Tag abspielen
+        if (insert.date && insert.date !== todayKey) {
+          continue; // Nicht heute → überspringen
+        }
+
+        const insertId = todayKey + '_' + insert.time + '_' + (insert.name || '');
         if (insert.time === timeKey && !state.playedInserts.has(insertId)) {
           state.playedInserts.add(insertId);
-          console.log('Einspieler geplant:', insert.name, 'um', timeKey);
+          const dateHint = insert.date ? ` (einmalig am ${insert.date})` : ' (täglich)';
+          console.log('Einspieler geplant:', insert.name, 'um', timeKey + dateHint);
           scheduleInsertAfterSong(insert);
           break;
         }
