@@ -225,6 +225,15 @@
       background-color: #10b981;
       box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
     }
+    .status-dot.force {
+      background-color: #f59e0b;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.7);
+      animation: force-pulse 1s ease-in-out infinite;
+    }
+    @keyframes force-pulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+      50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.9); }
+    }
 
     /* ========== RADIO SIDEBAR ========== */
     .radio-sidebar {
@@ -749,6 +758,8 @@
     let currentStreamBtn = null;
     let streamInfoInterval = null;
     let autoSwitching = false; // Flag um programmatische Klicks von manuellen zu unterscheiden
+    // Globaler Online-Status für Jingle-Logik
+    let stationStatus = { mainOnline: false, nachtOnline: false, mainForce: false, nachtForce: false };
 
     const streamInfoBox = $('stream-info');
     const siSong = $('si-song');
@@ -930,31 +941,55 @@
         const dataMain = await resMain.json();
         const dataNacht = await resNacht.json();
         
-        const isMainOnline = dataMain.format && dataMain.format.toLowerCase().includes('online');
-        const isNachtOnline = dataNacht.format && dataNacht.format.toLowerCase().includes('online');
+        const mainFmt = (dataMain.format || '').toLowerCase();
+        const nachtFmt = (dataNacht.format || '').toLowerCase();
+        const isMainForce = mainFmt.includes('force');
+        const isNachtForce = nachtFmt.includes('force');
+        const isMainOnline = isMainForce || mainFmt.includes('online');
+        const isNachtOnline = isNachtForce || nachtFmt.includes('online');
+        
+        // Globalen Status aktualisieren (für Jingle-Logik)
+        stationStatus = { mainOnline: isMainOnline, nachtOnline: isNachtOnline, mainForce: isMainForce, nachtForce: isNachtForce };
         
         // Dots aktualisieren
-        if (isMainOnline) {
+        // Dot-Status: force > online > offline
+        dotMain.classList.remove('online', 'force');
+        if (isMainForce) {
+          dotMain.classList.add('force');
+          dotMain.title = "FORCE (Priorität)";
+        } else if (isMainOnline) {
           dotMain.classList.add('online');
           dotMain.title = "Live/Online";
         } else {
-          dotMain.classList.remove('online');
           dotMain.title = "Offline (AutoDJ)";
         }
         
-        if (isNachtOnline) {
+        dotNacht.classList.remove('online', 'force');
+        if (isNachtForce) {
+          dotNacht.classList.add('force');
+          dotNacht.title = "FORCE (Priorität)";
+        } else if (isNachtOnline) {
           dotNacht.classList.add('online');
           dotNacht.title = "Live/Online";
         } else {
-          dotNacht.classList.remove('online');
           dotNacht.title = "Offline (AutoDJ)";
         }
         
-        // Auto-Wechsel Logik
+        // Auto-Wechsel Logik – force sticht online
         if (autoRadioActive) {
           let targetStation = null;
           
-          if (isNachtOnline && isMainOnline) {
+          // 1. Force hat höchste Priorität
+          if (isMainForce && isNachtForce) {
+             // Beide force: letzten Sender als Fallback
+             targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
+          } else if (isMainForce) {
+             targetStation = 'war-era-de';
+          } else if (isNachtForce) {
+             targetStation = 'warera-nachtwache';
+          }
+          // 2. Dann online
+          else if (isNachtOnline && isMainOnline) {
              // Wenn beide online: letzten Sender als Fallback nehmen
              targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
           } else if (isNachtOnline) {
@@ -962,7 +997,7 @@
           } else if (isMainOnline) {
              targetStation = 'war-era-de';
           } else {
-             // Wenn keiner online ist: Zeitplan als Fallback
+             // 3. Wenn keiner online/force: Zeitplan als Fallback
              targetStation = getScheduledStation();
           }
           
@@ -1234,26 +1269,87 @@
     // Alle 60 Sekunden audio_schedule.json neu laden
     setInterval(reloadAudioSchedule, 60000);
 
+    function isJingleTime(timeKey) {
+      const mins = parseInt(timeKey.split(':')[1], 10);
+      return mins % 15 === 0;
+    }
+
+    function hasScheduledInsertAt(timeKey, todayKey) {
+      if (!state.audioSchedule || !state.audioSchedule.inserts) return false;
+      for (const insert of state.audioSchedule.inserts) {
+        if (insert.date && insert.date !== todayKey) continue;
+        if (insert.time === timeKey) return true;
+      }
+      return false;
+    }
+
+    function getJingleForStatus() {
+      const jConf = state.audioSchedule && state.audioSchedule.jingles;
+      if (!jConf) return null;
+
+      // Force/Online-Priorität: force > online > keiner
+      if (stationStatus.mainForce || stationStatus.nachtForce) {
+        // Bei force: den Sender mit force bevorzugen
+        if (stationStatus.mainForce && !stationStatus.nachtForce) {
+          return { file: jConf.main, name: 'Jingle (Hauptradio)' };
+        } else if (stationStatus.nachtForce && !stationStatus.mainForce) {
+          return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+        }
+        // Beide force → letzten Sender nehmen
+        const last = localStorage.getItem('wl-last-station');
+        if (last === 'warera-nachtwache') return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
+      }
+
+      if (stationStatus.mainOnline && !stationStatus.nachtOnline) {
+        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
+      } else if (stationStatus.nachtOnline && !stationStatus.mainOnline) {
+        return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+      } else if (stationStatus.mainOnline && stationStatus.nachtOnline) {
+        const last = localStorage.getItem('wl-last-station');
+        if (last === 'warera-nachtwache') return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
+      }
+
+      // Keiner online
+      return { file: jConf.none, name: 'Jingle (Standard)' };
+    }
+
     function checkInsertSchedule() {
-      if (!state.audioSchedule || !state.audioSchedule.inserts) return;
+      if (!state.audioSchedule) return;
       if (insertPlaying || pendingInsertTimeout) return; // Bereits aktiv oder wartend
 
       const timeKey = getCurrentTimeKey();
       const todayKey = getTodayKey();
 
-      for (const insert of state.audioSchedule.inserts) {
-        // Datum-Prüfung: Hat der Einspieler ein "date"-Feld, nur an diesem Tag abspielen
-        if (insert.date && insert.date !== todayKey) {
-          continue; // Nicht heute → überspringen
-        }
+      // 1. Reguläre Einspieler prüfen
+      let regularFound = false;
+      if (state.audioSchedule.inserts) {
+        for (const insert of state.audioSchedule.inserts) {
+          if (insert.date && insert.date !== todayKey) continue;
 
-        const insertId = todayKey + '_' + insert.time + '_' + (insert.name || '');
-        if (insert.time === timeKey && !state.playedInserts.has(insertId)) {
-          state.playedInserts.add(insertId);
-          const dateHint = insert.date ? ` (einmalig am ${insert.date})` : ' (täglich)';
-          console.log('Einspieler geplant:', insert.name, 'um', timeKey + dateHint);
-          scheduleInsertAfterSong(insert);
-          break;
+          const insertId = todayKey + '_' + insert.time + '_' + (insert.name || '');
+          if (insert.time === timeKey && !state.playedInserts.has(insertId)) {
+            state.playedInserts.add(insertId);
+            const dateHint = insert.date ? ` (einmalig am ${insert.date})` : ' (täglich)';
+            console.log('Einspieler geplant:', insert.name, 'um', timeKey + dateHint);
+            scheduleInsertAfterSong(insert);
+            regularFound = true;
+            break;
+          }
+        }
+      }
+
+      // 2. Jingle alle 15 Min, nur falls kein regulärer Einspieler zur gleichen Zeit
+      if (!regularFound && isJingleTime(timeKey) && !hasScheduledInsertAt(timeKey, todayKey)) {
+        const jingleId = todayKey + '_jingle_' + timeKey;
+        if (!state.playedInserts.has(jingleId)) {
+          const jingle = getJingleForStatus();
+          if (jingle && jingle.file) {
+            state.playedInserts.add(jingleId);
+            console.log('Jingle geplant:', jingle.name, 'um', timeKey);
+            scheduleInsertAfterSong(jingle);
+          }
         }
       }
     }
