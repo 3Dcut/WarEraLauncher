@@ -1373,22 +1373,42 @@
     const schedulePopupList = $('schedule-popup-list');
 
     function getNextInserts(count) {
-      if (!state.audioSchedule || !state.audioSchedule.inserts) return [];
+      if (!state.audioSchedule) return [];
       const now = new Date();
       const todayKey = getTodayKey();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
       const upcoming = [];
+      const occupiedTimes = new Set();
 
-      for (const insert of state.audioSchedule.inserts) {
-        // Nur heute relevante oder tägliche Einträge
-        if (insert.date && insert.date !== todayKey) continue;
+      // 1. Reguläre Einspieler sammeln
+      if (state.audioSchedule.inserts) {
+        for (const insert of state.audioSchedule.inserts) {
+          if (insert.date && insert.date !== todayKey) continue;
 
-        const parts = insert.time.split(':').map(Number);
-        const insertMinutes = parts[0] * 60 + parts[1];
+          const parts = insert.time.split(':').map(Number);
+          const insertMinutes = parts[0] * 60 + parts[1];
 
-        if (insertMinutes > nowMinutes) {
-          upcoming.push({ time: insert.time, name: insert.name, minutes: insertMinutes });
+          if (insertMinutes > nowMinutes) {
+            upcoming.push({ time: insert.time, name: insert.name, minutes: insertMinutes, isJingle: false });
+            occupiedTimes.add(insert.time);
+          }
+        }
+      }
+
+      // 2. Jingles alle 15 Min hinzufügen (nur wo kein regulärer Einspieler liegt)
+      if (state.audioSchedule.jingles) {
+        const jingle = getJingleForStatus();
+        if (jingle) {
+          for (let m = nowMinutes + 1; m < 24 * 60; m++) {
+            if (m % 15 !== 0) continue;
+            const h = String(Math.floor(m / 60)).padStart(2, '0');
+            const mi = String(m % 60).padStart(2, '0');
+            const tKey = h + ':' + mi;
+            if (!occupiedTimes.has(tKey)) {
+              upcoming.push({ time: tKey, name: '🔔 ' + jingle.name, minutes: m, isJingle: true });
+            }
+          }
         }
       }
 
