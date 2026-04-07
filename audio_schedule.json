@@ -20,6 +20,12 @@
       "time": "18:10",
       "file": "audio/wie_geht_krieg_bdm.mp3",
       "name": "Wie geht Krieg"
+    },
+    {
+      "date": "2026-04-07",
+      "time": "19:45",
+      "file": "audio/de_nl_friendship.mp3",
+      "name": "DE NL Friendship"
     }
   ]
 }
