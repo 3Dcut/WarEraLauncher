@@ -1282,23 +1282,38 @@
       return false;
     }
 
+    let mainJingleToggle = false; // Wechsel zwischen main und main_alt
+
     function getJingleForStatus() {
       const jConf = state.audioSchedule && state.audioSchedule.jingles;
       if (!jConf) return null;
 
-      // Jingle richtet sich nach dem aktuell laufenden Stream
+      // Jingle richtet sich nach dem aktuell laufenden Stream + Online-Status
       const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
 
       if (activeStation === 'war-era-de') {
-        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
-      } else if (activeStation === 'warera-nachtwache') {
-        return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+        if (stationStatus.mainOnline || stationStatus.mainForce) {
+          // Main online → abwechselnd main und "Nur das Beste auf die Ohren"
+          mainJingleToggle = !mainJingleToggle;
+          if (mainJingleToggle) {
+            return { file: jConf.main, name: 'Jingle (Hauptradio)' };
+          } else {
+            return { file: jConf.main_alt, name: 'Nur das Beste auf die Ohren' };
+          }
+        } else {
+          // Main offline → Offline-Jingle
+          return { file: jConf.none, name: 'Jingle (Offline)' };
+        }
       }
 
-      // Kein Stream aktiv: Offline-Jingle nur spielen, wenn *gar kein* Sender online/force meldet
-      if (!stationStatus.mainForce && !stationStatus.nachtForce && 
-          !stationStatus.mainOnline && !stationStatus.nachtOnline) {
-        return { file: jConf.none, name: 'Jingle (Offline)' };
+      if (activeStation === 'warera-nachtwache') {
+        if (stationStatus.nachtOnline || stationStatus.nachtForce) {
+          // Nachtwache online → Nachtwache-Jingle
+          return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
+        } else {
+          // Nachtwache offline → Offline-Jingle
+          return { file: jConf.none, name: 'Jingle (Offline)' };
+        }
       }
 
       return null;

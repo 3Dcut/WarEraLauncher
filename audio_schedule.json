@@ -2,6 +2,7 @@
   "jingles": {
     "none": "audio/jingles/jingle-offline.mp3",
     "main": "audio/jingles/jingle-main.mp3",
+    "main_alt": "audio/jingles/nur_das_beste_auf_die_ohren.mp3",
     "nachtwache": "audio/jingles/jingle-nachtwache.mp3"
   },
   "inserts": [
