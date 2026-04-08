@@ -1284,7 +1284,7 @@
 
     let mainJingleToggle = false; // Wechsel zwischen main und main_alt
 
-    function getJingleForStatus() {
+    function getJingleForStatus(advance) {
       const jConf = state.audioSchedule && state.audioSchedule.jingles;
       if (!jConf) return null;
 
@@ -1294,14 +1294,14 @@
       if (activeStation === 'war-era-de') {
         if (stationStatus.mainOnline || stationStatus.mainForce) {
           // Main online → abwechselnd main und "Nur das Beste auf die Ohren"
-          mainJingleToggle = !mainJingleToggle;
+          if (advance) mainJingleToggle = !mainJingleToggle;
           if (mainJingleToggle) {
             return { file: jConf.main, name: 'Jingle (Hauptradio)' };
           } else {
             return { file: jConf.main_alt, name: 'Nur das Beste auf die Ohren' };
           }
         } else {
-          // Main offline → Offline-Jingle
+          // Kein online/force Claim → Offline-Jingle
           return { file: jConf.none, name: 'Jingle (Offline)' };
         }
       }
@@ -1311,7 +1311,7 @@
           // Nachtwache online → Nachtwache-Jingle
           return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
         } else {
-          // Nachtwache offline → Offline-Jingle
+          // Kein online/force Claim → Offline-Jingle
           return { file: jConf.none, name: 'Jingle (Offline)' };
         }
       }
@@ -1351,7 +1351,7 @@
       if (!regularFound && isJingleTime(timeKey) && !hasScheduledInsertAt(timeKey, todayKey)) {
         const jingleId = todayKey + '_jingle_' + timeKey;
         if (!state.playedInserts.has(jingleId)) {
-          const jingle = getJingleForStatus();
+          const jingle = getJingleForStatus(true);
           if (jingle && jingle.file) {
             state.playedInserts.add(jingleId);
             console.log('Jingle geplant:', jingle.name, 'um', timeKey);
@@ -1405,7 +1405,7 @@
 
       // 2. Jingles alle 15 Min hinzufügen (nur wo kein regulärer Einspieler liegt)
       if (state.audioSchedule.jingles) {
-        const jingle = getJingleForStatus();
+        const jingle = getJingleForStatus(false);
         if (jingle) {
           for (let m = nowMinutes + 1; m < 24 * 60; m++) {
             if (m % 15 !== 0) continue;
