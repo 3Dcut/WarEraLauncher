@@ -1224,9 +1224,8 @@
       const station = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
 
       if (!station || !currentStreamAudio || currentStreamAudio.paused) {
-        // Kein Stream aktiv → sofort abspielen
-        console.log('Kein aktiver Stream, Einspieler sofort:', insert.name);
-        playInsert(insert);
+        // Kein Stream aktiv → Einspieler überspringen
+        console.log('Kein aktiver Stream, Einspieler übersprungen:', insert.name);
         return;
       }
 
@@ -1287,37 +1286,30 @@
       const jConf = state.audioSchedule && state.audioSchedule.jingles;
       if (!jConf) return null;
 
-      // Force/Online-Priorität: force > online > keiner
-      if (stationStatus.mainForce || stationStatus.nachtForce) {
-        // Bei force: den Sender mit force bevorzugen
-        if (stationStatus.mainForce && !stationStatus.nachtForce) {
-          return { file: jConf.main, name: 'Jingle (Hauptradio)' };
-        } else if (stationStatus.nachtForce && !stationStatus.mainForce) {
-          return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
-        }
-        // Beide force → letzten Sender nehmen
-        const last = localStorage.getItem('wl-last-station');
-        if (last === 'warera-nachtwache') return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
-        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
-      }
+      // Jingle richtet sich nach dem aktuell laufenden Stream
+      const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
 
-      if (stationStatus.mainOnline && !stationStatus.nachtOnline) {
+      if (activeStation === 'war-era-de') {
         return { file: jConf.main, name: 'Jingle (Hauptradio)' };
-      } else if (stationStatus.nachtOnline && !stationStatus.mainOnline) {
+      } else if (activeStation === 'warera-nachtwache') {
         return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
-      } else if (stationStatus.mainOnline && stationStatus.nachtOnline) {
-        const last = localStorage.getItem('wl-last-station');
-        if (last === 'warera-nachtwache') return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
-        return { file: jConf.main, name: 'Jingle (Hauptradio)' };
       }
 
-      // Keiner online
-      return { file: jConf.none, name: 'Jingle (Standard)' };
+      // Kein Stream aktiv: Offline-Jingle nur spielen, wenn *gar kein* Sender online/force meldet
+      if (!stationStatus.mainForce && !stationStatus.nachtForce && 
+          !stationStatus.mainOnline && !stationStatus.nachtOnline) {
+        return { file: jConf.none, name: 'Jingle (Offline)' };
+      }
+
+      return null;
     }
 
     function checkInsertSchedule() {
       if (!state.audioSchedule) return;
       if (insertPlaying || pendingInsertTimeout) return; // Bereits aktiv oder wartend
+
+      // Einspieler nur wenn Radio tatsächlich läuft
+      if (!currentStreamAudio || currentStreamAudio.paused) return;
 
       const timeKey = getCurrentTimeKey();
       const todayKey = getTodayKey();
