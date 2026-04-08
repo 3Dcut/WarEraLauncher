@@ -1282,9 +1282,7 @@
       return false;
     }
 
-    let mainJingleToggle = false; // Wechsel zwischen main und main_alt
-
-    function getJingleForStatus(advance) {
+    function getJingleForStatus() {
       const jConf = state.audioSchedule && state.audioSchedule.jingles;
       if (!jConf) return null;
 
@@ -1293,12 +1291,14 @@
 
       if (activeStation === 'war-era-de') {
         if (stationStatus.mainOnline || stationStatus.mainForce) {
-          // Main online → abwechselnd main und "Nur das Beste auf die Ohren"
-          if (advance) mainJingleToggle = !mainJingleToggle;
-          if (mainJingleToggle) {
-            return { file: jConf.main, name: 'Jingle (Hauptradio)' };
-          } else {
+          // Main online → zeitbasiert abwechselnd
+          const mins = new Date().getMinutes();
+          if (mins === 0 || mins === 30) {
+            // Volle & halbe Stunde → Nur das Beste auf die Ohren
             return { file: jConf.main_alt, name: 'Nur das Beste auf die Ohren' };
+          } else {
+            // :15 und :45 → Main-Jingle
+            return { file: jConf.main, name: 'Jingle (Hauptradio)' };
           }
         } else {
           // Kein online/force Claim → Offline-Jingle
@@ -1308,10 +1308,8 @@
 
       if (activeStation === 'warera-nachtwache') {
         if (stationStatus.nachtOnline || stationStatus.nachtForce) {
-          // Nachtwache online → Nachtwache-Jingle
           return { file: jConf.nachtwache, name: 'Jingle (Nachtwache)' };
         } else {
-          // Kein online/force Claim → Offline-Jingle
           return { file: jConf.none, name: 'Jingle (Offline)' };
         }
       }
@@ -1351,7 +1349,7 @@
       if (!regularFound && isJingleTime(timeKey) && !hasScheduledInsertAt(timeKey, todayKey)) {
         const jingleId = todayKey + '_jingle_' + timeKey;
         if (!state.playedInserts.has(jingleId)) {
-          const jingle = getJingleForStatus(true);
+          const jingle = getJingleForStatus();
           if (jingle && jingle.file) {
             state.playedInserts.add(jingleId);
             console.log('Jingle geplant:', jingle.name, 'um', timeKey);
@@ -1405,7 +1403,7 @@
 
       // 2. Jingles alle 15 Min hinzufügen (nur wo kein regulärer Einspieler liegt)
       if (state.audioSchedule.jingles) {
-        const jingle = getJingleForStatus(false);
+        const jingle = getJingleForStatus();
         if (jingle) {
           for (let m = nowMinutes + 1; m < 24 * 60; m++) {
             if (m % 15 !== 0) continue;
