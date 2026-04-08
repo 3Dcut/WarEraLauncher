@@ -2,13 +2,13 @@
   "schedule": [
     {
       "station": "warera-nachtwache",
-      "start": "23:00",
+      "start": "21:00",
       "end": "06:00"
     },
     {
       "station": "war-era-de",
       "start": "06:00",
-      "end": "23:00"
+      "end": "21:00"
     }
   ]
 }
