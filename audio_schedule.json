@@ -56,6 +56,12 @@
       "name": "DE NL Friendship"
     },
     {
+      "date": "2026-04-08",
+      "time": "19:00",
+      "file": "audio/jingles/nur_das_beste_auf_die_ohren.mp3",
+      "name": "Nur das Beste auf die Ohren"
+    },
+    {
       "time": "19:30",
       "file": "audio/de_nl_friendship.mp3",
       "name": "DE NL Friendship"
