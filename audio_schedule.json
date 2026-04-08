@@ -41,6 +41,12 @@
       "time": "22:10",
       "file": "audio/hebel-italien.mp3",
       "name": "Hebel Italien"
+    },
+    {
+      "date": "2026-04-08",
+      "time": "22:20",
+      "file": "audio/de_nl_friendship.mp3",
+      "name": "DE NL Friendship"
     }
   ]
 }
