@@ -628,8 +628,8 @@
       <div class="toolbar-right">
         <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE (Sidebar)">&#x1F4FB; HAUPTRADIO (SB)</button>
         <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache (Sidebar)">&#x1F4FB; NACHTW. (SB)</button>
-        <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO <span class="status-dot" id="dot-war-era-de" title="Offline (AutoDJ)"></span></button>
-        <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO <span class="status-dot" id="dot-warera-nachtwache" title="Offline (AutoDJ)"></span></button>
+        <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO <span class="status-dot dot-war-era-de" id="dot-war-era-de" title="Offline (AutoDJ)"></span></button>
+        <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO <span class="status-dot dot-warera-nachtwache" id="dot-warera-nachtwache" title="Offline (AutoDJ)"></span></button>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <button class="btn-theme" id="auto-radio-toggle" title="Automatischer Sender-Wechsel (prüft minütlich den Claim)">&#x1F916; AUTO: OFF</button>
         <div style="position:relative;display:inline-block;">
@@ -961,27 +961,31 @@
         
         // Dots aktualisieren
         // Dot-Status: force > online > offline
-        dotMain.classList.remove('online', 'force');
-        if (isMainForce) {
-          dotMain.classList.add('force');
-          dotMain.title = "FORCE (Priorität)";
-        } else if (isMainOnline) {
-          dotMain.classList.add('online');
-          dotMain.title = "Live/Online";
-        } else {
-          dotMain.title = "Offline (AutoDJ)";
-        }
+        document.querySelectorAll('.dot-war-era-de').forEach(dot => {
+          dot.classList.remove('online', 'force');
+          if (isMainForce) {
+            dot.classList.add('force');
+            dot.title = "FORCE (Priorität)";
+          } else if (isMainOnline) {
+            dot.classList.add('online');
+            dot.title = "Live/Online";
+          } else {
+            dot.title = "Offline (AutoDJ)";
+          }
+        });
         
-        dotNacht.classList.remove('online', 'force');
-        if (isNachtForce) {
-          dotNacht.classList.add('force');
-          dotNacht.title = "FORCE (Priorität)";
-        } else if (isNachtOnline) {
-          dotNacht.classList.add('online');
-          dotNacht.title = "Live/Online";
-        } else {
-          dotNacht.title = "Offline (AutoDJ)";
-        }
+        document.querySelectorAll('.dot-warera-nachtwache').forEach(dot => {
+          dot.classList.remove('online', 'force');
+          if (isNachtForce) {
+            dot.classList.add('force');
+            dot.title = "FORCE (Priorität)";
+          } else if (isNachtOnline) {
+            dot.classList.add('online');
+            dot.title = "Live/Online";
+          } else {
+            dot.title = "Offline (AutoDJ)";
+          }
+        });
         
         // Auto-Wechsel Logik – force sticht online
         if (autoRadioActive) {
@@ -1109,32 +1113,32 @@
                 <h2 style="color: var(--accent); font-size: 34px; font-weight: 700; font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 16px var(--accent-glow);">Radio Menü</h2>
               </div>
               <p style="color: var(--text-dim); font-size: 16px; margin-bottom: 32px; text-align: center;">
-                Wähle deinen Sender. Sidebar-Modus (Volle Website) oder kompakter Hintergrund-Stream.
+                Starte den WarEra Stream im kompakten Hintergrund-Player.<br><span style="font-size: 13px; color: var(--text-muted);">Falls der Standard-Stream nicht funktioniert, kannst du die komplette Senderseite als Notlösung in der Sidebar öffnen.</span>
               </p>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px;">
                 <button class="btn-warera" style="flex-direction: column; gap: 8px; font-size: 15px; padding: 20px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(255,255,255,0.03);" 
                         onmouseover="this.style.background='var(--tab-active-bg)'; this.style.transform='translateY(-2px)';" 
                         onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(0)';"
-                        onclick="document.querySelector('.radio-btn[data-url*=\\'war-era-de\\']').click()">
+                        onclick="document.querySelector('.stream-btn[data-station=\\'war-era-de\\']').click()">
                   <span style="font-size: 24px;">&#x1F3B5;</span>
-                  <span>HAUPTRADIO <span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">Vollanzeige (Sidebar)</span></span>
+                  <span>HAUPTRADIO <span class="status-dot dot-war-era-de ${stationStatus.mainForce ? 'force' : (stationStatus.mainOnline ? 'online' : '')}"></span><span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">Direkter Hintergrund-Stream</span></span>
                 </button>
                 <button class="btn-warera" style="flex-direction: column; gap: 8px; font-size: 15px; padding: 20px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(255,255,255,0.03);" 
                         onmouseover="this.style.background='var(--tab-active-bg)'; this.style.transform='translateY(-2px)';" 
                         onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(0)';"
-                        onclick="document.querySelector('.radio-btn[data-url*=\\'nachtwache\\']').click()">
-                  <span style="font-size: 24px;">&#x1F319;</span>
-                  <span>NACHTWACHE <span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">Vollanzeige (Sidebar)</span></span>
-                </button>
-                <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
-                        onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
-                        onclick="document.querySelector('.stream-btn[data-station=\\'war-era-de\\']').click()">
-                  &#x25B6; STREAM: HAUPTRADIO
-                </button>
-                <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
-                        onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
                         onclick="document.querySelector('.stream-btn[data-station=\\'warera-nachtwache\\']').click()">
-                  &#x25B6; STREAM: NACHTWACHE
+                  <span style="font-size: 24px;">&#x1F319;</span>
+                  <span>NACHTWACHE <span class="status-dot dot-warera-nachtwache ${stationStatus.nachtForce ? 'force' : (stationStatus.nachtOnline ? 'online' : '')}"></span><span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">Direkter Hintergrund-Stream</span></span>
+                </button>
+                <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
+                        onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
+                        onclick="document.querySelector('.radio-btn[data-url*=\\'war-era-de\\']').click()">
+                  &#x1F4FB; NOTFALL: HAUPTRADIO (SB)
+                </button>
+                <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
+                        onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
+                        onclick="document.querySelector('.radio-btn[data-url*=\\'nachtwache\\']').click()">
+                  &#x1F4FB; NOTFALL: NACHTWACHE (SB)
                 </button>
               </div>
               <div style="padding-top: 24px; border-top: 1px solid var(--glass-border); display: flex; justify-content: center;">
