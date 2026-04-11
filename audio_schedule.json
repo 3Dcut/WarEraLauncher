@@ -182,6 +182,12 @@
     },
     {
       "date": "2026-04-11",
+      "time": "22:45",
+      "file": "audio/wie_geht_krieg_bdm.mp3",
+      "name": "Wie geht Krieg"
+    },
+    {
+      "date": "2026-04-11",
       "time": "23:00",
       "file": "audio/hebel-italien.mp3",
       "name": "Hebel Italien"
