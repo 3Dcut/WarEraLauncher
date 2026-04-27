@@ -6,203 +6,28 @@
     "nachtwache": "audio/jingles/jingle-nachtwache.mp3"
   },
   "inserts": [
-    {
-      "time": "17:45",
-      "file": "audio/fundament_der_ordnung.mp3",
-      "name": "Fundament der Ordnung"
-    },
-    {
-      "time": "23:20",
-      "file": "audio/wie_geht_krieg_bdm.mp3",
-      "name": "Wie geht Krieg"
-    },
-    {
-      "time": "09:00",
-      "file": "audio/de_nl_friendship.mp3",
-      "name": "DE NL Friendship"
-    },
-    {
-      "time": "16:00",
-      "file": "audio/de_nl_friendship.mp3",
-      "name": "DE NL Friendship"
-    },
-    {
-      "time": "18:00",
-      "file": "audio/de_nl_friendship.mp3",
-      "name": "DE NL Friendship"
-    },
-    {
-      "time": "19:30",
-      "file": "audio/de_nl_friendship.mp3",
-      "name": "DE NL Friendship"
-    },
-    {
-      "date": "2026-04-08",
-      "time": "22:40",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-08",
-      "time": "23:35",
-      "file": "audio/de_nl_friendship.mp3",
-      "name": "DE NL Friendship"
-    },
-    {
-      "date": "2026-04-08",
-      "time": "23:42",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "00:17",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "01:53",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "02:24",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "03:09",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "04:31",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "05:48",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "06:12",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "07:37",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "08:51",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "09:05",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "10:28",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "11:44",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "12:11",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "13:59",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "14:26",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "15:33",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "16:02",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "17:49",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-09",
-      "time": "18:21",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-11",
-      "time": "22:30",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-11",
-      "time": "22:45",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-11",
-      "time": "22:45",
-      "file": "audio/wie_geht_krieg_bdm.mp3",
-      "name": "Wie geht Krieg"
-    },
-    {
-      "date": "2026-04-11",
-      "time": "23:00",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-11",
-      "time": "23:20",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    },
-    {
-      "date": "2026-04-12",
-      "time": "00:30",
-      "file": "audio/hebel-italien.mp3",
-      "name": "Hebel Italien"
-    }
+    { "date": "2026-04-28", "time": "09:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-28", "time": "12:00", "file": "audio/tarucut1.mp3", "name": "Tarucut" },
+    { "date": "2026-04-28", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
+    { "date": "2026-04-28", "time": "18:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-28", "time": "21:00", "file": "audio/davis2.mp3", "name": "Davis 2" },
+
+    { "date": "2026-04-29", "time": "09:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-29", "time": "12:00", "file": "audio/tarucut1.mp3", "name": "Tarucut" },
+    { "date": "2026-04-29", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
+    { "date": "2026-04-29", "time": "18:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-29", "time": "21:00", "file": "audio/davis2.mp3", "name": "Davis 2" },
+
+    { "date": "2026-04-30", "time": "09:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-30", "time": "12:00", "file": "audio/tarucut1.mp3", "name": "Tarucut" },
+    { "date": "2026-04-30", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
+    { "date": "2026-04-30", "time": "18:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-04-30", "time": "21:00", "file": "audio/davis2.mp3", "name": "Davis 2" },
+
+    { "date": "2026-05-01", "time": "09:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-05-01", "time": "12:00", "file": "audio/tarucut1.mp3", "name": "Tarucut" },
+    { "date": "2026-05-01", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
+    { "date": "2026-05-01", "time": "18:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
+    { "date": "2026-05-01", "time": "21:00", "file": "audio/davis2.mp3", "name": "Davis 2" }
   ]
 }
