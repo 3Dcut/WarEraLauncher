@@ -6,6 +6,7 @@
     "nachtwache": "audio/jingles/jingle-nachtwache.mp3"
   },
   "inserts": [
+    { "date": "2026-04-28", "time": "01:45", "file": "audio/davis1.mp3", "name": "Davis 1" },
     { "date": "2026-04-28", "time": "09:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
     { "date": "2026-04-28", "time": "12:00", "file": "audio/tarucut1.mp3", "name": "Tarucut" },
     { "date": "2026-04-28", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
