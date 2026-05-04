@@ -18,37 +18,9 @@
             border: none;
             display: block;
         }
-        .warning {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 0, 0, 0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-family: sans-serif;
-            display: none;
-            z-index: 1000;
-        }
     </style>
 </head>
 <body>
-    <div id="mixed-content-warning" class="warning">
-        Das Einbetten könnte von deinem Browser blockiert werden (Mixed Content). Bitte erlaube unsichere Inhalte für diese Seite oder öffne <a href="http://wahl.warera.de/" style="color: white; text-decoration: underline;" target="_blank">http://wahl.warera.de/</a> direkt.
-    </div>
-    <iframe id="wahl-iframe" src="http://wahl.warera.de/" allowfullscreen></iframe>
-
-    <script>
-        // Check if the iframe failed to load due to mixed content
-        // This is a bit tricky, but we can assume if the protocol is HTTPS, it will likely be blocked.
-        if (window.location.protocol === 'https:') {
-            // Browsers will block http:// inside https://
-            // We show a warning after a short delay just in case.
-            setTimeout(() => {
-                document.getElementById('mixed-content-warning').style.display = 'block';
-            }, 2000);
-        }
-    </script>
+    <iframe id="wahl-iframe" src="https://wahl.warera.de/" allowfullscreen></iframe>
 </body>
 </html>
