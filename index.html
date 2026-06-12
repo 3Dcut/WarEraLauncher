@@ -953,8 +953,8 @@
         const nachtFmt = (dataNacht.format || '').toLowerCase();
         const isMainForce = mainFmt.includes('force');
         const isNachtForce = nachtFmt.includes('force');
-        const isMainOnline = isMainForce || mainFmt.includes('online');
-        const isNachtOnline = isNachtForce || nachtFmt.includes('online');
+        const isMainOnline = isMainForce || mainFmt.includes('aktiv');
+        const isNachtOnline = isNachtForce || nachtFmt.includes('aktiv');
         
         // Globalen Status aktualisieren (für Jingle-Logik)
         stationStatus = { mainOnline: isMainOnline, nachtOnline: isNachtOnline, mainForce: isMainForce, nachtForce: isNachtForce };
