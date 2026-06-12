@@ -1333,8 +1333,12 @@
     // Alle 60 Sekunden audio_schedule.json neu laden
     setInterval(reloadAudioSchedule, 60000);
 
-    function isJingleTime(timeKey) {
+    function isJingleTimeForCurrentStation(timeKey) {
       const mins = parseInt(timeKey.split(':')[1], 10);
+      const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
+      if (activeStation === 'warera-nachtwache') {
+        return mins % 30 === 0;
+      }
       return mins % 15 === 0;
     }
 
@@ -1410,8 +1414,8 @@
         }
       }
 
-      // 2. Jingle alle 15 Min, nur falls kein regulärer Einspieler zur gleichen Zeit
-      if (!regularFound && isJingleTime(timeKey) && !hasScheduledInsertAt(timeKey, todayKey)) {
+      // 2. Jingle-Intervall je nach Sender, nur falls kein regulärer Einspieler zur gleichen Zeit
+      if (!regularFound && isJingleTimeForCurrentStation(timeKey) && !hasScheduledInsertAt(timeKey, todayKey)) {
         const jingleId = todayKey + '_jingle_' + timeKey;
         if (!state.playedInserts.has(jingleId)) {
           const jingle = getJingleForStatus();
@@ -1466,12 +1470,14 @@
         }
       }
 
-      // 2. Jingles alle 15 Min hinzufügen (nur wo kein regulärer Einspieler liegt)
+      // 2. Jingles senderabhängig hinzufügen (nur wo kein regulärer Einspieler liegt)
       if (state.audioSchedule.jingles) {
         const jingle = getJingleForStatus();
+        const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
+        const jingleInterval = activeStation === 'warera-nachtwache' ? 30 : 15;
         if (jingle) {
           for (let m = nowMinutes + 1; m < 24 * 60; m++) {
-            if (m % 15 !== 0) continue;
+            if (m % jingleInterval !== 0) continue;
             const h = String(Math.floor(m / 60)).padStart(2, '0');
             const mi = String(m % 60).padStart(2, '0');
             const tKey = h + ':' + mi;
