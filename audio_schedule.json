@@ -30,6 +30,7 @@
     { "date": "2026-05-01", "time": "15:00", "file": "audio/lindner.mp3", "name": "Lindner" },
     { "date": "2026-05-01", "time": "18:00", "file": "audio/davis1.mp3", "name": "Davis 1" },
     { "date": "2026-05-01", "time": "21:00", "file": "audio/davis2.mp3", "name": "Davis 2" },
-    { "date": "2026-05-03", "time": "23:00", "file": "audio/primo-ein-maerchen.mp3", "name": "Primo Märchen" }
+    { "date": "2026-05-03", "time": "23:00", "file": "audio/primo-ein-maerchen.mp3", "name": "Primo Märchen" },
+    { "date": "2026-07-04", "time": "01:21", "file": "audio/Julibean.mp3", "name": "Julibean" }
   ]
 }
