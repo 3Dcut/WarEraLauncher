@@ -35,6 +35,7 @@
     { "date": "2026-07-04", "time": "01:57", "file": "audio/Hirsch.mp3", "name": "Hirsch" },
     { "date": "2026-07-12", "time": "00:05", "file": "audio/mission.mp3", "name": "Mission" },
     { "date": "2026-07-12", "time": "01:08", "file": "audio/Julibean.mp3", "name": "Julibean" },
-    { "time": "01:30", "file": "audio/mission.mp3", "name": "Mission Täglich" }
+    { "time": "01:30", "file": "audio/mission.mp3", "name": "Mission Täglich" },
+    { "date": "2026-07-15", "time": "21:30", "file": "audio/Julibean.mp3", "name": "Julibean" }
   ]
 }
