@@ -628,8 +628,10 @@
       <div class="toolbar-right">
         <button class="btn-theme radio-btn" data-url="https://laut.fm/war-era-de?autoplay=1" data-title="WarEra DE" title="Laut.fm WarEra DE (Sidebar)">&#x1F4FB; HAUPTRADIO (SB)</button>
         <button class="btn-theme radio-btn" data-url="https://laut.fm/warera-nachtwache?autoplay=1" data-title="Nachtwache" title="Laut.fm Nachtwache (Sidebar)">&#x1F4FB; NACHTW. (SB)</button>
+        <button class="btn-theme radio-btn" data-url="https://azuracast-production-9a4a.up.railway.app/public/warera_radio" data-title="WarEra Live" title="AzuraCast WarEra Radio (Sidebar)">&#x1F4FB; AZURA LIVE (SB)</button>
         <button class="btn-theme stream-btn" data-station="war-era-de" data-stream="https://stream.laut.fm/war-era-de" title="Direkt-Stream Hauptradio"><span class="stream-icon">&#x25B6;</span> HAUPTRADIO <span class="status-dot dot-war-era-de" id="dot-war-era-de" title="Offline (AutoDJ)"></span></button>
         <button class="btn-theme stream-btn" data-station="warera-nachtwache" data-stream="https://stream.laut.fm/warera-nachtwache" title="Direkt-Stream Nachtwachenradio"><span class="stream-icon">&#x25B6;</span> NACHTWACHENRADIO <span class="status-dot dot-warera-nachtwache" id="dot-warera-nachtwache" title="Offline (AutoDJ)"></span></button>
+        <button class="btn-theme stream-btn" data-station="warera-azura" data-stream="https://azuracast-production-9a4a.up.railway.app/listen/warera_radio/live" title="Direkt-Stream AzuraCast Live (/live Einhängepunkt)"><span class="stream-icon">&#x25B6;</span> AZURA LIVE <span class="status-dot dot-warera-azura" id="dot-warera-azura" title="Offline"></span></button>
         <div class="toolbar-sep" style="height: 18px; margin: 0 4px;"></div>
         <button class="btn-theme" id="auto-radio-toggle" title="Automatischer Sender-Wechsel (prüft minütlich den Claim)">&#x1F916; AUTO: OFF</button>
         <div style="position:relative;display:inline-block;">
@@ -749,7 +751,7 @@
         const url = btn.getAttribute('data-url');
         const title = btn.getAttribute('data-title');
         
-        radioSidebarTitle.innerHTML = '&#x1F3B5; Laut.fm ' + title;
+        radioSidebarTitle.innerHTML = '&#x1F3B5; ' + (url.includes('laut.fm') ? 'Laut.fm ' : '') + title;
         if (radioIframe.src !== url) {
           radioIframe.src = url;
         }
@@ -767,7 +769,7 @@
     let streamInfoInterval = null;
     let autoSwitching = false; // Flag um programmatische Klicks von manuellen zu unterscheiden
     // Globaler Online-Status für Jingle-Logik
-    let stationStatus = { mainOnline: false, nachtOnline: false, mainForce: false, nachtForce: false };
+    let stationStatus = { mainOnline: false, nachtOnline: false, mainForce: false, nachtForce: false, azuraOnline: false, azuraLive: false };
 
     const streamInfoBox = $('stream-info');
     const siSong = $('si-song');
@@ -786,6 +788,39 @@
     async function fetchStreamInfo(station) {
       if (!currentStreamAudio || currentStreamAudio.paused) return;
       try {
+        if (station === 'warera-azura') {
+          const timestamp = Date.now();
+          const res = await fetch(`https://azuracast-production-9a4a.up.railway.app/api/nowplaying/warera_radio?t=${timestamp}`).catch(() => null);
+          let song = 'AzuraCast Live Stream';
+          let list = '0';
+          if (res && res.ok) {
+            const data = await res.json();
+            if (data.now_playing && data.now_playing.song) {
+              const s = data.now_playing.song;
+              if (s.artist || s.title) {
+                song = s.artist ? `${s.artist} - ${s.title}` : s.title;
+              }
+            }
+            if (data.listeners) {
+              list = (data.listeners.current || data.listeners.total || 0).toString();
+            }
+          } else {
+            const resIce = await fetch(`https://azuracast-production-9a4a.up.railway.app/radio/8000/status-json.xsl?t=${timestamp}`).catch(() => null);
+            if (resIce && resIce.ok) {
+              const dataIce = await resIce.json();
+              if (dataIce && dataIce.icestats && dataIce.icestats.source) {
+                const sources = Array.isArray(dataIce.icestats.source) ? dataIce.icestats.source : [dataIce.icestats.source];
+                for (let src of sources) {
+                  if (src.title && src.title !== 'AzuraCast is Live!') song = src.title;
+                  if (src.listeners) list = src.listeners.toString();
+                }
+              }
+            }
+          }
+          siSong.innerHTML = `&#x1F3B5; ${song}`;
+          siListeners.innerHTML = `&#x1F3A7; ${list} Sparschäler`;
+          return;
+        }
         const [songRes, listRes] = await Promise.all([
           fetch(`https://api.laut.fm/station/${station}/current_song`),
           fetch(`https://api.laut.fm/station/${station}/listeners`)
@@ -939,25 +974,63 @@
     async function pollStationData() {
       try {
         const timestamp = Date.now();
-        const [resMain, resNacht] = await Promise.all([
-          fetch(`https://api.laut.fm/station/war-era-de?t=${timestamp}`),
-          fetch(`https://api.laut.fm/station/warera-nachtwache?t=${timestamp}`)
+        const [resMain, resNacht, resAzura, resIce] = await Promise.all([
+          fetch(`https://api.laut.fm/station/war-era-de?t=${timestamp}`).catch(() => null),
+          fetch(`https://api.laut.fm/station/warera-nachtwache?t=${timestamp}`).catch(() => null),
+          fetch(`https://azuracast-production-9a4a.up.railway.app/api/nowplaying/warera_radio?t=${timestamp}`).catch(() => null),
+          fetch(`https://azuracast-production-9a4a.up.railway.app/radio/8000/status-json.xsl?t=${timestamp}`).catch(() => null)
         ]);
         
-        if (!resMain.ok || !resNacht.ok) return;
-        
-        const dataMain = await resMain.json();
-        const dataNacht = await resNacht.json();
-        
-        const mainFmt = (dataMain.format || '').toLowerCase();
-        const nachtFmt = (dataNacht.format || '').toLowerCase();
+        let dataMain = resMain && resMain.ok ? await resMain.json().catch(() => null) : null;
+        let dataNacht = resNacht && resNacht.ok ? await resNacht.json().catch(() => null) : null;
+        let dataAzura = resAzura && resAzura.ok ? await resAzura.json().catch(() => null) : null;
+        let dataIce = resIce && resIce.ok ? await resIce.json().catch(() => null) : null;
+
+        const mainFmt = dataMain ? (dataMain.format || '').toLowerCase() : '';
+        const nachtFmt = dataNacht ? (dataNacht.format || '').toLowerCase() : '';
         const isMainForce = mainFmt.includes('force');
         const isNachtForce = nachtFmt.includes('force');
         const isMainOnline = isMainForce || mainFmt.includes('aktiv');
         const isNachtOnline = isNachtForce || nachtFmt.includes('aktiv');
+
+        let isAzuraOnline = false;
+        let isAzuraLive = false;
+        let isLiveMountConnected = false;
+
+        if (dataAzura) {
+          if (dataAzura.is_online || (dataAzura.live && dataAzura.live.is_live)) {
+            isAzuraOnline = true;
+          }
+          if (dataAzura.live && dataAzura.live.is_live) {
+            isAzuraLive = true;
+            isLiveMountConnected = true;
+          }
+          if (dataAzura.station && dataAzura.station.mounts) {
+            const liveMount = dataAzura.station.mounts.find(m => m.name === '/live' || m.path === '/live');
+            if (liveMount && (liveMount.bitrate !== null || liveMount.format !== null || (liveMount.listeners && liveMount.listeners.current > 0))) {
+              isLiveMountConnected = true;
+              isAzuraOnline = true;
+            }
+          }
+        }
+
+        if (dataIce && dataIce.icestats && dataIce.icestats.source) {
+          const sources = Array.isArray(dataIce.icestats.source) ? dataIce.icestats.source : [dataIce.icestats.source];
+          for (let src of sources) {
+            const url = src.listenurl || '';
+            const path = src.server_name || '';
+            if (url.includes('/live') || path.includes('live') || url.includes('warera_radio')) {
+              isAzuraOnline = true;
+              if (url.includes('/live') || path.includes('live')) {
+                isLiveMountConnected = true;
+                isAzuraLive = true;
+              }
+            }
+          }
+        }
         
         // Globalen Status aktualisieren (für Jingle-Logik)
-        stationStatus = { mainOnline: isMainOnline, nachtOnline: isNachtOnline, mainForce: isMainForce, nachtForce: isNachtForce };
+        stationStatus = { mainOnline: isMainOnline, nachtOnline: isNachtOnline, mainForce: isMainForce, nachtForce: isNachtForce, azuraOnline: isAzuraOnline, azuraLive: isAzuraLive || isLiveMountConnected };
         
         // Dots aktualisieren
         // Dot-Status: force > online > offline
@@ -986,28 +1059,47 @@
             dot.title = "Offline (AutoDJ)";
           }
         });
+
+        document.querySelectorAll('.dot-warera-azura').forEach(dot => {
+          dot.classList.remove('online', 'force');
+          if (isAzuraLive || isLiveMountConnected) {
+            dot.classList.add('online');
+            dot.title = "Live/Connected (/live Einhängepunkt verbunden)";
+          } else if (isAzuraOnline) {
+            dot.classList.add('online');
+            dot.title = "Online (AutoDJ)";
+          } else {
+            dot.title = "Offline";
+          }
+        });
         
-        // Auto-Wechsel Logik – force sticht online
+        // Auto-Wechsel Logik – force/live sticht online
         if (autoRadioActive) {
           let targetStation = null;
           
-          // 1. Force hat höchste Priorität
-          if (isMainForce && isNachtForce) {
-             // Beide force: letzten Sender als Fallback
-             targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
-          } else if (isMainForce) {
-             targetStation = 'war-era-de';
-          } else if (isNachtForce) {
-             targetStation = 'warera-nachtwache';
+          // 1. Force/Live hat höchste Priorität
+          if (isMainForce || isNachtForce || (isAzuraLive || isLiveMountConnected)) {
+             if (isAzuraLive || isLiveMountConnected) {
+               targetStation = 'warera-azura';
+             } else if (isMainForce && isNachtForce) {
+               targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
+             } else if (isMainForce) {
+               targetStation = 'war-era-de';
+             } else if (isNachtForce) {
+               targetStation = 'warera-nachtwache';
+             }
           }
           // 2. Dann online
-          else if (isNachtOnline && isMainOnline) {
-             // Wenn beide online: letzten Sender als Fallback nehmen
-             targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
-          } else if (isNachtOnline) {
-             targetStation = 'warera-nachtwache';
-          } else if (isMainOnline) {
-             targetStation = 'war-era-de';
+          else if (isAzuraOnline || isNachtOnline || isMainOnline) {
+             if (isAzuraOnline) {
+               targetStation = 'warera-azura';
+             } else if (isNachtOnline && isMainOnline) {
+               targetStation = localStorage.getItem('wl-last-station') || 'war-era-de';
+             } else if (isNachtOnline) {
+               targetStation = 'warera-nachtwache';
+             } else if (isMainOnline) {
+               targetStation = 'war-era-de';
+             }
           } else {
              // 3. Wenn keiner online/force: Zeitplan als Fallback
              targetStation = getScheduledStation();
@@ -1115,7 +1207,7 @@
               <p style="color: var(--text-dim); font-size: 16px; margin-bottom: 32px; text-align: center;">
                 Starte den WarEra Stream im kompakten Hintergrund-Player.<br><span style="font-size: 13px; color: var(--text-muted);">Falls der Standard-Stream nicht funktioniert, kannst du die komplette Senderseite als Notlösung in der Sidebar öffnen.</span>
               </p>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px;">
                 <button class="btn-warera" style="flex-direction: column; gap: 8px; font-size: 15px; padding: 20px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(255,255,255,0.03);" 
                         onmouseover="this.style.background='var(--tab-active-bg)'; this.style.transform='translateY(-2px)';" 
                         onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(0)';"
@@ -1130,6 +1222,13 @@
                   <span style="font-size: 24px;">&#x1F319;</span>
                   <span>NACHTWACHE <span class="status-dot dot-warera-nachtwache ${stationStatus.nachtForce ? 'force' : (stationStatus.nachtOnline ? 'online' : '')}"></span><span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">Direkter Hintergrund-Stream</span></span>
                 </button>
+                <button class="btn-warera" style="flex-direction: column; gap: 8px; font-size: 15px; padding: 20px; border-radius: 16px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); background: rgba(255,255,255,0.03);" 
+                        onmouseover="this.style.background='var(--tab-active-bg)'; this.style.transform='translateY(-2px)';" 
+                        onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateY(0)';"
+                        onclick="document.querySelector('.stream-btn[data-station=\\'warera-azura\\']').click()">
+                  <span style="font-size: 24px;">&#x1F4FB;</span>
+                  <span>AZURA LIVE <span class="status-dot dot-warera-azura ${stationStatus.azuraLive ? 'online' : (stationStatus.azuraOnline ? 'online' : '')}"></span><span style="font-size: 11px; opacity: 0.7; display: block; margin-top: 2px;">/live Einhängepunkt</span></span>
+                </button>
                 <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
                         onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
                         onclick="document.querySelector('.radio-btn[data-url*=\\'war-era-de\\']').click()">
@@ -1139,6 +1238,11 @@
                         onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
                         onclick="document.querySelector('.radio-btn[data-url*=\\'nachtwache\\']').click()">
                   &#x1F4FB; NOTFALL: NACHTWACHE (SB)
+                </button>
+                <button class="btn-theme" style="justify-content: center; font-size: 13px; padding: 14px; border-radius: 12px; font-weight: 600; letter-spacing: 1px;" 
+                        onmouseover="this.style.color='var(--accent)';" onmouseout="this.style.color='';"
+                        onclick="document.querySelector('.radio-btn[data-url*=\\'azuracast\\']').click()">
+                  &#x1F4FB; NOTFALL: AZURA LIVE (SB)
                 </button>
               </div>
               <div style="padding-top: 24px; border-top: 1px solid var(--glass-border); display: flex; justify-content: center;">
@@ -1336,6 +1440,7 @@
     function isJingleTimeForCurrentStation(timeKey) {
       const mins = parseInt(timeKey.split(':')[1], 10);
       const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
+      if (activeStation === 'warera-azura') return false;
       if (activeStation === 'warera-nachtwache') {
         return mins % 30 === 0;
       }
@@ -1357,6 +1462,11 @@
 
       // Jingle richtet sich nach dem aktuell laufenden Stream + Online-Status
       const activeStation = currentStreamBtn ? currentStreamBtn.getAttribute('data-station') : null;
+
+      if (activeStation === 'warera-azura') {
+        // Keine Jingles bei AzuraCast (werden live direkt über den Stream gesendet)
+        return null;
+      }
 
       if (activeStation === 'war-era-de') {
         if (stationStatus.mainOnline || stationStatus.mainForce) {
