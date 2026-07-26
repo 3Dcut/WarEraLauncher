@@ -885,6 +885,8 @@
         // If clicking the same active button
         if (currentStreamAudio && currentStreamBtn === btn) {
           if (!currentStreamAudio.paused) {
+            isReconnecting = false;
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
             currentStreamAudio.pause();
             iconSpan.innerHTML = '&#x25B6;'; // Play
             btn.classList.remove('active');
@@ -902,6 +904,8 @@
 
         // Stop existing
         if (currentStreamAudio) {
+          isReconnecting = false;
+          if (reconnectTimeout) clearTimeout(reconnectTimeout);
           currentStreamAudio.pause();
           currentStreamAudio.src = '';
           currentStreamAudio = null;
@@ -913,9 +917,12 @@
         }
 
         // Play new
+        isReconnecting = false;
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
         currentStreamAudio = new Audio(streamUrl + "?t=" + Date.now());
         currentStreamAudio.volume = streamVolume.value;
-        currentStreamAudio.play();
+        attachStreamWatchdog(currentStreamAudio);
+        currentStreamAudio.play().catch(e => console.warn("Initial play info:", e));
         currentStreamBtn = btn;
         iconSpan.innerHTML = '&#x23F8;'; // Pause
         btn.classList.add('active');
@@ -925,6 +932,98 @@
         localStorage.setItem('wl-last-station', station);
       });
     });
+
+    // ========== STREAM WATCHDOG & AUTO-RECONNECT ==========
+    let reconnectTimeout = null;
+    let isReconnecting = false;
+
+    function triggerStreamReconnect(reason) {
+      if (!currentStreamBtn || !currentStreamBtn.classList.contains('active')) return;
+      if (typeof insertPlaying !== 'undefined' && insertPlaying) return;
+      if (isReconnecting) return;
+      
+      console.warn(`[Watchdog] Stream-Unterbrechung erkannt (${reason}). Starte Auto-Reconnect in 2s...`);
+      isReconnecting = true;
+
+      if (siSong) {
+        siSong.innerHTML = `&#x26A0;&#xFE0F; Verbindung unterbrochen... Verbinde neu...`;
+      }
+
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(() => {
+        if (!currentStreamBtn || !currentStreamBtn.classList.contains('active')) {
+          isReconnecting = false;
+          return;
+        }
+        console.log("[Watchdog] Verbinde neu mit Stream...");
+        const streamUrl = currentStreamBtn.getAttribute('data-stream');
+        const station = currentStreamBtn.getAttribute('data-station');
+
+        if (currentStreamAudio) {
+          try {
+            currentStreamAudio.pause();
+            currentStreamAudio.src = '';
+          } catch(e){}
+        }
+
+        currentStreamAudio = new Audio(streamUrl + "?t=" + Date.now());
+        currentStreamAudio.volume = streamVolume.value;
+        attachStreamWatchdog(currentStreamAudio);
+        
+        currentStreamAudio.play().then(() => {
+          console.log("[Watchdog] Auto-Reconnect erfolgreich!");
+          isReconnecting = false;
+          if (currentStreamBtn) {
+            currentStreamBtn.querySelector('.stream-icon').innerHTML = '&#x23F8;';
+          }
+          fetchStreamInfo(station);
+        }).catch(err => {
+          if (err && err.name === 'NotAllowedError') {
+            console.warn("[Watchdog] Auto-Reconnect durch Autoplay blockiert.");
+            isReconnecting = false;
+            return;
+          }
+          console.error("[Watchdog] Auto-Reconnect fehlgeschlagen, nächster Versuch in 4s...", err);
+          isReconnecting = false;
+          setTimeout(() => triggerStreamReconnect("Erneuter Versuch"), 4000);
+        });
+      }, 2000);
+    }
+
+    function attachStreamWatchdog(audioEl) {
+      if (!audioEl) return;
+      audioEl.addEventListener('error', () => triggerStreamReconnect('Netzwerk-/Stream-Fehler (error event)'));
+      audioEl.addEventListener('ended', () => triggerStreamReconnect('Stream beendet (ended event)'));
+      audioEl.addEventListener('stalled', () => {
+        setTimeout(() => {
+          if (currentStreamAudio === audioEl && currentStreamBtn && currentStreamBtn.classList.contains('active') && (!typeof insertPlaying !== 'undefined' || !insertPlaying)) {
+            if (audioEl.readyState < 3 || audioEl.paused) {
+              triggerStreamReconnect('Stream hängen geblieben (stalled)');
+            }
+          }
+        }, 5000);
+      });
+    }
+
+    // Periodischer Check alle 10 Sekunden für stillschweigende Abbrüche / Freezes
+    setInterval(() => {
+      if (currentStreamBtn && currentStreamBtn.classList.contains('active') && currentStreamAudio && (!typeof insertPlaying !== 'undefined' || !insertPlaying) && !isReconnecting) {
+        if (currentStreamAudio.error || (currentStreamAudio.paused && !currentStreamAudio.ended) || currentStreamAudio.readyState === 0) {
+          console.warn("[Watchdog] Stiller Abbruch erkannt - paused:", currentStreamAudio.paused, "error:", currentStreamAudio.error, "readyState:", currentStreamAudio.readyState);
+          if (currentStreamAudio.paused) {
+            currentStreamAudio.play().catch(err => {
+              if (err && err.name === 'NotAllowedError') {
+                console.warn("[Watchdog] Play im Watchdog durch Autoplay blockiert.");
+              } else {
+                triggerStreamReconnect('Watchdog: Play fehlerhaft nach Freeze');
+              }
+            });
+          } else {
+            triggerStreamReconnect('Watchdog: Fehlerstatus / Kein readyState');
+          }
+        }
+      }
+    }, 10000);
 
     // ========== AUTO RADIO & STATUS LOGIC ==========
     const autoRadioToggle = $('auto-radio-toggle');
