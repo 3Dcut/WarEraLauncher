@@ -767,7 +767,7 @@
     const currentStreamAudio = document.createElement('audio');
     currentStreamAudio.id = 'persistent-radio-stream';
     currentStreamAudio.preload = 'none';
-    currentStreamAudio.crossOrigin = 'anonymous';
+    // Kein crossOrigin setzen: der 302-Redirect von stream.laut.fm hat keinen CORS-Header → Stream würde blockiert
     document.body.appendChild(currentStreamAudio);
     let currentStreamBtn = null;
     let streamInfoInterval = null;
