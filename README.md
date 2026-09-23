@@ -67,6 +67,13 @@ und `tabs` (gestapelt). IDs sind Tool-IDs oder Widgets (`widget:timers`, `widget
 
 **audio_schedule.json / radio_schedule.json**: unverändertes Format wie bisher. Uhrzeiten gelten in deutscher Zeit (Europe/Berlin).
 
+## Suchmaschinen & Linkvorschau
+
+`index.html` enthält Titel, Beschreibung, Canonical, Open-Graph/Twitter-Tags (Vorschaubild `public/og-image.jpg`, 1200×630)
+und strukturierte Daten (JSON-LD). Beim Build schreibt ein Vite-Plugin die Tools aus `tools.json` als Links in den
+`<noscript>`-Block; `scripts/copy-static.mjs` erzeugt `sitemap.xml`. `robots.txt` liegt in `public/`.
+Die alte Oberfläche (`legacy.html`) ist auf `noindex` gesetzt und verweist per Canonical auf die Startseite.
+
 ## Deploy
 
 Push auf `main` startet `.github/workflows/deploy.yml`: Typprüfung, Tests, Build, Tool-Check (schreibt `tools-status.json`),

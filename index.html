@@ -3,12 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>WarEra Launcher</title>
-    <meta name="description" content="Dein Leitstand für WarEra: Community-Tools, Live-Daten und WarEra Radio in einem frei anpassbaren Arbeitsbereich." />
+    <title>WarEra Launcher – Tools, Live-Daten und Radio für WarEra</title>
+    <meta name="description" content="Leitstand für WarEra: Community-Tools in frei anordenbaren Fenstern, Live-Timer, Marktpreise, laufende Schlachten und WarEra Radio – kostenlos im Browser." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="canonical" href="https://warera.de/" />
     <meta name="theme-color" content="#0b1020" />
+    <meta name="application-name" content="WarEra Launcher" />
+
+    <!-- Linkvorschau (Discord, Messenger, soziale Netzwerke) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WarEra Launcher" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:url" content="https://warera.de/" />
+    <meta property="og:title" content="WarEra Launcher – Dein Leitstand für WarEra" />
+    <meta property="og:description" content="Community-Tools in freien Fenstern, Live-Timer, Markt und Front, WarEra Radio mit Automatik. Kostenlos im Browser, ohne Anmeldung." />
+    <meta property="og:image" content="https://warera.de/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="WarEra Launcher: Arbeitsbereich mit Zeiten, Charakter, Front und Radio" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="WarEra Launcher – Dein Leitstand für WarEra" />
+    <meta name="twitter:description" content="Community-Tools in freien Fenstern, Live-Timer, Markt und Front, WarEra Radio mit Automatik. Kostenlos im Browser, ohne Anmeldung." />
+    <meta name="twitter:image" content="https://warera.de/og-image.jpg" />
+
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="./icon-192.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="preconnect" href="https://api2.warera.io" crossorigin />
+    <link rel="dns-prefetch" href="https://api.laut.fm" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://warera.de/#website",
+            "url": "https://warera.de/",
+            "name": "WarEra Launcher",
+            "inLanguage": "de-DE",
+            "description": "Leitstand für WarEra: Community-Tools in frei anordenbaren Fenstern, Live-Timer, Marktpreise, laufende Schlachten und WarEra Radio – kostenlos im Browser."
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://warera.de/#app",
+            "name": "WarEra Launcher",
+            "url": "https://warera.de/",
+            "image": "https://warera.de/og-image.jpg",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Benötigt JavaScript",
+            "inLanguage": "de-DE",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+            "about": { "@type": "VideoGame", "name": "WarEra", "url": "https://app.warera.io" },
+            "featureList": [
+              "Community-Tools für WarEra in frei anordenbaren Fenstern",
+              "Live-Timer für Regeneration, Tageswechsel, Missionen und Wahlen",
+              "Marktpreise mit Verlauf und Wert pro Produktionspunkt",
+              "Laufende Schlachten mit Rundenstand",
+              "WarEra Radio mit automatischer Senderwahl"
+            ],
+            "isPartOf": { "@id": "https://warera.de/#website" }
+          }
+        ]
+      }
+    </script>
     <script>
       // Theme vor dem ersten Zeichnen setzen, damit nichts aufblitzt
       try {
@@ -22,12 +84,22 @@
     <div id="app">
       <div class="boot" role="status">
         <div class="boot__mark" aria-hidden="true"></div>
-        <p>WarEra Launcher wird geladen …</p>
+        <h1 class="boot__title">WarEra Launcher</h1>
+        <p>Community-Tools, Live-Daten und Radio werden geladen …</p>
         <a id="boot-fallback" href="./legacy.html" hidden>Lädt nicht? Zur alten Oberfläche</a>
       </div>
     </div>
     <noscript>
-      <p style="padding: 24px; font-family: sans-serif">Der WarEra Launcher braucht JavaScript. <a href="./legacy.html">Zur alten Oberfläche</a></p>
+      <main style="padding: 24px; font-family: sans-serif; max-width: 70ch">
+        <h1>WarEra Launcher</h1>
+        <p>
+          Der WarEra Launcher bündelt die Werkzeuge der WarEra-Community in einem frei anpassbaren Arbeitsbereich: Rechner, Karten und
+          Statistiken nebeneinander, dazu Live-Timer, Marktpreise, laufende Schlachten und WarEra Radio. Die Oberfläche braucht JavaScript.
+          <a href="./legacy.html">Zur einfachen Oberfläche</a>
+        </p>
+        <h2>Enthaltene Tools</h2>
+        <!--seo-tools-->
+      </main>
     </noscript>
     <script>
       // Sicherheitsnetz: startet die App nicht, führt ein Link zur alten Oberfläche

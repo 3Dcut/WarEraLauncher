@@ -3,6 +3,7 @@
   "short_name": "WarEra",
   "description": "Leitstand für WarEra: Community-Tools, Live-Daten und WarEra Radio in einem anpassbaren Arbeitsbereich.",
   "lang": "de",
+  "categories": ["games", "utilities"],
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

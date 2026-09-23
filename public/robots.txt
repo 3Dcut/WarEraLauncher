@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /*.aup3$
+
+Sitemap: https://warera.de/sitemap.xml

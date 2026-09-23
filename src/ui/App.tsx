@@ -26,6 +26,7 @@ export function App({ legacyTree }: { legacyTree: LayoutNode | null }) {
   const collapsed = settings.value.sidebarCollapsed && !isMobile.value;
   return (
     <div class={`app ${collapsed ? 'app--rail' : ''} ${isMobile.value ? 'app--mobile' : ''}`}>
+      <h1 class="sr-only">WarEra Launcher – Community-Tools, Live-Daten und Radio für WarEra</h1>
       <TopBar />
       <div class="app__body">
         <Sidebar />

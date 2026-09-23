@@ -540,6 +540,24 @@ input[type='range'] {
   text-transform: uppercase;
 }
 
+.boot__title {
+  font-size: 1.4em;
+  letter-spacing: 0.16em;
+  color: var(--text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .boot a {
   color: var(--accent);
   font-size: 0.9em;
