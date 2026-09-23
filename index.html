@@ -23,11 +23,20 @@
       <div class="boot" role="status">
         <div class="boot__mark" aria-hidden="true"></div>
         <p>WarEra Launcher wird geladen …</p>
+        <a id="boot-fallback" href="./legacy.html" hidden>Lädt nicht? Zur alten Oberfläche</a>
       </div>
     </div>
     <noscript>
       <p style="padding: 24px; font-family: sans-serif">Der WarEra Launcher braucht JavaScript. <a href="./legacy.html">Zur alten Oberfläche</a></p>
     </noscript>
-    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Sicherheitsnetz: startet die App nicht, führt ein Link zur alten Oberfläche
+      setTimeout(function () {
+        var el = document.getElementById('boot-fallback');
+        if (el) el.hidden = false;
+      }, 12000);
+    </script>
+    <!-- Wird statt des Builds der Quellcode ausgeliefert, lässt sich main.tsx nicht laden: dann alte Oberfläche -->
+    <script type="module" src="/src/main.tsx" onerror="location.replace('./legacy.html')"></script>
   </body>
 </html>

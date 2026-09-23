@@ -540,6 +540,13 @@ input[type='range'] {
   text-transform: uppercase;
 }
 
+.boot a {
+  color: var(--accent);
+  font-size: 0.9em;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
 .boot__mark {
   width: 40px;
   height: 40px;
