@@ -821,8 +821,8 @@
               }
             }
           }
-          siSong.innerHTML = `&#x1F3B5; ${song}`;
-          siListeners.innerHTML = `&#x1F3A7; ${list} Sparschäler`;
+          siSong.textContent = `\u{1F3B5} ${song}`;
+          siListeners.textContent = `\u{1F3A7} ${list} Sparschäler`;
           return;
         }
         const [songRes, listRes] = await Promise.all([
@@ -832,8 +832,8 @@
         if (songRes.ok && listRes.ok) {
           const songData = await songRes.json();
           const listText = await listRes.text();
-          siSong.innerHTML = `&#x1F3B5; ${songData.artist.name} - ${songData.title}`;
-          siListeners.innerHTML = `&#x1F3A7; ${listText.trim()} Sparschäler`;
+          siSong.textContent = `\u{1F3B5} ${songData.artist && songData.artist.name ? songData.artist.name + ' - ' : ''}${songData.title || ''}`;
+          siListeners.textContent = `\u{1F3A7} ${listText.trim()} Sparschäler`;
         }
       } catch (e) {
         console.error("Fehler beim Laden der API-Daten", e);
@@ -947,7 +947,7 @@
 
     currentStreamAudio.addEventListener('stalled', () => {
       setTimeout(() => {
-        if (currentStreamBtn && currentStreamBtn.classList.contains('active') && (!typeof insertPlaying !== 'undefined' || !insertPlaying)) {
+        if (currentStreamBtn && currentStreamBtn.classList.contains('active') && !insertPlaying) {
           if (currentStreamAudio.readyState < 3 || currentStreamAudio.paused) {
             reconnectPersistentStream('Buffer Stalled');
           }
@@ -1003,7 +1003,7 @@
     let freezeCounter = 0;
 
     setInterval(() => {
-      if (currentStreamBtn && currentStreamBtn.classList.contains('active') && currentStreamAudio && (!typeof insertPlaying !== 'undefined' || !insertPlaying) && !isReconnecting) {
+      if (currentStreamBtn && currentStreamBtn.classList.contains('active') && currentStreamAudio && !insertPlaying && !isReconnecting) {
         // 1. Prüfen auf unbemerktes Pausieren oder Netzwerk-Fehler
         if (currentStreamAudio.error || currentStreamAudio.networkState === 3 || (currentStreamAudio.paused && !currentStreamAudio.ended)) {
           console.warn("[Watchdog] Stiller Abbruch / Pause erkannt. Versuche Fortsetzung...");
@@ -1100,8 +1100,10 @@
         const nachtFmt = dataNacht ? (dataNacht.format || '').toLowerCase() : '';
         const isMainForce = mainFmt.includes('force');
         const isNachtForce = nachtFmt.includes('force');
-        const isMainOnline = isMainForce || mainFmt.includes('aktiv');
-        const isNachtOnline = isNachtForce || nachtFmt.includes('aktiv');
+        // "aktiv" nur als eigenes Wort werten – "inaktiv" enthält "aktiv" als Teilstring
+        const aktivWord = /(^|[^a-zäöüß])aktiv/;
+        const isMainOnline = isMainForce || aktivWord.test(mainFmt);
+        const isNachtOnline = isNachtForce || aktivWord.test(nachtFmt);
 
         let isAzuraOnline = false;
         let isAzuraLive = false;
@@ -1115,7 +1117,7 @@
             isAzuraLive = true;
             isLiveMountConnected = true;
           }
-          if (dataAzura.station && dataAzura.station.mounts) {
+          if (dataAzura.is_online && dataAzura.station && dataAzura.station.mounts) {
             const liveMount = dataAzura.station.mounts.find(m => m.name === '/live' || m.path === '/live');
             if (liveMount && (liveMount.bitrate !== null || liveMount.format !== null || (liveMount.listeners && liveMount.listeners.current > 0))) {
               isLiveMountConnected = true;
@@ -1124,17 +1126,18 @@
           }
         }
 
-        if (dataIce && dataIce.icestats && dataIce.icestats.source) {
+        // Icecast nur als Rückfall, wenn die AzuraCast-API nicht antwortet.
+        // Der /live-Mount steht dort auch unverbunden als Platzhalter ("dummy") in der Liste;
+        // verbunden ist er erst, wenn Icecast stream_start/connected liefert.
+        if (!dataAzura && dataIce && dataIce.icestats && dataIce.icestats.source) {
           const sources = Array.isArray(dataIce.icestats.source) ? dataIce.icestats.source : [dataIce.icestats.source];
           for (let src of sources) {
             const url = src.listenurl || '';
-            const path = src.server_name || '';
-            if (url.includes('/live') || path.includes('live') || url.includes('warera_radio')) {
+            const connected = !!(src.stream_start || src.connected);
+            if (connected && /\/live$/.test(url)) {
               isAzuraOnline = true;
-              if (url.includes('/live') || path.includes('live')) {
-                isLiveMountConnected = true;
-                isAzuraLive = true;
-              }
+              isLiveMountConnected = true;
+              isAzuraLive = true;
             }
           }
         }
@@ -1439,7 +1442,7 @@
 
       // Show insert info
       streamInfoBox.classList.remove('hidden');
-      siSong.innerHTML = '&#x1F399; Einspieler: ' + insert.name;
+      siSong.textContent = '\u{1F399} Einspieler: ' + insert.name;
       siListeners.innerHTML = '';
 
       // Play insert as separate audio stream (reuse persistent element)
@@ -1525,7 +1528,7 @@
 
       // Info anzeigen, dass Einspieler wartet
       streamInfoBox.classList.remove('hidden');
-      siListeners.innerHTML = `&#x23F3; Einspieler "${insert.name}" wartet auf Song-Ende...`;
+      siListeners.textContent = `\u23F3 Einspieler "${insert.name}" wartet auf Song-Ende...`;
 
       if (pendingInsertTimeout) clearTimeout(pendingInsertTimeout);
       pendingInsertTimeout = setTimeout(() => {
