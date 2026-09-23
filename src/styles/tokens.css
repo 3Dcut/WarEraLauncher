@@ -1,0 +1,155 @@
+/* ==========================================================================
+   Design-Tokens. Jedes Theme setzt Grundflächen, Text und einen Akzent-Farbton;
+   der Nutzer kann den Farbton (--accent-h) überschreiben, Helligkeit und Sättigung
+   bleiben beim Theme, damit Kontraste stimmen.
+   ========================================================================== */
+
+:root {
+  --font-ui: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Source Code Pro Variable', 'Cascadia Mono', ui-monospace, monospace;
+
+  --ok: #34d399;
+  --live: #22c55e;
+  --force: #f59e0b;
+  --danger: #f87171;
+  --info: #60a5fa;
+
+  --energy: #fbbf24;
+  --health: #f87171;
+  --hunger: #a3e635;
+  --entre: #60a5fa;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Feder mit leichtem Überschwingen, als CSS-Kurve */
+  --ease-spring: linear(0, 0.14 5.5%, 0.52 13%, 0.87 21.6%, 1.05 30%, 1.09 36.7%, 1.07 44%, 1.01 57%, 0.99 70%, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 380ms;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --radius-xl: 20px;
+
+  --glass: 0.55;
+
+  /* Dichte: luftig */
+  --topbar-h: 54px;
+  --gap: 8px;
+  --pad: 14px;
+  --fs: 15px;
+  --sidebar-w: 268px;
+}
+
+:root[data-density='compact'] {
+  --topbar-h: 46px;
+  --gap: 4px;
+  --pad: 10px;
+  --fs: 14px;
+  --sidebar-w: 236px;
+}
+
+/* ---------- Grau: Nachtblau und Gold (Standard, Erbe der ersten Version) ---------- */
+:root,
+:root[data-theme='grau'] {
+  color-scheme: dark;
+  --ground: #0b1020;
+  --ground-2: #0e1528;
+  --surface: #131b2e;
+  --surface-2: #19233b;
+  --surface-3: #212d49;
+  --line: rgb(214 225 255 / 0.08);
+  --line-strong: rgb(214 225 255 / 0.15);
+  --text: #eef0ea;
+  --text-dim: #a7b0c0;
+  --text-muted: #6b768a;
+  --grid-line: rgb(214 225 255 / 0.028);
+  --shadow: 0 18px 50px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.35);
+  --accent-h-theme: 78;
+  --accent-l: 0.8;
+  --accent-c: 0.155;
+  --accent-ink: #171204;
+}
+
+/* ---------- Feldgrau: Oliv, Khaki, gedämpftes Messing ---------- */
+:root[data-theme='feldgrau'] {
+  color-scheme: dark;
+  --ground: #10130e;
+  --ground-2: #141811;
+  --surface: #1a1f16;
+  --surface-2: #222a1c;
+  --surface-3: #2c3524;
+  --line: rgb(226 232 205 / 0.08);
+  --line-strong: rgb(226 232 205 / 0.15);
+  --text: #edeee4;
+  --text-dim: #b3b8a2;
+  --text-muted: #767d67;
+  --grid-line: rgb(226 232 205 / 0.03);
+  --shadow: 0 18px 50px rgb(4 6 2 / 0.55), 0 2px 8px rgb(4 6 2 / 0.35);
+  --accent-h-theme: 96;
+  --accent-l: 0.78;
+  --accent-c: 0.11;
+  --accent-ink: #151705;
+}
+
+/* ---------- Pink: Magenta auf Violett (Erbe der ersten Version) ---------- */
+:root[data-theme='pink'] {
+  color-scheme: dark;
+  --font-ui: 'Quicksand Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Quicksand Variable', 'Segoe UI', system-ui, sans-serif;
+  --ground: #14051a;
+  --ground-2: #1a0822;
+  --surface: #220b2c;
+  --surface-2: #2c1038;
+  --surface-3: #3a1649;
+  --line: rgb(255 200 250 / 0.1);
+  --line-strong: rgb(255 200 250 / 0.18);
+  --text: #fff4fd;
+  --text-dim: #e3b8dc;
+  --text-muted: #9a6d93;
+  --grid-line: rgb(255 200 250 / 0.035);
+  --shadow: 0 18px 50px rgb(20 0 20 / 0.6), 0 2px 8px rgb(20 0 20 / 0.4);
+  --accent-h-theme: 340;
+  --accent-l: 0.72;
+  --accent-c: 0.26;
+  --accent-ink: #1d0017;
+}
+
+/* ---------- Hell: heller Arbeitsplatz für Tagesbetrieb ---------- */
+:root[data-theme='hell'] {
+  color-scheme: light;
+  --ground: #e9edf3;
+  --ground-2: #e2e7ef;
+  --surface: #ffffff;
+  --surface-2: #f4f6fa;
+  --surface-3: #e8ecf3;
+  --line: rgb(20 32 60 / 0.1);
+  --line-strong: rgb(20 32 60 / 0.18);
+  --text: #141a26;
+  --text-dim: #4a5568;
+  --text-muted: #7c8799;
+  --grid-line: rgb(20 32 60 / 0.045);
+  --shadow: 0 18px 44px rgb(20 32 60 / 0.16), 0 2px 6px rgb(20 32 60 / 0.08);
+  --accent-h-theme: 70;
+  --accent-l: 0.6;
+  --accent-c: 0.14;
+  --accent-ink: #ffffff;
+  --live: #16a34a;
+  --force: #d97706;
+  --danger: #dc2626;
+}
+
+:root {
+  --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h, var(--accent-h-theme)));
+  --accent-strong: oklch(calc(var(--accent-l) + 0.06) var(--accent-c) var(--accent-h, var(--accent-h-theme)));
+  --accent-soft: color-mix(in oklch, var(--accent) 15%, transparent);
+  --accent-softer: color-mix(in oklch, var(--accent) 8%, transparent);
+  --accent-line: color-mix(in oklch, var(--accent) 45%, transparent);
+  --accent-glow: color-mix(in oklch, var(--accent) 35%, transparent);
+
+  /* Glas: je höher --glass, desto durchscheinender und unschärfer */
+  --chrome: color-mix(in oklch, var(--surface) calc(96% - var(--glass) * 55%), transparent);
+  --chrome-blur: calc(var(--glass) * 22px);
+  --popover-bg: color-mix(in oklch, var(--surface-2) calc(99% - var(--glass) * 9%), transparent);
+}

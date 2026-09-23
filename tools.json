@@ -1,38 +1,41 @@
 [
   {
     "category": "Wirtschaft",
+    "icon": "💰",
     "tools": [
-      { "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵" },
-      { "name": "WE Calculator", "url": "https://war-era-calculator.netlify.app", "emoji": "🧮" },
-      { "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭" },
-      { "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨" },
-      { "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️" },
-      { "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰" }
+      {"id": "income-calc", "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵", "desc": "Einkommen berechnen", "tags": ["einkommen", "lohn", "rechner"]},
+      {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": "Firmen durchrechnen", "tags": ["firma", "produktion", "rechner"]},
+      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]},
+      {"id": "production-bonus", "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️", "desc": "Produktionsbonus berechnen", "tags": ["produktion", "bonus"]},
+      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": "Löhne im Überblick", "tags": ["lohn", "jobs", "statistik"]}
     ]
   },
   {
     "category": "Maps & Kampf",
+    "icon": "⚔️",
     "tools": [
-      { "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️" },
-      { "name": "Battle Sim", "url": "https://warera-battle-simulator.netlify.app", "emoji": "⚔️" },
-      { "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜" }
+      {"id": "map", "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️", "desc": "Interaktive Weltkarte", "embed": false, "tags": ["karte", "regionen"]},
+      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"]},
+      {"id": "phantomant", "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜", "tags": ["kampf"]}
     ]
   },
   {
     "category": "Statistiken",
+    "icon": "📊",
     "tools": [
-      { "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊" },
-      { "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍" },
-      { "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒" },
-      { "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢" }
+      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken rund um WarEra", "tags": ["statistik", "ranking"]},
+      {"id": "countrystats", "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍", "desc": "Länderstatistiken im Zeitverlauf", "tags": ["land", "entwicklung", "statistik"]},
+      {"id": "market-monitor", "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒", "desc": "Marktpreise und Orderbücher", "tags": ["markt", "preise", "handel"]},
+      {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": "Firmen eines Landes", "tags": ["firmen", "land"]}
     ]
   },
   {
     "category": "Misc",
+    "icon": "🧰",
     "tools": [
-      { "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️" },
-      { "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝" },
-      { "name": "ArcanaEra", "url": "https://arcanaera.vercel.app", "emoji": "🔮" }
+      {"id": "build-tool", "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️", "desc": "Builds planen", "tags": ["build", "skills"]},
+      {"id": "stackedit", "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝", "desc": "Markdown-Editor, etwa für Zeitungsartikel", "tags": ["artikel", "zeitung", "markdown"]},
+      {"id": "arcanaera", "name": "ArcanaEra", "url": "https://arcana.warera.wiki", "emoji": "🔮", "tags": ["wiki"]}
     ]
   }
 ]

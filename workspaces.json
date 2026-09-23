@@ -1,0 +1,51 @@
+{
+  "defaults": ["start", "wirtschaft", "kampf", "statistik"],
+  "presets": [
+    {
+      "id": "start",
+      "name": "Lage",
+      "icon": "🏠",
+      "desc": "Zeiten, Charakter, Front, Markt und Radio auf einen Blick",
+      "layout": {
+        "row": [
+          { "column": [{ "tabs": ["widget:timers"] }, { "tabs": ["widget:character"] }] },
+          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["widget:radio"] }] },
+          { "tabs": ["widget:market"] }
+        ]
+      }
+    },
+    {
+      "id": "wirtschaft",
+      "name": "Wirtschaft",
+      "icon": "💰",
+      "desc": "Rechner links, Markt und Löhne rechts",
+      "layout": {
+        "row": [
+          { "tabs": ["company-calc", "income-calc", "dismantle-calc"] },
+          { "column": [{ "tabs": ["widget:market", "market-monitor"] }, { "tabs": ["wages", "production-bonus"] }] }
+        ]
+      }
+    },
+    {
+      "id": "kampf",
+      "name": "Kampf",
+      "icon": "⚔️",
+      "desc": "Simulator, laufende Schlachten und Karte",
+      "layout": {
+        "row": [
+          { "tabs": ["battle-sim"] },
+          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["phantomant", "map"] }] }
+        ]
+      }
+    },
+    {
+      "id": "statistik",
+      "name": "Statistik",
+      "icon": "📊",
+      "desc": "Statistikseiten nebeneinander",
+      "layout": {
+        "row": [{ "tabs": ["warerastats", "countrystats"] }, { "tabs": ["national-companies", "market-monitor"] }]
+      }
+    }
+  ]
+}

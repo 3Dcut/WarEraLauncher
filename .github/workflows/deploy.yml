@@ -4,6 +4,9 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+  schedule:
+    # Wöchentlich neu bauen, damit der Tool-Status (erreichbar / einbettbar) aktuell bleibt
+    - cron: "17 4 * * 1"
 
 permissions:
   contents: read
@@ -15,16 +18,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typprüfung
+        run: npm run check
+      - name: Tests (Radio-Logik, Datendateien)
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Tool-Status prüfen
+        continue-on-error: true
+        run: npm run check-tools -- dist/tools-status.json
+      - name: Weitere Dateien wie bisher mit ausliefern
+        run: cp -- *.aup3 dist/ 2>/dev/null || true
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
   deploy:
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: "."
       - id: deployment
         uses: actions/deploy-pages@v4
