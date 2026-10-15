@@ -7,7 +7,8 @@
       {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": "Firmen durchrechnen", "tags": ["firma", "produktion", "rechner"]},
       {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]},
       {"id": "production-bonus", "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️", "desc": "Produktionsbonus berechnen", "tags": ["produktion", "bonus"]},
-      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": "Löhne im Überblick", "tags": ["lohn", "jobs", "statistik"]}
+      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": "Löhne im Überblick", "tags": ["lohn", "jobs", "statistik"]},
+      {"id": "case-ev", "name": "Case EV", "url": "https://warera.de/cases/", "emoji": "📦", "desc": "Erwartungswert einer Wooden Case nach Orderbuch", "tags": ["case", "kiste", "erwartungswert", "markt", "rechner"]}
     ]
   },
   {

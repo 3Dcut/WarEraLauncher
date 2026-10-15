@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="grau">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wooden Case – Erwartungswert</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ========== THEME: GRAU (identisch zum Launcher) ========== */
+    :root[data-theme="grau"] {
+      --bg-gradient: linear-gradient(135deg, #0a0e1a 0%, #111827 40%, #0f172a 100%);
+      --accent: #f0b429;
+      --accent-glow: rgba(240,180,41,0.25);
+      --accent-dim: rgba(240,180,41,0.6);
+      --text: #f0f0ec;
+      --text-dim: #a0a8b4;
+      --text-muted: #556070;
+      --glass-bg: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.1);
+      --glass-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+      --tab-hover-bg: rgba(255,255,255,0.08);
+      --font-heading: 'Rajdhani', sans-serif;
+      --font-mono: 'Source Code Pro', monospace;
+      --danger: #ef4444;
+      --ok: #4ade80;
+      --rar-common: #b0b8c4;
+      --rar-uncommon: #4ade80;
+      --rar-rare: #60a5fa;
+      --rar-epic: #c084fc;
+    }
+
+    /* ========== THEME: PINK ========== */
+    :root[data-theme="pink"] {
+      --bg-gradient: linear-gradient(135deg, #1f001f 0%, #300040 40%, #1a001a 100%);
+      --accent: #ff00ff;
+      --accent-glow: rgba(255,0,255,0.35);
+      --accent-dim: rgba(255,0,255,0.6);
+      --text: #ffffff;
+      --text-dim: #ffccff;
+      --text-muted: #996699;
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,0,255,0.2);
+      --glass-shadow: 0 8px 32px rgba(100,0,100,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+      --tab-hover-bg: rgba(255,0,255,0.08);
+      --font-heading: 'Quicksand', sans-serif;
+      --font-mono: 'Source Code Pro', monospace;
+      --danger: #ff3366;
+      --ok: #66ff99;
+      --rar-common: #ddc0dd;
+      --rar-uncommon: #66ff99;
+      --rar-rare: #66ccff;
+      --rar-epic: #ff66ff;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: var(--font-heading);
+    }
+    body { padding: 10px; }
+
+    .wrap { max-width: 1150px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 12px;
+    }
+
+    /* ========== HEADER ========== */
+    header { display: flex; align-items: center; gap: 10px; padding: 8px 14px; flex-wrap: wrap; }
+    h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+    h1 small { font-size: 12px; font-weight: 500; color: var(--text-dim); margin-left: 6px; }
+    .status { margin-left: auto; color: var(--text-dim); font-size: 11px; font-family: var(--font-mono); }
+    .status.err { color: var(--danger); }
+
+    .btn {
+      padding: 5px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 11px;
+      transition: all 0.15s;
+    }
+    .btn:hover { background: var(--tab-hover-bg); color: var(--text); border-color: var(--accent-dim); }
+    .btn:disabled { opacity: 0.5; cursor: wait; }
+
+    select, input[type="number"] {
+      padding: 4px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--glass-border);
+      background: rgba(0,0,0,0.25);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+    }
+    select:focus, input:focus { border-color: var(--accent-dim); }
+    select option { background: #111827; color: #fff; }
+    label { font-size: 12px; color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
+
+    /* ========== CARDS ========== */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+    .card { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .card h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-dim); font-weight: 700; }
+    .big { font-size: 26px; font-weight: 700; font-family: var(--font-mono); line-height: 1.1; color: var(--accent); }
+    .big small { font-size: 12px; color: var(--text-dim); font-family: var(--font-heading); font-weight: 500; margin-left: 4px; }
+    .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+    .row .k { color: var(--text-dim); }
+    .row .v { font-family: var(--font-mono); }
+    .verdict { font-size: 14px; font-weight: 700; margin-top: 2px; }
+    .verdict .pct { font-family: var(--font-mono); }
+    .good { color: var(--ok); }
+    .bad { color: var(--danger); }
+    .neutral { color: var(--text-dim); }
+    .hint { font-size: 11px; color: var(--text-muted); line-height: 1.35; }
+    .fallback { color: var(--danger); font-size: 10px; margin-left: 2px; cursor: help; }
+
+    /* ========== TABLE ========== */
+    .tablewrap { overflow-x: auto; }
+    .controls { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-bottom: 1px solid var(--glass-border); flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 5px 10px; text-align: right; border-bottom: 1px solid var(--glass-border); white-space: nowrap; }
+    th:first-child, td:first-child, th.l, td.l { text-align: left; }
+    th { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+    tbody tr:hover { background: var(--tab-hover-bg); }
+    td.num { font-family: var(--font-mono); }
+    td.dim { color: var(--text-dim); }
+    tr.sub td { background: rgba(0,0,0,0.18); font-weight: 700; }
+    tr.total td { font-weight: 700; color: var(--accent); border-top: 1px solid var(--accent-dim); border-bottom: none; }
+    .rar { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 1px 7px; border-radius: 8px; border: 1px solid currentColor; }
+    .rar.common { color: var(--rar-common); }
+    .rar.uncommon { color: var(--rar-uncommon); }
+    .rar.rare { color: var(--rar-rare); }
+    .rar.epic { color: var(--rar-epic); }
+    .sharecell { min-width: 120px; }
+    .share { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .share .bar { height: 5px; border-radius: 3px; background: var(--accent); opacity: 0.8; }
+    .share .txt { font-family: var(--font-mono); min-width: 48px; text-align: right; }
+    .price-cell { cursor: help; }
+    .loading-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite; margin-left: 6px; vertical-align: middle; }
+    @keyframes pulse { 0%,100% { opacity: 0.2; } 50% { opacity: 1; } }
+
+    /* ========== FOOT ========== */
+    .foot { padding: 10px 14px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+    .foot a { color: var(--accent); text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+    .foot ul { margin: 4px 0 0 16px; }
+    code { font-family: var(--font-mono); font-size: 10.5px; }
+
+    @media (max-width: 600px) {
+      body { padding: 6px; }
+      h1 { font-size: 17px; }
+      .status { margin-left: 0; width: 100%; }
+      th, td { padding: 4px 6px; font-size: 12px; }
+      .big { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="glass">
+      <h1>&#x1F4E6; Wooden Case <small>Erwartungswert nach aktuellem Orderbuch</small></h1>
+      <button class="btn" id="btn-refresh" title="Orderbücher neu laden">&#x21BB; AKTUALISIEREN</button>
+      <div class="status" id="status">Lade Preise …</div>
+    </header>
+
+    <div class="cards">
+      <div class="card glass">
+        <h2>Case-Preis (Orderbuch)</h2>
+        <div class="big" id="case-main">–</div>
+        <div class="row"><span class="k">Kaufen: günstigstes Verkaufsangebot</span><span class="v" id="case-ask">–</span></div>
+        <div class="row"><span class="k">Verkaufen: höchstes Kaufgebot</span><span class="v" id="case-bid">–</span></div>
+        <div class="row"><span class="k">Spread</span><span class="v" id="case-spread">–</span></div>
+      </div>
+
+      <div class="card glass">
+        <h2>Erwartungswert Inhalt</h2>
+        <div class="big" id="ev-main">–</div>
+        <div class="row"><span class="k">zu höchstem Kaufgebot (sofort verkaufen)</span><span class="v" id="ev-bid">–</span></div>
+        <div class="row"><span class="k">zu günstigstem Verkaufsangebot (selbst nutzen)</span><span class="v" id="ev-ask">–</span></div>
+        <div class="row"><span class="k">Mitte</span><span class="v" id="ev-mid">–</span></div>
+      </div>
+
+      <div class="card glass">
+        <h2>Case kaufen &amp; öffnen</h2>
+        <div class="verdict" id="verdict-buy">–</div>
+        <div class="row"><span class="k">Kaufpreis</span><span class="v" id="buy-cost">–</span></div>
+        <div class="row"><span class="k">Erwartungswert</span><span class="v" id="buy-ev">–</span></div>
+        <div class="row"><span class="k">Gewinn / Verlust pro Case</span><span class="v" id="buy-diff">–</span></div>
+        <label style="margin-top:4px;">Eigener Kaufpreis <input type="number" id="own-price" step="0.001" min="0" placeholder="optional" style="width:90px;"></label>
+      </div>
+
+      <div class="card glass">
+        <h2>Eigene Case: öffnen oder verkaufen?</h2>
+        <div class="verdict" id="verdict-own">–</div>
+        <div class="row"><span class="k">Verkaufserlös (höchstes Kaufgebot)</span><span class="v" id="own-sell">–</span></div>
+        <div class="row"><span class="k">Erwartungswert beim Öffnen</span><span class="v" id="own-ev">–</span></div>
+        <div class="row"><span class="k">Differenz</span><span class="v" id="own-diff">–</span></div>
+        <div class="hint">Der Erwartungswert ist ein Mittelwert über viele Cases – eine einzelne Case kann deutlich mehr oder weniger wert sein.</div>
+      </div>
+    </div>
+
+    <div class="glass tablewrap">
+      <div class="controls">
+        <label>Preisbasis für den Inhalt
+          <select id="basis">
+            <option value="bid">Höchstes Kaufgebot – Inhalt sofort verkaufen</option>
+            <option value="ask">Günstigstes Verkaufsangebot – Inhalt selbst nutzen</option>
+            <option value="mid">Mitte aus beidem</option>
+          </select>
+        </label>
+        <label>Sortierung
+          <select id="sort">
+            <option value="rarity">Seltenheit</option>
+            <option value="ev">EV-Beitrag</option>
+            <option value="chance">Chance</option>
+            <option value="price">Preis</option>
+          </select>
+        </label>
+        <span class="hint" id="ob-status"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="l">Ressource</th>
+            <th class="l">Seltenheit</th>
+            <th title="Wahrscheinlichkeit, dass genau diese Ressource fällt">Chance</th>
+            <th title="Menge = Budget (20–80 Arbeitspunkte) ÷ Produktionspunkte, abgerundet, mindestens 1">Menge</th>
+            <th title="Produktionspunkte pro Einheit (aus der Game-Config)">PP</th>
+            <th title="Preis pro Einheit nach gewählter Preisbasis – Tooltip zeigt Kaufgebot / Verkaufsangebot">Preis</th>
+            <th title="Chance × Ø Menge × Preis">EV-Beitrag</th>
+            <th class="sharecell">Anteil am EV</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="glass foot">
+      <strong>Annahmen &amp; Quellen</strong>
+      <ul>
+        <li>Dropraten laut Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>: erst Seltenheit (Episch 2 %, Selten 13 %, Ungewöhnlich 20 %, Gewöhnlich 65 %), dann eine Ressource dieser Seltenheit gleichverteilt.</li>
+        <li>Menge: Budget gleichverteilt 20–80 Arbeitspunkte, Menge = Budget ÷ Produktionspunkte (abgerundet, mindestens 1). Produktionspunkte kommen live aus der Game-Config (<code>gameConfig.getGameConfig</code>); die Rundung ist eine Annahme, die Spannen im Devlog passen dazu.</li>
+        <li>Preise ausschließlich aus dem Orderbuch (<code>tradingOrder.getTopOrders</code>): höchstes Kaufgebot bzw. günstigstes Verkaufsangebot. Der API-Durchschnittspreis (<code>itemTrading.getPrices</code>) wird nur als Notlösung genutzt, wenn kein Angebot existiert – dann mit <span class="fallback">*</span> markiert. Marktgebühren sind nicht berücksichtigt.</li>
+        <li>„Pille“ heißt in der API <code>cocain</code>, „Mysteriöse Pflanze“ <code>coca</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // ========== THEME-SYNC MIT LAUNCHER ==========
+    function applyTheme() {
+      try { document.documentElement.dataset.theme = localStorage.getItem('wl-theme') || 'grau'; } catch (e) {}
+    }
+    applyTheme();
+    window.addEventListener('storage', e => { if (e.key === 'wl-theme') applyTheme(); });
+
+    // ========== KONFIGURATION ==========
+    const API = 'https://api2.warera.io/trpc/';
+    const CASE_CODE = 'woodenCase';
+    const BUDGET_MIN = 20, BUDGET_MAX = 80;
+
+    const RARITY = {
+      epic:     { p: 0.02, label: 'Episch',        order: 0 },
+      rare:     { p: 0.13, label: 'Selten',        order: 1 },
+      uncommon: { p: 0.20, label: 'Ungewöhnlich',  order: 2 },
+      common:   { p: 0.65, label: 'Gewöhnlich',    order: 3 },
+    };
+
+    // Produktionspunkte (pp) = Fallback; werden live aus der Game-Config überschrieben
+    const DROPS = [
+      { code: 'cookedFish', name: 'Gekochter Fisch',    rarity: 'epic',     pp: 40 },
+      { code: 'heavyAmmo',  name: 'Schwere Munition',   rarity: 'epic',     pp: 16 },
+      { code: 'cocain',     name: 'Pille',              rarity: 'epic',     pp: 200 },
+      { code: 'ammo',       name: 'Munition',           rarity: 'rare',     pp: 4 },
+      { code: 'steak',      name: 'Steak',              rarity: 'rare',     pp: 20 },
+      { code: 'concrete',   name: 'Beton',              rarity: 'uncommon', pp: 10 },
+      { code: 'steel',      name: 'Stahl',              rarity: 'uncommon', pp: 10 },
+      { code: 'bread',      name: 'Brot',               rarity: 'uncommon', pp: 10 },
+      { code: 'oil',        name: 'Öl',                 rarity: 'uncommon', pp: 1 },
+      { code: 'paper',      name: 'Papier',             rarity: 'uncommon', pp: 1 },
+      { code: 'lightAmmo',  name: 'Leichte Munition',   rarity: 'uncommon', pp: 1 },
+      { code: 'grain',      name: 'Getreide',           rarity: 'common',   pp: 1 },
+      { code: 'iron',       name: 'Eisen',              rarity: 'common',   pp: 1 },
+      { code: 'wood',       name: 'Holz',               rarity: 'common',   pp: 1 },
+      { code: 'lead',       name: 'Blei',               rarity: 'common',   pp: 1 },
+      { code: 'limestone',  name: 'Kalkstein',          rarity: 'common',   pp: 1 },
+      { code: 'coca',       name: 'Mysteriöse Pflanze', rarity: 'common',   pp: 1 },
+      { code: 'petroleum',  name: 'Erdöl',              rarity: 'common',   pp: 1 },
+      { code: 'livestock',  name: 'Vieh',               rarity: 'common',   pp: 20 },
+      { code: 'fish',       name: 'Fisch',              rarity: 'common',   pp: 40 },
+    ];
+
+    const rarityCount = {};
+    DROPS.forEach(d => { rarityCount[d.rarity] = (rarityCount[d.rarity] || 0) + 1; });
+    DROPS.forEach(d => { d.chance = RARITY[d.rarity].p / rarityCount[d.rarity]; });
+
+    // ========== STATE ==========
+    const state = {
+      prices: {},      // code -> { market, bid, ask }  (bid = höchstes Kaufgebot, ask = günstigstes Verkaufsangebot)
+      basis: 'bid',
+      sort: 'rarity',
+      ownPrice: null,
+      obLoaded: 0,
+      obTotal: 0,
+      loading: false,
+    };
+
+    const $ = id => document.getElementById(id);
+
+    // ========== MATHE ==========
+    function expectedAmount(pp) {
+      let sum = 0, n = 0;
+      for (let b = BUDGET_MIN; b <= BUDGET_MAX; b++) { sum += Math.max(1, Math.floor(b / pp)); n++; }
+      return sum / n;
+    }
+    function amountRange(pp) {
+      return [Math.max(1, Math.floor(BUDGET_MIN / pp)), Math.max(1, Math.floor(BUDGET_MAX / pp))];
+    }
+
+    // Liefert { value, fallback } – fallback = true, wenn der API-Durchschnitt genutzt werden musste
+    function priceInfo(code, basis) {
+      const p = state.prices[code];
+      if (!p) return { value: null, fallback: false };
+      const fb = v => ({ value: v == null ? (p.market ?? null) : v, fallback: v == null && p.market != null });
+      switch (basis) {
+        case 'bid': return fb(p.bid ?? null);
+        case 'ask': return fb(p.ask ?? null);
+        case 'mid':
+          if (p.bid != null && p.ask != null) return { value: (p.bid + p.ask) / 2, fallback: false };
+          return fb(p.bid ?? p.ask ?? null);
+        default: return { value: p.market ?? null, fallback: false };
+      }
+    }
+    const priceFor = (code, basis) => priceInfo(code, basis).value;
+
+    function evTotal(basis) {
+      let total = 0, any = false;
+      for (const d of DROPS) {
+        const price = priceFor(d.code, basis);
+        if (price == null) continue;
+        any = true;
+        total += d.chance * expectedAmount(d.pp) * price;
+      }
+      return any ? total : null;
+    }
+
+    // ========== FORMAT ==========
+    const nf = (v, d) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const fmt = v => (v == null || isNaN(v)) ? '–' : nf(v, Math.abs(v) < 1 ? 3 : 2);
+    const fmtSigned = v => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + fmt(v);
+    const fmtPct = (v, d = 1) => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + nf(v * 100, d) + ' %';
+    const fmtPctPlain = (v, d = 2) => nf(v * 100, d) + ' %';
+    const FB = '<span class="fallback" title="Kein Angebot im Orderbuch – API-Durchschnittspreis als Notlösung">*</span>';
+
+    // ========== RENDER ==========
+    function setVerdict(el, diff, cost, goodText, badText) {
+      if (diff == null || cost == null || cost === 0) { el.textContent = '–'; el.className = 'verdict neutral'; return; }
+      const pct = diff / cost;
+      const good = diff >= 0;
+      el.className = 'verdict ' + (Math.abs(pct) < 0.005 ? 'neutral' : (good ? 'good' : 'bad'));
+      el.innerHTML = (good ? goodText : badText) + ' <span class="pct">(' + fmtPct(pct) + ')</span>';
+    }
+
+    function render() {
+      const basis = state.basis;
+      const caseAsk = priceInfo(CASE_CODE, 'ask');
+      const caseBid = priceInfo(CASE_CODE, 'bid');
+      const evB = evTotal('bid'), evA = evTotal('ask'), evM = evTotal('mid');
+      const evSel = evTotal(basis);
+      const basisLabel = { bid: 'höchstes Kaufgebot', ask: 'günstigstes Verkaufsangebot', mid: 'Mitte' }[basis];
+
+      // Case-Karte
+      $('case-ask').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB : '');
+      $('case-bid').innerHTML = fmt(caseBid.value) + (caseBid.fallback ? FB : '');
+      const spread = (caseAsk.value != null && caseBid.value != null && !caseAsk.fallback && !caseBid.fallback)
+        ? caseAsk.value - caseBid.value : null;
+      $('case-spread').textContent = spread == null ? '–' : fmt(spread) + (caseBid.value ? ' (' + nf(spread / caseBid.value * 100, 1) + ' %)' : '');
+      $('case-main').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB : '') + '<small>Kaufpreis</small>';
+
+      // EV-Karte
+      $('ev-bid').textContent = fmt(evB);
+      $('ev-ask').textContent = fmt(evA);
+      $('ev-mid').textContent = fmt(evM);
+      $('ev-main').innerHTML = fmt(evSel) + '<small>' + basisLabel + '</small>';
+
+      // Kaufen & öffnen
+      const cost = state.ownPrice != null ? state.ownPrice : caseAsk.value;
+      $('buy-cost').innerHTML = fmt(cost) + (state.ownPrice != null ? ' (eigen)' : (caseAsk.fallback ? FB : ''));
+      $('buy-ev').textContent = fmt(evSel);
+      const buyDiff = (cost != null && evSel != null) ? evSel - cost : null;
+      $('buy-diff').textContent = fmtSigned(buyDiff);
+      setVerdict($('verdict-buy'), buyDiff, cost, '&#x2705; Lohnt sich', '&#x274C; Lohnt sich nicht');
+
+      // Eigene Case
+      const sell = caseBid.value;
+      $('own-sell').innerHTML = fmt(sell) + (caseBid.fallback ? FB : '');
+      $('own-ev').textContent = fmt(evSel);
+      const ownDiff = (sell != null && evSel != null) ? evSel - sell : null;
+      $('own-diff').textContent = fmtSigned(ownDiff);
+      setVerdict($('verdict-own'), ownDiff, sell, '&#x1F513; Öffnen', '&#x1F4B0; Verkaufen');
+
+      renderTable(basis, evSel, basisLabel);
+    }
+
+    function renderTable(basis, total, basisLabel) {
+      const rows = DROPS.map(d => {
+        const pi = priceInfo(d.code, basis);
+        const ea = expectedAmount(d.pp);
+        const ev = pi.value != null ? d.chance * ea * pi.value : null;
+        return { d, price: pi.value, fallback: pi.fallback, ea, ev, range: amountRange(d.pp) };
+      });
+
+      const sorters = {
+        rarity: (a, b) => RARITY[a.d.rarity].order - RARITY[b.d.rarity].order || (b.ev ?? 0) - (a.ev ?? 0),
+        ev: (a, b) => (b.ev ?? 0) - (a.ev ?? 0),
+        chance: (a, b) => b.d.chance - a.d.chance || (b.ev ?? 0) - (a.ev ?? 0),
+        price: (a, b) => (b.price ?? 0) - (a.price ?? 0),
+      };
+      rows.sort(sorters[state.sort] || sorters.rarity);
+
+      const maxShare = Math.max(...rows.map(r => (r.ev != null && total) ? r.ev / total : 0), 0.0001);
+      const groupSums = {};
+      rows.forEach(r => { groupSums[r.d.rarity] = (groupSums[r.d.rarity] || 0) + (r.ev || 0); });
+
+      let html = '';
+      let lastRarity = null;
+      rows.forEach(r => {
+        const d = r.d;
+        if (state.sort === 'rarity' && d.rarity !== lastRarity) {
+          lastRarity = d.rarity;
+          const gs = groupSums[d.rarity];
+          html += `<tr class="sub">
+            <td colspan="2"><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
+            <td class="num">${fmtPctPlain(RARITY[d.rarity].p, 0)}</td>
+            <td colspan="3" class="dim" style="text-align:left;">${rarityCount[d.rarity]} Ressourcen, je ${fmtPctPlain(RARITY[d.rarity].p / rarityCount[d.rarity])}</td>
+            <td class="num">${fmt(gs)}</td>
+            <td class="num dim">${total ? fmtPctPlain(gs / total, 1) : '–'}</td>
+          </tr>`;
+        }
+        const p = state.prices[d.code] || {};
+        const tip = `Höchstes Kaufgebot ${fmt(p.bid)} · Günstigstes Verkaufsangebot ${fmt(p.ask)} · API-Ø ${fmt(p.market)}`;
+        const share = (r.ev != null && total) ? r.ev / total : 0;
+        const barW = Math.round(share / maxShare * 70);
+        html += `<tr>
+          <td>${d.name} <span class="hint">${d.code}</span></td>
+          <td><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
+          <td class="num">${fmtPctPlain(d.chance)}</td>
+          <td class="num" title="Ø ${nf(r.ea, 2)}">${r.range[0]}–${r.range[1]} <span class="dim">(Ø ${nf(r.ea, 1)})</span></td>
+          <td class="num dim">${d.pp}</td>
+          <td class="num price-cell" title="${tip}">${fmt(r.price)}${r.fallback ? FB : ''}</td>
+          <td class="num">${fmt(r.ev)}</td>
+          <td class="sharecell"><div class="share"><div class="bar" style="width:${barW}px"></div><span class="txt">${r.ev != null && total ? fmtPctPlain(share, 1) : '–'}</span></div></td>
+        </tr>`;
+      });
+
+      html += `<tr class="total">
+        <td colspan="6">Erwartungswert pro Case (${basisLabel})</td>
+        <td class="num">${fmt(total)}</td>
+        <td></td>
+      </tr>`;
+      $('tbody').innerHTML = html;
+    }
+
+    // ========== API ==========
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    async function fetchJson(url, tries = 4) {
+      for (let i = 0; i < tries; i++) {
+        const res = await fetch(url);
+        if (res.status === 429) { await sleep(700 * (i + 1)); continue; }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }
+      throw new Error('Rate-Limit (429)');
+    }
+    const trpc = (path, input) => fetchJson(API + path + (input ? '?input=' + encodeURIComponent(JSON.stringify(input)) : ''));
+
+    // API-Durchschnittspreise: nur als Notlösung, wenn das Orderbuch leer ist
+    async function loadPrices() {
+      try {
+        const data = (await trpc('itemTrading.getPrices')).result.data;
+        for (const code of Object.keys(data)) {
+          state.prices[code] = Object.assign(state.prices[code] || {}, { market: data[code] });
+        }
+      } catch (e) { console.warn('itemTrading.getPrices nicht geladen', e); }
+    }
+
+    async function loadConfig() {
+      try {
+        const items = (await trpc('gameConfig.getGameConfig')).result.data.items || {};
+        DROPS.forEach(d => {
+          const pp = items[d.code] && items[d.code].productionPoints;
+          if (typeof pp === 'number' && pp > 0) d.pp = pp;
+        });
+      } catch (e) { console.warn('Game-Config nicht geladen, nutze Fallback-Produktionspunkte', e); }
+    }
+
+    async function loadOrderBooks() {
+      const codes = [CASE_CODE, ...DROPS.map(d => d.code)];
+      state.obTotal = codes.length; state.obLoaded = 0;
+      const queue = [...codes];
+      let failed = 0;
+      const worker = async () => {
+        while (queue.length) {
+          const code = queue.shift();
+          try {
+            const d = (await trpc('tradingOrder.getTopOrders', { itemCode: code, limit: 1 })).result.data;
+            const bid = d.buyOrders && d.buyOrders[0] ? d.buyOrders[0].price : null;   // höchstes Kaufgebot
+            const ask = d.sellOrders && d.sellOrders[0] ? d.sellOrders[0].price : null; // günstigstes Verkaufsangebot
+            state.prices[code] = Object.assign(state.prices[code] || {}, { bid, ask });
+          } catch (e) { failed++; console.warn('Orderbuch fehlgeschlagen:', code, e); }
+          state.obLoaded++;
+          updateObStatus();
+          render();
+          await sleep(120);
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+      return failed;
+    }
+
+    function updateObStatus() {
+      const el = $('ob-status');
+      if (state.obLoaded < state.obTotal) {
+        el.innerHTML = `Orderbücher ${state.obLoaded}/${state.obTotal}<span class="loading-dot"></span>`;
+      } else {
+        el.textContent = '';
+      }
+    }
+
+    async function refresh() {
+      if (state.loading) return;
+      state.loading = true;
+      const btn = $('btn-refresh'); btn.disabled = true;
+      const st = $('status'); st.className = 'status'; st.textContent = 'Lade Orderbücher …';
+      try {
+        await Promise.all([loadPrices(), loadConfig()]);
+        render();
+        const failed = await loadOrderBooks();
+        const time = new Date().toLocaleTimeString('de-DE');
+        if (failed > 0) {
+          st.className = 'status err';
+          st.textContent = `Stand: ${time} · ${failed} Orderbuch/Orderbücher nicht geladen – nochmal aktualisieren`;
+        } else {
+          st.textContent = 'Stand: ' + time + ' · api2.warera.io';
+        }
+      } catch (e) {
+        st.className = 'status err';
+        st.textContent = 'Fehler beim Laden: ' + e.message;
+        render();
+      } finally {
+        state.loading = false; btn.disabled = false;
+      }
+    }
+
+    // ========== EVENTS ==========
+    $('btn-refresh').addEventListener('click', refresh);
+    $('basis').addEventListener('change', e => { state.basis = e.target.value; render(); });
+    $('sort').addEventListener('change', e => { state.sort = e.target.value; render(); });
+    $('own-price').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      state.ownPrice = (isNaN(v) || v <= 0) ? null : v;
+      render();
+    });
+
+    render();
+    refresh();
+  </script>
+</body>
+</html>
