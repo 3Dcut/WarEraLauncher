@@ -11,6 +11,7 @@ const entries = [
   'CNAME',
   'audio',
   'wahl',
+  'cases',
 ];
 
 for (const entry of entries) {

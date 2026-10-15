@@ -30,6 +30,9 @@ function framingBlocked(headers) {
 }
 
 async function check(tool) {
+  // Eigene Unterseiten (z. B. /cases/) werden mit dem Launcher ausgeliefert und existieren
+  // beim Check des ersten Deploys noch nicht.
+  if (tool.url.startsWith(ORIGIN + '/')) return { status: 'ok', note: 'eigene Seite' };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
   try {

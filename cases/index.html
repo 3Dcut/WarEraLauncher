@@ -10,50 +10,60 @@
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* ========== THEME: GRAU (identisch zum Launcher) ========== */
-    :root[data-theme="grau"] {
-      --bg-gradient: linear-gradient(135deg, #0a0e1a 0%, #111827 40%, #0f172a 100%);
-      --accent: #f0b429;
-      --accent-glow: rgba(240,180,41,0.25);
-      --accent-dim: rgba(240,180,41,0.6);
-      --text: #f0f0ec;
-      --text-dim: #a0a8b4;
-      --text-muted: #556070;
-      --glass-bg: rgba(255,255,255,0.06);
-      --glass-border: rgba(255,255,255,0.1);
-      --glass-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
-      --tab-hover-bg: rgba(255,255,255,0.08);
-      --font-heading: 'Rajdhani', sans-serif;
-      --font-mono: 'Source Code Pro', monospace;
-      --danger: #ef4444;
-      --ok: #4ade80;
-      --rar-common: #b0b8c4;
-      --rar-uncommon: #4ade80;
-      --rar-rare: #60a5fa;
-      --rar-epic: #c084fc;
+    /* ========== THEMES: Tokens wie in src/styles/tokens.css der Launcher-App ========== */
+    :root, :root[data-theme="grau"] {
+      color-scheme: dark;
+      --ground: #0b1020; --ground-2: #0e1528;
+      --surface: #131b2e; --surface-2: #19233b;
+      --line: rgb(214 225 255 / 0.08);
+      --text: #eef0ea; --text-dim: #a7b0c0; --text-muted: #6b768a;
+      --shadow: 0 18px 50px rgb(2 6 18 / 0.55), 0 2px 8px rgb(2 6 18 / 0.35);
+      --accent-h-theme: 78; --accent-l: 0.8; --accent-c: 0.155;
+      --font-heading: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'Source Code Pro', 'Cascadia Mono', ui-monospace, monospace;
+      --ok: #34d399; --danger: #f87171;
+      --rar-common: #a7b0c0; --rar-uncommon: #4ade80; --rar-rare: #60a5fa; --rar-epic: #c084fc;
+      --input-bg: rgb(0 0 0 / 0.25);
     }
-
-    /* ========== THEME: PINK ========== */
+    :root[data-theme="feldgrau"] {
+      --ground: #10130e; --ground-2: #141811;
+      --surface: #1a1f16; --surface-2: #222a1c;
+      --line: rgb(226 232 205 / 0.08);
+      --text: #edeee4; --text-dim: #b3b8a2; --text-muted: #767d67;
+      --shadow: 0 18px 50px rgb(4 6 2 / 0.55), 0 2px 8px rgb(4 6 2 / 0.35);
+      --accent-h-theme: 96; --accent-l: 0.78; --accent-c: 0.11;
+      --rar-common: #b3b8a2;
+    }
     :root[data-theme="pink"] {
-      --bg-gradient: linear-gradient(135deg, #1f001f 0%, #300040 40%, #1a001a 100%);
-      --accent: #ff00ff;
-      --accent-glow: rgba(255,0,255,0.35);
-      --accent-dim: rgba(255,0,255,0.6);
-      --text: #ffffff;
-      --text-dim: #ffccff;
-      --text-muted: #996699;
-      --glass-bg: rgba(255,255,255,0.04);
-      --glass-border: rgba(255,0,255,0.2);
-      --glass-shadow: 0 8px 32px rgba(100,0,100,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
-      --tab-hover-bg: rgba(255,0,255,0.08);
-      --font-heading: 'Quicksand', sans-serif;
-      --font-mono: 'Source Code Pro', monospace;
-      --danger: #ff3366;
-      --ok: #66ff99;
-      --rar-common: #ddc0dd;
-      --rar-uncommon: #66ff99;
-      --rar-rare: #66ccff;
-      --rar-epic: #ff66ff;
+      --font-heading: 'Quicksand', 'Segoe UI', system-ui, sans-serif;
+      --ground: #14051a; --ground-2: #1a0822;
+      --surface: #220b2c; --surface-2: #2c1038;
+      --line: rgb(255 200 250 / 0.1);
+      --text: #fff4fd; --text-dim: #e3b8dc; --text-muted: #9a6d93;
+      --shadow: 0 18px 50px rgb(20 0 20 / 0.6), 0 2px 8px rgb(20 0 20 / 0.4);
+      --accent-h-theme: 340; --accent-l: 0.72; --accent-c: 0.26;
+      --rar-common: #e3b8dc; --rar-uncommon: #86efac; --rar-rare: #7dd3fc; --rar-epic: #f0abfc;
+    }
+    :root[data-theme="hell"] {
+      color-scheme: light;
+      --ground: #e9edf3; --ground-2: #e2e7ef;
+      --surface: #ffffff; --surface-2: #f4f6fa;
+      --line: rgb(20 32 60 / 0.1);
+      --text: #141a26; --text-dim: #4a5568; --text-muted: #7c8799;
+      --shadow: 0 18px 44px rgb(20 32 60 / 0.16), 0 2px 6px rgb(20 32 60 / 0.08);
+      --accent-h-theme: 70; --accent-l: 0.6; --accent-c: 0.14;
+      --ok: #16a34a; --danger: #dc2626;
+      --rar-common: #64748b; --rar-uncommon: #16a34a; --rar-rare: #2563eb; --rar-epic: #9333ea;
+      --input-bg: rgb(20 32 60 / 0.06);
+    }
+    :root {
+      --accent: oklch(var(--accent-l) var(--accent-c) var(--accent-h, var(--accent-h-theme)));
+      --accent-dim: color-mix(in oklch, var(--accent) 60%, transparent);
+      --bg-gradient: linear-gradient(135deg, var(--ground) 0%, var(--ground-2) 60%, var(--ground) 100%);
+      --glass-bg: color-mix(in oklch, var(--surface) 78%, transparent);
+      --glass-border: var(--line);
+      --glass-shadow: var(--shadow);
+      --tab-hover-bg: color-mix(in oklch, var(--surface-2) 70%, transparent);
     }
 
     html, body {
@@ -104,14 +114,14 @@
       padding: 4px 8px;
       border-radius: 10px;
       border: 1px solid var(--glass-border);
-      background: rgba(0,0,0,0.25);
+      background: var(--input-bg);
       color: var(--text);
       font-family: var(--font-mono);
       font-size: 12px;
       outline: none;
     }
     select:focus, input:focus { border-color: var(--accent-dim); }
-    select option { background: #111827; color: #fff; }
+    select option { background: var(--surface); color: var(--text); }
     label { font-size: 12px; color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
 
     /* ========== CARDS ========== */
@@ -141,7 +151,7 @@
     tbody tr:hover { background: var(--tab-hover-bg); }
     td.num { font-family: var(--font-mono); }
     td.dim { color: var(--text-dim); }
-    tr.sub td { background: rgba(0,0,0,0.18); font-weight: 700; }
+    tr.sub td { background: var(--tab-hover-bg); font-weight: 700; }
     tr.total td { font-weight: 700; color: var(--accent); border-top: 1px solid var(--accent-dim); border-bottom: none; }
     .rar { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 1px 7px; border-radius: 8px; border: 1px solid currentColor; }
     .rar.common { color: var(--rar-common); }
@@ -259,11 +269,26 @@
 
   <script>
     // ========== THEME-SYNC MIT LAUNCHER ==========
+    // Neue App: Einstellungen unter "wl2:settings" (theme, accentHue). Alte Oberfläche: "wl-theme".
+    const THEMES = ['grau', 'feldgrau', 'pink', 'hell'];
     function applyTheme() {
-      try { document.documentElement.dataset.theme = localStorage.getItem('wl-theme') || 'grau'; } catch (e) {}
+      const root = document.documentElement;
+      let theme = 'grau', hue = null;
+      try {
+        const s = JSON.parse(localStorage.getItem('wl2:settings') || 'null');
+        if (s && THEMES.includes(s.theme)) {
+          theme = s.theme;
+          hue = typeof s.accentHue === 'number' ? s.accentHue : null;
+        } else if (localStorage.getItem('wl-theme') === 'pink') {
+          theme = 'pink';
+        }
+      } catch (e) {}
+      root.dataset.theme = theme;
+      if (hue == null) root.style.removeProperty('--accent-h');
+      else root.style.setProperty('--accent-h', String(hue));
     }
     applyTheme();
-    window.addEventListener('storage', e => { if (e.key === 'wl-theme') applyTheme(); });
+    window.addEventListener('storage', e => { if (!e.key || e.key === 'wl2:settings' || e.key === 'wl-theme') applyTheme(); });
 
     // ========== KONFIGURATION ==========
     const API = 'https://api2.warera.io/trpc/';
