@@ -93,6 +93,8 @@
       font-family: var(--font-heading);
       font-weight: 700;
       font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
       transition: all 0.15s;
     }
     .btn:hover { background: var(--tab-hover-bg); color: var(--text); border-color: var(--accent-dim); }
@@ -120,7 +122,7 @@
     .big small { font-size: 12px; color: var(--text-dim); font-family: var(--font-heading); font-weight: 500; margin-left: 4px; }
     .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
     .row .k { color: var(--text-dim); }
-    .row .v { font-family: var(--font-mono); }
+    .row .v { font-family: var(--font-mono); white-space: nowrap; }
     .verdict { font-size: 14px; font-weight: 700; margin-top: 2px; }
     .verdict .pct { font-family: var(--font-mono); }
     .good { color: var(--ok); }
@@ -155,10 +157,9 @@
     @keyframes pulse { 0%,100% { opacity: 0.2; } 50% { opacity: 1; } }
 
     /* ========== FOOT ========== */
-    .foot { padding: 10px 14px; font-size: 11px; color: var(--text-dim); line-height: 1.5; }
-    .foot a { color: var(--accent); text-decoration: none; }
+    .foot { padding: 8px 14px; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+    .foot a { color: var(--text-dim); text-decoration: none; }
     .foot a:hover { text-decoration: underline; }
-    .foot ul { margin: 4px 0 0 16px; }
     code { font-family: var(--font-mono); font-size: 10.5px; }
 
     @media (max-width: 600px) {
@@ -173,54 +174,53 @@
 <body>
   <div class="wrap">
     <header class="glass">
-      <h1>&#x1F4E6; Wooden Case <small>Erwartungswert nach aktuellem Orderbuch</small></h1>
-      <button class="btn" id="btn-refresh" title="Orderbücher neu laden">&#x21BB; AKTUALISIEREN</button>
-      <div class="status" id="status">Lade Preise …</div>
+      <h1>Wooden Case <small>Erwartungswert</small></h1>
+      <button class="btn" id="btn-refresh">Aktualisieren</button>
+      <div class="status" id="status">Lade …</div>
     </header>
 
     <div class="cards">
       <div class="card glass">
-        <h2>Case-Preis (Orderbuch)</h2>
+        <h2>Case</h2>
         <div class="big" id="case-main">–</div>
-        <div class="row"><span class="k">Kaufen: günstigstes Verkaufsangebot</span><span class="v" id="case-ask">–</span></div>
-        <div class="row"><span class="k">Verkaufen: höchstes Kaufgebot</span><span class="v" id="case-bid">–</span></div>
+        <div class="row"><span class="k">Kaufen</span><span class="v" id="case-ask">–</span></div>
+        <div class="row"><span class="k">Verkaufen</span><span class="v" id="case-bid">–</span></div>
         <div class="row"><span class="k">Spread</span><span class="v" id="case-spread">–</span></div>
       </div>
 
       <div class="card glass">
-        <h2>Erwartungswert Inhalt</h2>
+        <h2>Inhalt</h2>
         <div class="big" id="ev-main">–</div>
-        <div class="row"><span class="k">zu höchstem Kaufgebot (sofort verkaufen)</span><span class="v" id="ev-bid">–</span></div>
-        <div class="row"><span class="k">zu günstigstem Verkaufsangebot (selbst nutzen)</span><span class="v" id="ev-ask">–</span></div>
+        <div class="row"><span class="k">Verkaufen</span><span class="v" id="ev-bid">–</span></div>
+        <div class="row"><span class="k">Selbst nutzen</span><span class="v" id="ev-ask">–</span></div>
         <div class="row"><span class="k">Mitte</span><span class="v" id="ev-mid">–</span></div>
       </div>
 
       <div class="card glass">
-        <h2>Case kaufen &amp; öffnen</h2>
+        <h2>Kaufen und öffnen</h2>
         <div class="verdict" id="verdict-buy">–</div>
         <div class="row"><span class="k">Kaufpreis</span><span class="v" id="buy-cost">–</span></div>
         <div class="row"><span class="k">Erwartungswert</span><span class="v" id="buy-ev">–</span></div>
-        <div class="row"><span class="k">Gewinn / Verlust pro Case</span><span class="v" id="buy-diff">–</span></div>
-        <label style="margin-top:4px;">Eigener Kaufpreis <input type="number" id="own-price" step="0.001" min="0" placeholder="optional" style="width:90px;"></label>
+        <div class="row"><span class="k">Differenz</span><span class="v" id="buy-diff">–</span></div>
+        <label style="margin-top:4px;">Eigener Kaufpreis <input type="number" id="own-price" step="0.001" min="0" style="width:90px;"></label>
       </div>
 
       <div class="card glass">
-        <h2>Eigene Case: öffnen oder verkaufen?</h2>
+        <h2>Öffnen oder verkaufen</h2>
         <div class="verdict" id="verdict-own">–</div>
-        <div class="row"><span class="k">Verkaufserlös (höchstes Kaufgebot)</span><span class="v" id="own-sell">–</span></div>
-        <div class="row"><span class="k">Erwartungswert beim Öffnen</span><span class="v" id="own-ev">–</span></div>
+        <div class="row"><span class="k">Verkaufserlös</span><span class="v" id="own-sell">–</span></div>
+        <div class="row"><span class="k">Erwartungswert</span><span class="v" id="own-ev">–</span></div>
         <div class="row"><span class="k">Differenz</span><span class="v" id="own-diff">–</span></div>
-        <div class="hint">Der Erwartungswert ist ein Mittelwert über viele Cases – eine einzelne Case kann deutlich mehr oder weniger wert sein.</div>
       </div>
     </div>
 
     <div class="glass tablewrap">
       <div class="controls">
-        <label>Preisbasis für den Inhalt
+        <label>Preisbasis
           <select id="basis">
-            <option value="bid">Höchstes Kaufgebot – Inhalt sofort verkaufen</option>
-            <option value="ask">Günstigstes Verkaufsangebot – Inhalt selbst nutzen</option>
-            <option value="mid">Mitte aus beidem</option>
+            <option value="bid">Verkaufen (höchstes Kaufgebot)</option>
+            <option value="ask">Selbst nutzen (günstigstes Angebot)</option>
+            <option value="mid">Mitte</option>
           </select>
         </label>
         <label>Sortierung
@@ -251,13 +251,9 @@
     </div>
 
     <div class="glass foot">
-      <strong>Annahmen &amp; Quellen</strong>
-      <ul>
-        <li>Dropraten laut Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>: erst Seltenheit (Episch 2 %, Selten 13 %, Ungewöhnlich 20 %, Gewöhnlich 65 %), dann eine Ressource dieser Seltenheit gleichverteilt.</li>
-        <li>Menge: Budget gleichverteilt 20–80 Arbeitspunkte, Menge = Budget ÷ Produktionspunkte (abgerundet, mindestens 1). Produktionspunkte kommen live aus der Game-Config (<code>gameConfig.getGameConfig</code>); die Rundung ist eine Annahme, die Spannen im Devlog passen dazu.</li>
-        <li>Preise ausschließlich aus dem Orderbuch (<code>tradingOrder.getTopOrders</code>): höchstes Kaufgebot bzw. günstigstes Verkaufsangebot. Der API-Durchschnittspreis (<code>itemTrading.getPrices</code>) wird nur als Notlösung genutzt, wenn kein Angebot existiert – dann mit <span class="fallback">*</span> markiert. Marktgebühren sind nicht berücksichtigt.</li>
-        <li>„Pille“ heißt in der API <code>cocain</code>, „Mysteriöse Pflanze“ <code>coca</code>.</li>
-      </ul>
+      Dropraten: Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>, Seltenheit dann Ressource gleichverteilt.
+      Menge: Budget 20–80 gleichverteilt ÷ Produktionspunkte (Game-Config), abgerundet, min. 1.
+      Preise: Orderbuch api2.warera.io, ohne Marktgebühren. <span class="fallback">*</span> kein Angebot, API-Durchschnitt verwendet.
     </div>
   </div>
 
@@ -382,7 +378,7 @@
       const caseBid = priceInfo(CASE_CODE, 'bid');
       const evB = evTotal('bid'), evA = evTotal('ask'), evM = evTotal('mid');
       const evSel = evTotal(basis);
-      const basisLabel = { bid: 'höchstes Kaufgebot', ask: 'günstigstes Verkaufsangebot', mid: 'Mitte' }[basis];
+      const basisLabel = { bid: 'Verkaufen', ask: 'Selbst nutzen', mid: 'Mitte' }[basis];
 
       // Case-Karte
       $('case-ask').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB : '');
@@ -404,7 +400,7 @@
       $('buy-ev').textContent = fmt(evSel);
       const buyDiff = (cost != null && evSel != null) ? evSel - cost : null;
       $('buy-diff').textContent = fmtSigned(buyDiff);
-      setVerdict($('verdict-buy'), buyDiff, cost, '&#x2705; Lohnt sich', '&#x274C; Lohnt sich nicht');
+      setVerdict($('verdict-buy'), buyDiff, cost, 'Lohnt sich', 'Lohnt sich nicht');
 
       // Eigene Case
       const sell = caseBid.value;
@@ -412,7 +408,7 @@
       $('own-ev').textContent = fmt(evSel);
       const ownDiff = (sell != null && evSel != null) ? evSel - sell : null;
       $('own-diff').textContent = fmtSigned(ownDiff);
-      setVerdict($('verdict-own'), ownDiff, sell, '&#x1F513; Öffnen', '&#x1F4B0; Verkaufen');
+      setVerdict($('verdict-own'), ownDiff, sell, 'Öffnen', 'Verkaufen');
 
       renderTable(basis, evSel, basisLabel);
     }
@@ -447,17 +443,17 @@
           html += `<tr class="sub">
             <td colspan="2"><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
             <td class="num">${fmtPctPlain(RARITY[d.rarity].p, 0)}</td>
-            <td colspan="3" class="dim" style="text-align:left;">${rarityCount[d.rarity]} Ressourcen, je ${fmtPctPlain(RARITY[d.rarity].p / rarityCount[d.rarity])}</td>
+            <td colspan="3" class="dim" style="text-align:left;">${rarityCount[d.rarity]} × ${fmtPctPlain(RARITY[d.rarity].p / rarityCount[d.rarity])}</td>
             <td class="num">${fmt(gs)}</td>
             <td class="num dim">${total ? fmtPctPlain(gs / total, 1) : '–'}</td>
           </tr>`;
         }
         const p = state.prices[d.code] || {};
-        const tip = `Höchstes Kaufgebot ${fmt(p.bid)} · Günstigstes Verkaufsangebot ${fmt(p.ask)} · API-Ø ${fmt(p.market)}`;
+        const tip = `${d.code} · Kaufgebot ${fmt(p.bid)} · Angebot ${fmt(p.ask)} · API ${fmt(p.market)}`;
         const share = (r.ev != null && total) ? r.ev / total : 0;
         const barW = Math.round(share / maxShare * 70);
         html += `<tr>
-          <td>${d.name} <span class="hint">${d.code}</span></td>
+          <td title="${d.code}">${d.name}</td>
           <td><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
           <td class="num">${fmtPctPlain(d.chance)}</td>
           <td class="num" title="Ø ${nf(r.ea, 2)}">${r.range[0]}–${r.range[1]} <span class="dim">(Ø ${nf(r.ea, 1)})</span></td>
@@ -469,7 +465,7 @@
       });
 
       html += `<tr class="total">
-        <td colspan="6">Erwartungswert pro Case (${basisLabel})</td>
+        <td colspan="6">Erwartungswert (${basisLabel})</td>
         <td class="num">${fmt(total)}</td>
         <td></td>
       </tr>`;
@@ -546,7 +542,7 @@
       if (state.loading) return;
       state.loading = true;
       const btn = $('btn-refresh'); btn.disabled = true;
-      const st = $('status'); st.className = 'status'; st.textContent = 'Lade Orderbücher …';
+      const st = $('status'); st.className = 'status'; st.textContent = 'Lade …';
       try {
         await Promise.all([loadPrices(), loadConfig()]);
         render();
@@ -554,7 +550,7 @@
         const time = new Date().toLocaleTimeString('de-DE');
         if (failed > 0) {
           st.className = 'status err';
-          st.textContent = `Stand: ${time} · ${failed} Orderbuch/Orderbücher nicht geladen – nochmal aktualisieren`;
+          st.textContent = `Stand: ${time} · ${failed} Orderbücher fehlen`;
         } else {
           st.textContent = 'Stand: ' + time + ' · api2.warera.io';
         }
