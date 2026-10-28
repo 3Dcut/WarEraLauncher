@@ -249,7 +249,7 @@
             <th class="l">Ressource</th>
             <th class="l">Seltenheit</th>
             <th title="Wahrscheinlichkeit, dass genau diese Ressource fällt">Chance</th>
-            <th title="Menge = Budget (20–80 Arbeitspunkte) ÷ Produktionspunkte, abgerundet, mindestens 1">Menge</th>
+            <th title="Menge = Budget der Seltenheit ÷ Produktionspunkte, abgerundet, mindestens 1">Menge</th>
             <th title="Produktionspunkte pro Einheit (aus der Game-Config)">PP</th>
             <th title="Preis pro Einheit nach gewählter Preisbasis – Tooltip zeigt Kaufgebot / Verkaufsangebot">Preis</th>
             <th title="Chance × Ø Menge × Preis">EV-Beitrag</th>
@@ -261,8 +261,8 @@
     </div>
 
     <div class="glass foot">
-      Dropraten: Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>, Seltenheit dann Ressource gleichverteilt.
-      Menge: Budget 20–80 gleichverteilt ÷ Produktionspunkte (Game-Config), abgerundet, min. 1.
+      Dropraten: Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>, mit Balance-Update (Episch 3 %, Selten 12 %, Ungewöhnlich 25 %, Gewöhnlich 60 %), Seltenheit dann Ressource gleichverteilt.
+      Menge: Budget je Seltenheit gleichverteilt (Gewöhnlich 20–40, Ungewöhnlich 40–70, Selten 80–130, Episch 160–260) ÷ Produktionspunkte (Game-Config), abgerundet, min. 1.
       Preise: Orderbuch api2.warera.io, ohne Marktgebühren. <span class="fallback">*</span> kein Angebot, API-Durchschnitt verwendet.
     </div>
   </div>
@@ -293,13 +293,13 @@
     // ========== KONFIGURATION ==========
     const API = 'https://api2.warera.io/trpc/';
     const CASE_CODE = 'woodenCase';
-    const BUDGET_MIN = 20, BUDGET_MAX = 80;
 
     const RARITY = {
-      epic:     { p: 0.02, label: 'Episch',        order: 0 },
-      rare:     { p: 0.13, label: 'Selten',        order: 1 },
-      uncommon: { p: 0.20, label: 'Ungewöhnlich',  order: 2 },
-      common:   { p: 0.65, label: 'Gewöhnlich',    order: 3 },
+      // p = Chance der Seltenheit, min/max = Budget in Produktionspunkten (gleichverteilt)
+      epic:     { p: 0.03, min: 160, max: 260, label: 'Episch',        order: 0 },
+      rare:     { p: 0.12, min: 80,  max: 130, label: 'Selten',        order: 1 },
+      uncommon: { p: 0.25, min: 40,  max: 70,  label: 'Ungewöhnlich',  order: 2 },
+      common:   { p: 0.60, min: 20,  max: 40,  label: 'Gewöhnlich',    order: 3 },
     };
 
     // Produktionspunkte (pp) = Fallback; werden live aus der Game-Config überschrieben
@@ -344,13 +344,15 @@
     const $ = id => document.getElementById(id);
 
     // ========== MATHE ==========
-    function expectedAmount(pp) {
+    function expectedAmount(d) {
+      const { min, max } = RARITY[d.rarity];
       let sum = 0, n = 0;
-      for (let b = BUDGET_MIN; b <= BUDGET_MAX; b++) { sum += Math.max(1, Math.floor(b / pp)); n++; }
+      for (let b = min; b <= max; b++) { sum += Math.max(1, Math.floor(b / d.pp)); n++; }
       return sum / n;
     }
-    function amountRange(pp) {
-      return [Math.max(1, Math.floor(BUDGET_MIN / pp)), Math.max(1, Math.floor(BUDGET_MAX / pp))];
+    function amountRange(d) {
+      const { min, max } = RARITY[d.rarity];
+      return [Math.max(1, Math.floor(min / d.pp)), Math.max(1, Math.floor(max / d.pp))];
     }
 
     // Liefert { value, fallback } – fallback = true, wenn der API-Durchschnitt genutzt werden musste
@@ -375,7 +377,7 @@
         const price = priceFor(d.code, basis);
         if (price == null) continue;
         any = true;
-        total += d.chance * expectedAmount(d.pp) * price;
+        total += d.chance * expectedAmount(d) * price;
       }
       return any ? total : null;
     }
@@ -441,9 +443,9 @@
     function renderTable(basis, total, basisLabel) {
       const rows = DROPS.map(d => {
         const pi = priceInfo(d.code, basis);
-        const ea = expectedAmount(d.pp);
+        const ea = expectedAmount(d);
         const ev = pi.value != null ? d.chance * ea * pi.value : null;
-        return { d, price: pi.value, fallback: pi.fallback, ea, ev, range: amountRange(d.pp) };
+        return { d, price: pi.value, fallback: pi.fallback, ea, ev, range: amountRange(d) };
       });
 
       const sorters = {
@@ -468,7 +470,7 @@
           html += `<tr class="sub">
             <td colspan="2"><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
             <td class="num">${fmtPctPlain(RARITY[d.rarity].p, 0)}</td>
-            <td colspan="3" class="dim" style="text-align:left;">${rarityCount[d.rarity]} × ${fmtPctPlain(RARITY[d.rarity].p / rarityCount[d.rarity])}</td>
+            <td colspan="3" class="dim" style="text-align:left;">${rarityCount[d.rarity]} × ${fmtPctPlain(RARITY[d.rarity].p / rarityCount[d.rarity])} · ${RARITY[d.rarity].min}–${RARITY[d.rarity].max} PP</td>
             <td class="num">${fmt(gs)}</td>
             <td class="num dim">${total ? fmtPctPlain(gs / total, 1) : '–'}</td>
           </tr>`;
