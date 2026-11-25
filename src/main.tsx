@@ -1,3 +1,5 @@
+// Zuerst: Sprache festlegen, bevor andere Module Texte oder Einstellungen anlegen
+import { initDocumentLanguage } from './i18n';
 import '@fontsource/rajdhani/500.css';
 import '@fontsource/rajdhani/600.css';
 import '@fontsource/rajdhani/700.css';
@@ -38,6 +40,7 @@ async function importSharedWorkspace(): Promise<string | null> {
 }
 
 async function start(): Promise<void> {
+  initDocumentLanguage();
   initTheme();
   const [, defaults] = await Promise.all([loadTools(), loadPresets()]);
   const { legacyTree } = ensureWorkspaces(defaults);

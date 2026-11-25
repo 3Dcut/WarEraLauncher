@@ -2,16 +2,43 @@ import { signal, effect } from '@preact/signals';
 import { load, save, remove, loadLegacy } from '../core/storage';
 import { fetchLocalJson } from '../core/http';
 import { allTools, findLaunchable } from '../data/tools';
+import { t, localized, allVariants, messageVariants, type LocalizedText, type MessageKey } from '../i18n';
 
 /** Vereinfachte Layoutbeschreibung für Vorlagen und geteilte Links. */
 export type LayoutNode = { tabs: string[] } | { row: LayoutNode[] } | { column: LayoutNode[] };
 
-export interface Preset {
+/** Vorlage in workspaces.json; name und desc als String oder { "de": …, "en": …, "sv": … }. */
+export interface PresetDef {
   id: string;
-  name: string;
+  name: LocalizedText;
   icon: string;
-  desc?: string;
+  desc?: LocalizedText;
   layout: LayoutNode;
+}
+
+/** Vorlage zur Laufzeit: name und desc liefern den Text in der aktuellen Sprache. */
+export interface Preset {
+  readonly id: string;
+  readonly name: string;
+  readonly names: string[];
+  readonly icon: string;
+  readonly desc: string;
+  readonly layout: LayoutNode;
+}
+
+function toPreset(def: PresetDef): Preset {
+  return {
+    id: def.id,
+    icon: def.icon,
+    layout: def.layout,
+    names: allVariants(def.name),
+    get name() {
+      return localized(def.name);
+    },
+    get desc() {
+      return localized(def.desc);
+    },
+  };
 }
 
 export interface Workspace {
@@ -22,7 +49,7 @@ export interface Workspace {
 }
 
 interface PresetFile {
-  presets?: Preset[];
+  presets?: PresetDef[];
   defaults?: string[];
 }
 
@@ -78,7 +105,7 @@ export function treeIds(node: LayoutNode): string[] {
 export async function loadPresets(): Promise<string[]> {
   try {
     const file = await fetchLocalJson<PresetFile>('./workspaces.json');
-    const list = (file.presets ?? []).filter((p) => p && p.id && p.name && p.layout);
+    const list = (file.presets ?? []).filter((p) => p && p.id && p.name && p.layout).map(toPreset);
     presets.value = list;
     return file.defaults ?? list.map((p) => p.id);
   } catch (err) {
@@ -102,8 +129,8 @@ export function ensureWorkspaces(defaults: string[]): { legacyTree: LayoutNode |
       if (p) list.push({ id: p.id, name: p.name, icon: p.icon, preset: p.id });
     }
     legacyTree = legacyOpenTools();
-    if (legacyTree) list.push({ id: 'meine-tools', name: 'Meine Tools', icon: '🧭' });
-    if (list.length === 0) list.push({ id: newId(), name: 'Arbeitsbereich', icon: '🗂️' });
+    if (legacyTree) list.push({ id: 'meine-tools', name: t('workspace.myTools'), icon: '🧭' });
+    if (list.length === 0) list.push({ id: newId(), name: t('workspace.defaultName'), icon: '🗂️' });
     workspaces.value = list;
     activeWorkspaceId.value = legacyTree ? 'meine-tools' : list[0].id;
   }
@@ -126,6 +153,20 @@ function legacyOpenTools(): LayoutNode | null {
   } catch {
     return null;
   }
+}
+
+/** Standardnamen, die der Launcher selbst vergibt; sie folgen der Sprache, solange niemand sie ändert. */
+const GENERIC_NAMES: MessageKey[] = ['workspace.myTools', 'workspace.defaultName', 'workspace.newName', 'workspace.sharedName'];
+
+/**
+ * Anzeigename eines Arbeitsbereichs. Unveränderte Namen aus Vorlagen ("Lage") oder vom Launcher
+ * vergebene Namen ("Meine Tools") erscheinen in der aktuellen Sprache, eigene Namen bleiben, wie sie sind.
+ */
+export function workspaceLabel(ws: Workspace): string {
+  const p = presetById(ws.preset);
+  if (p && p.names.includes(ws.name)) return p.name;
+  for (const key of GENERIC_NAMES) if (messageVariants(key).includes(ws.name)) return t(key);
+  return ws.name;
 }
 
 export function addWorkspace(ws: Workspace): void {
@@ -193,7 +234,7 @@ export async function decodeShare(token: string): Promise<SharedWorkspace | null
     const data = JSON.parse(new TextDecoder().decode(bytes)) as SharedWorkspace;
     const layout = sanitizeTree(data.l);
     if (!layout) return null;
-    return { n: String(data.n ?? 'Geteilt').slice(0, 40), i: String(data.i ?? '🔗').slice(0, 4), l: layout };
+    return { n: String(data.n ?? t('workspace.sharedName')).slice(0, 40), i: String(data.i ?? '🔗').slice(0, 4), l: layout };
   } catch {
     return null;
   }

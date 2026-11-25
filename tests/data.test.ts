@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { normalizeCategories, WIDGETS, type CategoryDef } from '../src/data/tools';
+import { allVariants, localizedUrl } from '../src/i18n';
 import { parseTimeKey } from '../src/core/clock';
 
 const read = <T>(file: string): T => JSON.parse(readFileSync(file, 'utf8')) as T;
@@ -15,7 +16,7 @@ describe('tools.json', () => {
     const raw = defs.flatMap((c) => c.tools);
     const normalized = cats.flatMap((c) => c.tools);
     expect(normalized.length).toBe(raw.length);
-    for (const t of raw) expect(t.url.startsWith('https://'), t.name).toBe(true);
+    for (const t of raw) for (const url of allVariants(t.url)) expect(localizedUrl(url, 'de').startsWith('https://'), url).toBe(true);
   });
 
   it('hat eindeutige IDs', () => {

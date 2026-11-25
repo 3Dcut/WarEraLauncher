@@ -1,20 +1,25 @@
-import { signal, computed } from '@preact/signals';
+import { signal, computed, effect } from '@preact/signals';
 import { fetchLocalJson } from '../core/http';
+import { t, lang, localized, localizedUrl, allVariants, type Lang, type LocalizedText } from '../i18n';
 
-/** Eintrag in tools.json. Nur name und url sind Pflicht, alles andere ist optional. */
+/**
+ * Eintrag in tools.json. Nur name und url sind Pflicht, alles andere ist optional.
+ * name, url, desc und category dürfen ein String oder { "de": …, "en": …, "sv": … } sein;
+ * in url wird {lang} durch die aktuelle Sprache ersetzt.
+ */
 export interface ToolDef {
   id?: string;
-  name: string;
-  url: string;
+  name: LocalizedText;
+  url: LocalizedText;
   emoji?: string;
-  desc?: string;
+  desc?: LocalizedText;
   /** false = Seite verbietet Einbettung, wird als Karte mit Öffnen-Knopf gezeigt. */
   embed?: boolean;
   tags?: string[];
 }
 
 export interface CategoryDef {
-  category: string;
+  category: LocalizedText;
   icon?: string;
   tools: ToolDef[];
 }
@@ -31,6 +36,8 @@ export interface Tool {
   embed: boolean;
   tags: string[];
   category: string;
+  /** Sprachunabhängige Kennung der Kategorie (aus dem deutschen bzw. ersten Namen). */
+  categoryId: string;
   health: ToolHealth;
 }
 
@@ -54,29 +61,63 @@ interface StatusFile {
   results?: Record<string, { status?: ToolHealth }>;
 }
 
+// Namen und Beschreibungen sind Getter: Sie lesen die aktuelle Sprache erst beim Zugriff,
+// Komponenten zeichnen deshalb beim Umschalten der Sprache neu.
+function widget(
+  widgetKind: WidgetKind,
+  emoji: string,
+  tags: string[],
+  name: () => string,
+  desc: () => string,
+): WidgetDef {
+  return {
+    id: `widget:${widgetKind}`,
+    kind: 'widget',
+    widget: widgetKind,
+    emoji,
+    tags,
+    get name() {
+      return name();
+    },
+    get desc() {
+      return desc();
+    },
+    get category() {
+      return t('widgets.category');
+    },
+  };
+}
+
 export const WIDGETS: WidgetDef[] = [
-  { id: 'widget:timers', kind: 'widget', widget: 'timers', name: 'Zeiten', emoji: '⏱️', desc: 'Regeneration, Tageswechsel, Missionen und Wahlen', category: 'Widgets', tags: ['timer', 'regen', 'countdown', 'wahl'] },
-  { id: 'widget:character', kind: 'widget', widget: 'character', name: 'Mein Charakter', emoji: '🪖', desc: 'Energie, Gesundheit und Hunger mit Vollzeit-Prognose', category: 'Widgets', tags: ['energie', 'gesundheit', 'profil', 'spieler'] },
-  { id: 'widget:market', kind: 'widget', widget: 'market', name: 'Markt', emoji: '📈', desc: 'Live-Preise, Verlauf und Wert pro Produktionspunkt', category: 'Widgets', tags: ['preise', 'handel', 'marge', 'produktion'] },
-  { id: 'widget:battles', kind: 'widget', widget: 'battles', name: 'Front', emoji: '⚔️', desc: 'Laufende Schlachten mit Rundenstand', category: 'Widgets', tags: ['schlacht', 'krieg', 'kampf'] },
-  { id: 'widget:radio', kind: 'widget', widget: 'radio', name: 'Radio', emoji: '📻', desc: 'Sender, Automatik und Einspieler-Plan', category: 'Widgets', tags: ['musik', 'stream', 'laut.fm'] },
+  widget('timers', '⏱️', ['timer', 'regen', 'countdown', 'wahl', 'election', 'val'], () => t('widgets.timers.name'), () => t('widgets.timers.desc')),
+  widget('character', '🪖', ['energie', 'gesundheit', 'profil', 'spieler', 'energy', 'health', 'player', 'energi', 'hälsa', 'spelare'], () => t('widgets.character.name'), () => t('widgets.character.desc')),
+  widget('market', '📈', ['preise', 'handel', 'marge', 'produktion', 'prices', 'trade', 'margin', 'production', 'priser', 'handel', 'marknad'], () => t('widgets.market.name'), () => t('widgets.market.desc')),
+  widget('battles', '⚔️', ['schlacht', 'krieg', 'kampf', 'battle', 'war', 'front', 'strid', 'krig'], () => t('widgets.battles.name'), () => t('widgets.battles.desc')),
+  widget('radio', '📻', ['musik', 'stream', 'laut.fm', 'music', 'musik'], () => t('widgets.radio.name'), () => t('widgets.radio.desc')),
 ];
 
 /** Das Spiel selbst lässt sich nie einbetten, ist aber über Palette und Knopf erreichbar. */
 export const GAME_TOOL: Tool = {
   id: 'warera-game',
   kind: 'tool',
-  name: 'WarEra (Spiel)',
+  get name() {
+    return t('widgets.game.name');
+  },
   url: 'https://app.warera.io',
   emoji: '🎮',
-  desc: 'Das Spiel in einem eigenen Tab',
+  get desc() {
+    return t('widgets.game.desc');
+  },
   embed: false,
-  tags: ['spiel', 'game', 'app'],
-  category: 'Spiel',
+  tags: ['spiel', 'game', 'app', 'spel'],
+  get category() {
+    return t('widgets.game.category');
+  },
+  categoryId: 'spiel',
   health: 'ok',
 };
 
-export const categories = signal<{ name: string; icon: string; tools: Tool[] }[]>([]);
+export const categories = signal<{ id: string; name: string; icon: string; tools: Tool[] }[]>([]);
 export const toolsLoaded = signal(false);
 export const toolsError = signal<string | null>(null);
 
@@ -106,36 +147,58 @@ function isSafeUrl(url: string): boolean {
   }
 }
 
-export function normalizeCategories(defs: CategoryDef[], status?: StatusFile): { name: string; icon: string; tools: Tool[] }[] {
+const isText = (v: unknown): v is LocalizedText =>
+  typeof v === 'string' || (!!v && typeof v === 'object' && !Array.isArray(v) && Object.values(v).every((x) => typeof x === 'string'));
+
+/** Erster Name eines mehrsprachigen Textes in fester Reihenfolge (de, en, sv), unabhängig von der Anzeigesprache. */
+const stableName = (v: LocalizedText): string => localized(v, 'de') || allVariants(v)[0] || '';
+
+export function normalizeCategories(defs: CategoryDef[], status?: StatusFile, l: Lang = lang.value): { id: string; name: string; icon: string; tools: Tool[] }[] {
   const seen = new Set<string>();
   return defs
     .filter((c) => c && Array.isArray(c.tools))
-    .map((c) => ({
-      name: String(c.category ?? 'Sonstiges'),
-      icon: c.icon ?? '🧰',
-      tools: c.tools
-        .filter((t) => t && typeof t.name === 'string' && typeof t.url === 'string' && isSafeUrl(t.url))
-        .map((t): Tool => {
-          let id = t.id ? slugify(t.id) : slugify(t.name);
-          while (seen.has(id)) id += '-2';
-          seen.add(id);
-          const health = status?.results?.[id]?.status ?? 'unknown';
-          return {
-            id,
-            kind: 'tool',
-            name: t.name,
-            url: t.url,
-            emoji: t.emoji ?? '🔧',
-            desc: t.desc ?? '',
-            // Eine blockierte Seite bleibt blockiert, egal was tools.json behauptet.
-            embed: t.embed !== false && health !== 'blocked',
-            tags: t.tags ?? [],
-            category: String(c.category ?? 'Sonstiges'),
-            health,
-          };
-        }),
-    }));
+    .map((c) => {
+      const catDef: LocalizedText = isText(c.category) ? c.category : { de: 'Sonstiges', en: 'Other', sv: 'Övrigt' };
+      const categoryId = slugify(stableName(catDef)) || 'sonstiges';
+      const category = localized(catDef, l);
+      return {
+        id: categoryId,
+        name: category,
+        icon: c.icon ?? '🧰',
+        tools: c.tools
+          .filter((t) => t && isText(t.name) && isText(t.url) && allVariants(t.url).every((u) => isSafeUrl(u.replace(/\{lang\}/g, 'de'))))
+          .map((t): Tool => {
+            let id = t.id ? slugify(t.id) : slugify(stableName(t.name));
+            while (seen.has(id)) id += '-2';
+            seen.add(id);
+            const health = status?.results?.[id]?.status ?? 'unknown';
+            return {
+              id,
+              kind: 'tool',
+              name: localized(t.name, l),
+              url: localizedUrl(t.url, l),
+              emoji: t.emoji ?? '🔧',
+              desc: isText(t.desc) ? localized(t.desc, l) : '',
+              // Eine blockierte Seite bleibt blockiert, egal was tools.json behauptet.
+              embed: t.embed !== false && health !== 'blocked',
+              tags: t.tags ?? [],
+              category,
+              categoryId,
+              health,
+            };
+          }),
+      };
+    });
 }
+
+/** Rohdaten aus tools.json; die Liste wird bei jedem Sprachwechsel daraus neu aufgebaut. */
+const rawTools = signal<{ defs: CategoryDef[]; status?: StatusFile } | null>(null);
+
+effect(() => {
+  const raw = rawTools.value;
+  const l = lang.value;
+  if (raw) categories.value = normalizeCategories(raw.defs, raw.status, l);
+});
 
 export async function loadTools(): Promise<void> {
   try {
@@ -143,11 +206,11 @@ export async function loadTools(): Promise<void> {
       fetchLocalJson<CategoryDef[]>('./tools.json'),
       fetchLocalJson<StatusFile>('./tools-status.json').catch(() => undefined),
     ]);
-    categories.value = normalizeCategories(defs, status);
+    rawTools.value = { defs, status };
     toolsError.value = null;
   } catch (err) {
     console.error('tools.json konnte nicht geladen werden', err);
-    toolsError.value = 'Die Tool-Liste (tools.json) konnte nicht geladen werden.';
+    toolsError.value = 'tools.json';
   } finally {
     toolsLoaded.value = true;
   }

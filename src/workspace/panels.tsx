@@ -3,7 +3,7 @@
 // Verschieben, Stapeln und Lösen erhalten (im Chromium-Test gemessen).
 
 import { render } from 'preact';
-import { signal, type Signal } from '@preact/signals';
+import { signal, effect, type Signal } from '@preact/signals';
 import type {
   IContentRenderer,
   GroupPanelPartInitParameters,
@@ -37,6 +37,7 @@ export class ItemRenderer implements IContentRenderer {
   private key = '';
   private slowTimer: number | undefined;
   private loaded = false;
+  private disposeEffects: (() => void)[] = [];
 
   constructor(private readonly workspaceId: string) {
     this.element = document.createElement('div');
@@ -70,6 +71,16 @@ export class ItemRenderer implements IContentRenderer {
     this.tool = item;
     this.buildFrame(item);
     frameRegistry.set(this.key, this);
+    // Hängt die Adresse eines Tools von der Sprache ab ({lang} oder je Sprache in tools.json),
+    // lädt ein bereits geöffnetes Iframe nach dem Umschalten die passende Fassung.
+    this.disposeEffects.push(
+      effect(() => {
+        const fresh = findLaunchable(ref);
+        if (!fresh || fresh.kind !== 'tool' || !this.tool || fresh.url === this.tool.url) return;
+        this.tool = fresh;
+        if (this.iframe?.getAttribute('src')) this.reload();
+      }),
+    );
     // Erst nach dem Aufbau der Gruppe ist klar, welcher Tab sichtbar ist
     window.setTimeout(() => {
       if (params.api.isVisible) this.ensureLoaded();
@@ -140,6 +151,8 @@ export class ItemRenderer implements IContentRenderer {
 
   dispose(): void {
     clearTimeout(this.slowTimer);
+    this.disposeEffects.forEach((d) => d());
+    this.disposeEffects = [];
     frameRegistry.delete(this.key);
     render(null, this.element);
     this.iframe?.remove();

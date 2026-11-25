@@ -6,6 +6,7 @@ import { getCountries, type CountryInfo } from '../warera/api';
 import { countryName } from '../warera/dates';
 import { Dialog, Switch, Segmented } from './primitives';
 import { Icon } from './icons';
+import { t, LANGS, langChoice, setLang, compareText, type LangPref } from '../i18n';
 
 const THEME_SWATCH: Record<string, [string, string, string]> = {
   grau: ['#0b1020', '#182238', '#f0b429'],
@@ -48,12 +49,25 @@ export function SettingsDialog() {
 
   const countryList = Object.entries(countries)
     .map(([id, c]) => ({ id, name: countryName(c.code, c.name) }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    .sort((a, b) => compareText(a.name, b.name));
 
   return (
     <Dialog open={settingsOpen.value} onClose={() => (settingsOpen.value = false)} title="Einstellungen" icon="settings" class="settings">
       <section class="settings__section">
         <h3>Darstellung</h3>
+        <div class="field">
+          <div class="field__label">
+            <span>{t('settings.language')}</span>
+          </div>
+          <Segmented<LangPref>
+            name={t('settings.language')}
+            value={langChoice.value}
+            onChange={(pref) => setLang(pref)}
+            options={[{ value: 'auto', label: t('settings.languageAuto') }, ...LANGS.map((l) => ({ value: l.id as LangPref, label: l.name }))]}
+          />
+          <small class="muted">{t('settings.languageHint')}</small>
+        </div>
+
         <div class="theme-grid" role="radiogroup" aria-label="Theme">
           {THEMES.map((t) => {
             const [ground, surface, accent] = THEME_SWATCH[t.id];
