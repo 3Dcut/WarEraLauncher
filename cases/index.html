@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wooden Case – Erwartungswert</title>
+  <title data-i18n="title">Wooden Case – Erwartungswert</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -184,61 +184,61 @@
 <body>
   <div class="wrap">
     <header class="glass">
-      <h1>Wooden Case <small>Erwartungswert</small></h1>
-      <button class="btn" id="btn-refresh">Aktualisieren</button>
-      <div class="status" id="status">Lade …</div>
+      <h1>Wooden Case <small data-i18n="subtitle">Erwartungswert</small></h1>
+      <button class="btn" id="btn-refresh" data-i18n="refresh">Aktualisieren</button>
+      <div class="status" id="status" data-i18n="loading">Lade …</div>
     </header>
 
     <div class="cards">
       <div class="card glass">
-        <h2>Case</h2>
+        <h2 data-i18n="card.case">Case</h2>
         <div class="big" id="case-main">–</div>
-        <div class="row"><span class="k">Kaufen</span><span class="v" id="case-ask">–</span></div>
-        <div class="row"><span class="k">Verkaufen</span><span class="v" id="case-bid">–</span></div>
-        <div class="row"><span class="k">Spread</span><span class="v" id="case-spread">–</span></div>
+        <div class="row"><span class="k" data-i18n="buy">Kaufen</span><span class="v" id="case-ask">–</span></div>
+        <div class="row"><span class="k" data-i18n="sell">Verkaufen</span><span class="v" id="case-bid">–</span></div>
+        <div class="row"><span class="k" data-i18n="spread">Spread</span><span class="v" id="case-spread">–</span></div>
       </div>
 
       <div class="card glass">
-        <h2>Inhalt</h2>
+        <h2 data-i18n="card.contents">Inhalt</h2>
         <div class="big" id="ev-main">–</div>
-        <div class="row"><span class="k">Verkaufen</span><span class="v" id="ev-bid">–</span></div>
-        <div class="row"><span class="k">Selbst nutzen</span><span class="v" id="ev-ask">–</span></div>
-        <div class="row"><span class="k">Mitte</span><span class="v" id="ev-mid">–</span></div>
+        <div class="row"><span class="k" data-i18n="sell">Verkaufen</span><span class="v" id="ev-bid">–</span></div>
+        <div class="row"><span class="k" data-i18n="useSelf">Selbst nutzen</span><span class="v" id="ev-ask">–</span></div>
+        <div class="row"><span class="k" data-i18n="mid">Mitte</span><span class="v" id="ev-mid">–</span></div>
       </div>
 
       <div class="card glass">
-        <h2>Kaufen und öffnen</h2>
+        <h2 data-i18n="card.buyOpen">Kaufen und öffnen</h2>
         <div class="verdict" id="verdict-buy">–</div>
-        <div class="row"><span class="k">Kaufpreis</span><span class="v" id="buy-cost">–</span></div>
-        <div class="row"><span class="k">Erwartungswert</span><span class="v" id="buy-ev">–</span></div>
-        <div class="row"><span class="k">Differenz</span><span class="v" id="buy-diff">–</span></div>
-        <label style="margin-top:4px;">Eigener Kaufpreis <input type="number" id="own-price" step="0.001" min="0" style="width:90px;"></label>
+        <div class="row"><span class="k" data-i18n="purchasePrice">Kaufpreis</span><span class="v" id="buy-cost">–</span></div>
+        <div class="row"><span class="k" data-i18n="ev">Erwartungswert</span><span class="v" id="buy-ev">–</span></div>
+        <div class="row"><span class="k" data-i18n="diff">Differenz</span><span class="v" id="buy-diff">–</span></div>
+        <label style="margin-top:4px;"><span data-i18n="ownPrice">Eigener Kaufpreis</span> <input type="number" id="own-price" step="0.001" min="0" style="width:90px;"></label>
       </div>
 
       <div class="card glass">
-        <h2>Öffnen oder verkaufen</h2>
+        <h2 data-i18n="card.openSell">Öffnen oder verkaufen</h2>
         <div class="verdict" id="verdict-own">–</div>
-        <div class="row"><span class="k">Verkaufserlös</span><span class="v" id="own-sell">–</span></div>
-        <div class="row"><span class="k">Erwartungswert</span><span class="v" id="own-ev">–</span></div>
-        <div class="row"><span class="k">Differenz</span><span class="v" id="own-diff">–</span></div>
+        <div class="row"><span class="k" data-i18n="proceeds">Verkaufserlös</span><span class="v" id="own-sell">–</span></div>
+        <div class="row"><span class="k" data-i18n="ev">Erwartungswert</span><span class="v" id="own-ev">–</span></div>
+        <div class="row"><span class="k" data-i18n="diff">Differenz</span><span class="v" id="own-diff">–</span></div>
       </div>
     </div>
 
     <div class="glass tablewrap">
       <div class="controls">
-        <label>Preisbasis
+        <label><span data-i18n="priceBasis">Preisbasis</span>
           <select id="basis">
-            <option value="bid">Verkaufen (höchstes Kaufgebot)</option>
-            <option value="ask">Selbst nutzen (günstigstes Angebot)</option>
-            <option value="mid">Mitte</option>
+            <option value="bid" data-i18n="opt.bid">Verkaufen (höchstes Kaufgebot)</option>
+            <option value="ask" data-i18n="opt.ask">Selbst nutzen (günstigstes Angebot)</option>
+            <option value="mid" data-i18n="mid">Mitte</option>
           </select>
         </label>
-        <label>Sortierung
+        <label><span data-i18n="sorting">Sortierung</span>
           <select id="sort">
-            <option value="rarity">Seltenheit</option>
-            <option value="ev">EV-Beitrag</option>
-            <option value="chance">Chance</option>
-            <option value="price">Preis</option>
+            <option value="rarity" data-i18n="rarity">Seltenheit</option>
+            <option value="ev" data-i18n="evShare">EV-Beitrag</option>
+            <option value="chance" data-i18n="chance">Chance</option>
+            <option value="price" data-i18n="price">Preis</option>
           </select>
         </label>
         <span class="hint" id="ob-status"></span>
@@ -246,25 +246,21 @@
       <table>
         <thead>
           <tr>
-            <th class="l">Ressource</th>
-            <th class="l">Seltenheit</th>
-            <th title="Wahrscheinlichkeit, dass genau diese Ressource fällt">Chance</th>
-            <th title="Menge = Budget der Seltenheit ÷ Produktionspunkte, abgerundet, mindestens 1">Menge</th>
-            <th title="Produktionspunkte pro Einheit (aus der Game-Config)">PP</th>
-            <th title="Preis pro Einheit nach gewählter Preisbasis – Tooltip zeigt Kaufgebot / Verkaufsangebot">Preis</th>
-            <th title="Chance × Ø Menge × Preis">EV-Beitrag</th>
-            <th class="sharecell">Anteil am EV</th>
+            <th class="l" data-i18n="th.resource">Ressource</th>
+            <th class="l" data-i18n="rarity">Seltenheit</th>
+            <th data-i18n="chance" data-i18n-title="th.chanceTip" title="Wahrscheinlichkeit, dass genau diese Ressource fällt">Chance</th>
+            <th data-i18n="th.amount" data-i18n-title="th.amountTip" title="Menge = Budget der Seltenheit ÷ Produktionspunkte, abgerundet, mindestens 1">Menge</th>
+            <th data-i18n="th.pp" data-i18n-title="th.ppTip" title="Produktionspunkte pro Einheit (aus der Game-Config)">PP</th>
+            <th data-i18n="price" data-i18n-title="th.priceTip" title="Preis pro Einheit nach gewählter Preisbasis – Tooltip zeigt Kaufgebot / Verkaufsangebot">Preis</th>
+            <th data-i18n="evShare" data-i18n-title="th.evTip" title="Chance × Ø Menge × Preis">EV-Beitrag</th>
+            <th class="sharecell" data-i18n="th.share">Anteil am EV</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
 
-    <div class="glass foot">
-      Dropraten: Devlog <a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>, mit Balance-Update (Episch 3 %, Selten 12 %, Ungewöhnlich 25 %, Gewöhnlich 60 %), Seltenheit dann Ressource gleichverteilt.
-      Menge: Budget je Seltenheit gleichverteilt (Gewöhnlich 20–40, Ungewöhnlich 40–70, Selten 80–130, Episch 160–260) ÷ Produktionspunkte (Game-Config), abgerundet, min. 1.
-      Preise: Orderbuch api2.warera.io, ohne Marktgebühren. <span class="fallback">*</span> kein Angebot, API-Durchschnitt verwendet.
-    </div>
+    <div class="glass foot" data-i18n-html="foot"></div>
   </div>
 
   <script>
@@ -290,40 +286,164 @@
     applyTheme();
     window.addEventListener('storage', e => { if (!e.key || e.key === 'wl2:settings' || e.key === 'wl-theme') applyTheme(); });
 
+
+    // ========== SPRACHE (de/en/sv) ==========
+    // Reihenfolge: ?lang= in der Adresse, sonst localStorage "wl2:lang", bei "auto" die Browsersprache.
+    const LOCALES = { de: 'de-DE', en: 'en-GB', sv: 'sv-SE' };
+    const FOOT_LINK = '<a href="https://app.warera.io/article/6aa97af2c0e0960dfc3ca750" target="_blank" rel="noopener">v0.26.0</a>';
+    const MSG = {
+      de: {
+        title: 'Wooden Case – Erwartungswert', subtitle: 'Erwartungswert', refresh: 'Aktualisieren', loading: 'Lade …',
+        'card.case': 'Case', 'card.contents': 'Inhalt', 'card.buyOpen': 'Kaufen und öffnen', 'card.openSell': 'Öffnen oder verkaufen',
+        buy: 'Kaufen', sell: 'Verkaufen', spread: 'Spread', useSelf: 'Selbst nutzen', mid: 'Mitte',
+        purchasePrice: 'Kaufpreis', ev: 'Erwartungswert', diff: 'Differenz', proceeds: 'Verkaufserlös', ownPrice: 'Eigener Kaufpreis', own: 'eigen',
+        priceBasis: 'Preisbasis', sorting: 'Sortierung',
+        'opt.bid': 'Verkaufen (höchstes Kaufgebot)', 'opt.ask': 'Selbst nutzen (günstigstes Angebot)',
+        rarity: 'Seltenheit', evShare: 'EV-Beitrag', chance: 'Chance', price: 'Preis',
+        'th.resource': 'Ressource', 'th.chanceTip': 'Wahrscheinlichkeit, dass genau diese Ressource fällt',
+        'th.amount': 'Menge', 'th.amountTip': 'Menge = Budget der Seltenheit ÷ Produktionspunkte, abgerundet, mindestens 1',
+        'th.pp': 'PP', 'th.ppTip': 'Produktionspunkte pro Einheit (aus der Game-Config)',
+        'th.priceTip': 'Preis pro Einheit nach gewählter Preisbasis – Tooltip zeigt Kaufgebot / Verkaufsangebot',
+        'th.evTip': 'Chance × Ø Menge × Preis', 'th.share': 'Anteil am EV',
+        'r.epic': 'Episch', 'r.rare': 'Selten', 'r.uncommon': 'Ungewöhnlich', 'r.common': 'Gewöhnlich',
+        worth: 'Lohnt sich', notWorth: 'Lohnt sich nicht', open: 'Öffnen',
+        tipBid: 'Kaufgebot', tipAsk: 'Angebot', avg: 'Ø', total: 'Erwartungswert ({basis})',
+        fallbackTip: 'Kein Angebot im Orderbuch – API-Durchschnittspreis als Notlösung',
+        orderBooks: 'Orderbücher', asOf: 'Stand: {time}', missing: '{n} Orderbücher fehlen', loadError: 'Fehler beim Laden: {msg}', rateLimit: 'Rate-Limit (429)',
+        foot: 'Dropraten: Devlog {link}, mit Balance-Update (Episch 3 %, Selten 12 %, Ungewöhnlich 25 %, Gewöhnlich 60 %), Seltenheit dann Ressource gleichverteilt. ' +
+          'Menge: Budget je Seltenheit gleichverteilt (Gewöhnlich 20–40, Ungewöhnlich 40–70, Selten 80–130, Episch 160–260) ÷ Produktionspunkte (Game-Config), abgerundet, min. 1. ' +
+          'Preise: Orderbuch api2.warera.io, ohne Marktgebühren. <span class="fallback">*</span> kein Angebot, API-Durchschnitt verwendet.',
+      },
+      en: {
+        title: 'Wooden Case – expected value', subtitle: 'Expected value', refresh: 'Refresh', loading: 'Loading …',
+        'card.case': 'Case', 'card.contents': 'Contents', 'card.buyOpen': 'Buy and open', 'card.openSell': 'Open or sell',
+        buy: 'Buy', sell: 'Sell', spread: 'Spread', useSelf: 'Use yourself', mid: 'Mid',
+        purchasePrice: 'Purchase price', ev: 'Expected value', diff: 'Difference', proceeds: 'Sale proceeds', ownPrice: 'Your purchase price', own: 'own',
+        priceBasis: 'Price basis', sorting: 'Sort by',
+        'opt.bid': 'Sell (highest buy order)', 'opt.ask': 'Use yourself (lowest sell offer)',
+        rarity: 'Rarity', evShare: 'EV contribution', chance: 'Chance', price: 'Price',
+        'th.resource': 'Resource', 'th.chanceTip': 'Probability that exactly this resource drops',
+        'th.amount': 'Amount', 'th.amountTip': 'Amount = rarity budget ÷ production points, rounded down, at least 1',
+        'th.pp': 'PP', 'th.ppTip': 'Production points per unit (from the game config)',
+        'th.priceTip': 'Price per unit based on the selected price basis – tooltip shows buy order / sell offer',
+        'th.evTip': 'Chance × avg. amount × price', 'th.share': 'Share of EV',
+        'r.epic': 'Epic', 'r.rare': 'Rare', 'r.uncommon': 'Uncommon', 'r.common': 'Common',
+        worth: 'Worth it', notWorth: 'Not worth it', open: 'Open',
+        tipBid: 'Buy order', tipAsk: 'Offer', avg: 'avg.', total: 'Expected value ({basis})',
+        fallbackTip: 'No offer in the order book – API average price used as a fallback',
+        orderBooks: 'Order books', asOf: 'As of: {time}', missing: '{n} order books missing', loadError: 'Error while loading: {msg}', rateLimit: 'Rate limit (429)',
+        foot: 'Drop rates: devlog {link}, with balance update (Epic 3%, Rare 12%, Uncommon 25%, Common 60%), then rarity, then resource, uniformly distributed. ' +
+          'Amount: budget per rarity, uniformly distributed (Common 20–40, Uncommon 40–70, Rare 80–130, Epic 160–260) ÷ production points (game config), rounded down, min. 1. ' +
+          'Prices: order book api2.warera.io, excluding market fees. <span class="fallback">*</span> no offer, API average used.',
+      },
+      sv: {
+        title: 'Wooden Case – förväntat värde', subtitle: 'Förväntat värde', refresh: 'Uppdatera', loading: 'Laddar …',
+        'card.case': 'Låda', 'card.contents': 'Innehåll', 'card.buyOpen': 'Köp och öppna', 'card.openSell': 'Öppna eller sälj',
+        buy: 'Köp', sell: 'Sälj', spread: 'Spread', useSelf: 'Använd själv', mid: 'Mitt',
+        purchasePrice: 'Inköpspris', ev: 'Förväntat värde', diff: 'Skillnad', proceeds: 'Försäljningsintäkt', ownPrice: 'Eget inköpspris', own: 'eget',
+        priceBasis: 'Prisbas', sorting: 'Sortering',
+        'opt.bid': 'Sälj (högsta köporder)', 'opt.ask': 'Använd själv (lägsta säljerbjudande)',
+        rarity: 'Raritet', evShare: 'EV-bidrag', chance: 'Chans', price: 'Pris',
+        'th.resource': 'Resurs', 'th.chanceTip': 'Sannolikheten att just den här resursen droppas',
+        'th.amount': 'Mängd', 'th.amountTip': 'Mängd = raritetens budget ÷ produktionspoäng, avrundat nedåt, minst 1',
+        'th.pp': 'PP', 'th.ppTip': 'Produktionspoäng per enhet (från speldatan)',
+        'th.priceTip': 'Pris per enhet enligt vald prisbas – verktygstipset visar köporder / säljerbjudande',
+        'th.evTip': 'Chans × snittmängd × pris', 'th.share': 'Andel av EV',
+        'r.epic': 'Episk', 'r.rare': 'Sällsynt', 'r.uncommon': 'Ovanlig', 'r.common': 'Vanlig',
+        worth: 'Lönar sig', notWorth: 'Lönar sig inte', open: 'Öppna',
+        tipBid: 'Köporder', tipAsk: 'Erbjudande', avg: 'snitt', total: 'Förväntat värde ({basis})',
+        fallbackTip: 'Inget erbjudande i orderboken – API-snittpris används som nödlösning',
+        orderBooks: 'Orderböcker', asOf: 'Läge: {time}', missing: '{n} orderböcker saknas', loadError: 'Fel vid laddning: {msg}', rateLimit: 'Hastighetsgräns (429)',
+        foot: 'Droppchanser: devlog {link}, med balansuppdatering (Episk 3 %, Sällsynt 12 %, Ovanlig 25 %, Vanlig 60 %), därefter raritet och resurs, jämnt fördelade. ' +
+          'Mängd: budget per raritet, jämnt fördelad (Vanlig 20–40, Ovanlig 40–70, Sällsynt 80–130, Episk 160–260) ÷ produktionspoäng (speldata), avrundat nedåt, minst 1. ' +
+          'Priser: orderbok api2.warera.io, utan marknadsavgifter. <span class="fallback">*</span> inget erbjudande, API-snitt används.',
+      },
+    };
+
+    function pickLang() {
+      const norm = v => { v = String(v || '').toLowerCase().slice(0, 2); return LOCALES[v] ? v : null; };
+      try {
+        const q = new URLSearchParams(location.search).get('lang');
+        if (norm(q)) return norm(q);
+      } catch (e) {}
+      let pref = 'auto';
+      try {
+        const v = JSON.parse(localStorage.getItem('wl2:lang') || 'null');
+        if (typeof v === 'string') pref = v;
+      } catch (e) {}
+      if (norm(pref) && pref !== 'auto') return norm(pref);
+      const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+      for (const tag of list) {
+        const primary = String(tag || '').toLowerCase().split('-')[0];
+        if (LOCALES[primary]) return primary;
+        if (['nb', 'nn', 'no', 'da'].includes(primary)) return 'sv';
+      }
+      return 'en';
+    }
+    const hasUrlLang = (() => { try { return !!new URLSearchParams(location.search).get('lang'); } catch (e) { return false; } })();
+    let LANG = pickLang();
+    const t = (key, vars) => {
+      let s = (MSG[LANG] && MSG[LANG][key]) ?? MSG.de[key] ?? key;
+      if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+      return s;
+    };
+    function applyStaticTexts() {
+      document.documentElement.lang = LANG;
+      document.title = t('title');
+      document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+      document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml, { link: FOOT_LINK }); });
+    }
+    applyStaticTexts();
+    window.addEventListener('storage', e => {
+      if (hasUrlLang || (e.key && e.key !== 'wl2:lang')) return;
+      const next = pickLang();
+      if (next === LANG) return;
+      LANG = next;
+      applyStaticTexts();
+      if (typeof render === 'function') { render(); updateObStatus(); updateStatus(); }
+    });
+
     // ========== KONFIGURATION ==========
     const API = 'https://api2.warera.io/trpc/';
     const CASE_CODE = 'woodenCase';
 
     const RARITY = {
       // p = Chance der Seltenheit, min/max = Budget in Produktionspunkten (gleichverteilt)
-      epic:     { p: 0.03, min: 160, max: 260, label: 'Episch',        order: 0 },
-      rare:     { p: 0.12, min: 80,  max: 130, label: 'Selten',        order: 1 },
-      uncommon: { p: 0.25, min: 40,  max: 70,  label: 'Ungewöhnlich',  order: 2 },
-      common:   { p: 0.60, min: 20,  max: 40,  label: 'Gewöhnlich',    order: 3 },
+      epic:     { p: 0.03, min: 160, max: 260, get label() { return t('r.epic'); },        order: 0 },
+      rare:     { p: 0.12, min: 80,  max: 130, get label() { return t('r.rare'); },        order: 1 },
+      uncommon: { p: 0.25, min: 40,  max: 70,  get label() { return t('r.uncommon'); },  order: 2 },
+      common:   { p: 0.60, min: 20,  max: 40,  get label() { return t('r.common'); },    order: 3 },
+    };
+
+    const NAMES = {
+      de: { cookedFish: "Gekochter Fisch", heavyAmmo: "Schwere Munition", cocain: "Pille", ammo: "Munition", steak: "Steak", concrete: "Beton", steel: "Stahl", bread: "Brot", oil: "Öl", paper: "Papier", lightAmmo: "Leichte Munition", grain: "Getreide", iron: "Eisen", wood: "Holz", lead: "Blei", limestone: "Kalkstein", coca: "Mysteriöse Pflanze", petroleum: "Erdöl", livestock: "Vieh", fish: "Fisch" },
+      en: { cookedFish: "Cooked fish", heavyAmmo: "Heavy ammo", cocain: "Pill", ammo: "Ammo", steak: "Steak", concrete: "Concrete", steel: "Steel", bread: "Bread", oil: "Oil", paper: "Paper", lightAmmo: "Light ammo", grain: "Grain", iron: "Iron", wood: "Wood", lead: "Lead", limestone: "Limestone", coca: "Mysterious plant", petroleum: "Petroleum", livestock: "Livestock", fish: "Fish" },
+      sv: { cookedFish: "Halstrad fisk", heavyAmmo: "Tung ammunition", cocain: "Piller", ammo: "Ammunition", steak: "Biff", concrete: "Betong", steel: "Stål", bread: "Bröd", oil: "Olja", paper: "Papper", lightAmmo: "Lätt ammunition", grain: "Spannmål", iron: "Järn", wood: "Trä", lead: "Bly", limestone: "Kalksten", coca: "Mystisk planta", petroleum: "Råolja", livestock: "Boskap", fish: "Fisk" },
     };
 
     // Produktionspunkte (pp) = Fallback; werden live aus der Game-Config überschrieben
     const DROPS = [
-      { code: 'cookedFish', name: 'Gekochter Fisch',    rarity: 'epic',     pp: 40 },
-      { code: 'heavyAmmo',  name: 'Schwere Munition',   rarity: 'epic',     pp: 16 },
-      { code: 'cocain',     name: 'Pille',              rarity: 'epic',     pp: 200 },
-      { code: 'ammo',       name: 'Munition',           rarity: 'rare',     pp: 4 },
-      { code: 'steak',      name: 'Steak',              rarity: 'rare',     pp: 20 },
-      { code: 'concrete',   name: 'Beton',              rarity: 'uncommon', pp: 10 },
-      { code: 'steel',      name: 'Stahl',              rarity: 'uncommon', pp: 10 },
-      { code: 'bread',      name: 'Brot',               rarity: 'uncommon', pp: 10 },
-      { code: 'oil',        name: 'Öl',                 rarity: 'uncommon', pp: 1 },
-      { code: 'paper',      name: 'Papier',             rarity: 'uncommon', pp: 1 },
-      { code: 'lightAmmo',  name: 'Leichte Munition',   rarity: 'uncommon', pp: 1 },
-      { code: 'grain',      name: 'Getreide',           rarity: 'common',   pp: 1 },
-      { code: 'iron',       name: 'Eisen',              rarity: 'common',   pp: 1 },
-      { code: 'wood',       name: 'Holz',               rarity: 'common',   pp: 1 },
-      { code: 'lead',       name: 'Blei',               rarity: 'common',   pp: 1 },
-      { code: 'limestone',  name: 'Kalkstein',          rarity: 'common',   pp: 1 },
-      { code: 'coca',       name: 'Mysteriöse Pflanze', rarity: 'common',   pp: 1 },
-      { code: 'petroleum',  name: 'Erdöl',              rarity: 'common',   pp: 1 },
-      { code: 'livestock',  name: 'Vieh',               rarity: 'common',   pp: 20 },
-      { code: 'fish',       name: 'Fisch',              rarity: 'common',   pp: 40 },
+      { code: 'cookedFish', get name() { return NAMES[LANG]["cookedFish"]; },    rarity: 'epic',     pp: 40 },
+      { code: 'heavyAmmo',  get name() { return NAMES[LANG]["heavyAmmo"]; },   rarity: 'epic',     pp: 16 },
+      { code: 'cocain',     get name() { return NAMES[LANG]["cocain"]; },              rarity: 'epic',     pp: 200 },
+      { code: 'ammo',       get name() { return NAMES[LANG]["ammo"]; },           rarity: 'rare',     pp: 4 },
+      { code: 'steak',      get name() { return NAMES[LANG]["steak"]; },              rarity: 'rare',     pp: 20 },
+      { code: 'concrete',   get name() { return NAMES[LANG]["concrete"]; },              rarity: 'uncommon', pp: 10 },
+      { code: 'steel',      get name() { return NAMES[LANG]["steel"]; },              rarity: 'uncommon', pp: 10 },
+      { code: 'bread',      get name() { return NAMES[LANG]["bread"]; },               rarity: 'uncommon', pp: 10 },
+      { code: 'oil',        get name() { return NAMES[LANG]["oil"]; },                 rarity: 'uncommon', pp: 1 },
+      { code: 'paper',      get name() { return NAMES[LANG]["paper"]; },             rarity: 'uncommon', pp: 1 },
+      { code: 'lightAmmo',  get name() { return NAMES[LANG]["lightAmmo"]; },   rarity: 'uncommon', pp: 1 },
+      { code: 'grain',      get name() { return NAMES[LANG]["grain"]; },           rarity: 'common',   pp: 1 },
+      { code: 'iron',       get name() { return NAMES[LANG]["iron"]; },              rarity: 'common',   pp: 1 },
+      { code: 'wood',       get name() { return NAMES[LANG]["wood"]; },               rarity: 'common',   pp: 1 },
+      { code: 'lead',       get name() { return NAMES[LANG]["lead"]; },               rarity: 'common',   pp: 1 },
+      { code: 'limestone',  get name() { return NAMES[LANG]["limestone"]; },          rarity: 'common',   pp: 1 },
+      { code: 'coca',       get name() { return NAMES[LANG]["coca"]; }, rarity: 'common',   pp: 1 },
+      { code: 'petroleum',  get name() { return NAMES[LANG]["petroleum"]; },              rarity: 'common',   pp: 1 },
+      { code: 'livestock',  get name() { return NAMES[LANG]["livestock"]; },               rarity: 'common',   pp: 20 },
+      { code: 'fish',       get name() { return NAMES[LANG]["fish"]; },              rarity: 'common',   pp: 40 },
     ];
 
     const rarityCount = {};
@@ -339,6 +459,7 @@
       obLoaded: 0,
       obTotal: 0,
       loading: false,
+      status: { kind: 'loading' },   // kind: loading | ok | partial | error
     };
 
     const $ = id => document.getElementById(id);
@@ -383,12 +504,13 @@
     }
 
     // ========== FORMAT ==========
-    const nf = (v, d) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const PCT = () => (LANG === 'en' ? '%' : ' %');
+    const nf = (v, d) => v.toLocaleString(LOCALES[LANG], { minimumFractionDigits: d, maximumFractionDigits: d });
     const fmt = v => (v == null || isNaN(v)) ? '–' : nf(v, Math.abs(v) < 1 ? 3 : 2);
     const fmtSigned = v => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + fmt(v);
-    const fmtPct = (v, d = 1) => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + nf(v * 100, d) + ' %';
-    const fmtPctPlain = (v, d = 2) => nf(v * 100, d) + ' %';
-    const FB = '<span class="fallback" title="Kein Angebot im Orderbuch – API-Durchschnittspreis als Notlösung">*</span>';
+    const fmtPct = (v, d = 1) => (v == null || isNaN(v)) ? '–' : (v > 0 ? '+' : '') + nf(v * 100, d) + PCT();
+    const fmtPctPlain = (v, d = 2) => nf(v * 100, d) + PCT();
+    const FB_HTML = () => '<span class="fallback" title="' + t('fallbackTip') + '">*</span>';
 
     // ========== RENDER ==========
     function setVerdict(el, diff, cost, goodText, badText) {
@@ -405,15 +527,15 @@
       const caseBid = priceInfo(CASE_CODE, 'bid');
       const evB = evTotal('bid'), evA = evTotal('ask'), evM = evTotal('mid');
       const evSel = evTotal(basis);
-      const basisLabel = { bid: 'Verkaufen', ask: 'Selbst nutzen', mid: 'Mitte' }[basis];
+      const basisLabel = { bid: t('sell'), ask: t('useSelf'), mid: t('mid') }[basis];
 
       // Case-Karte
-      $('case-ask').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB : '');
-      $('case-bid').innerHTML = fmt(caseBid.value) + (caseBid.fallback ? FB : '');
+      $('case-ask').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB_HTML() : '');
+      $('case-bid').innerHTML = fmt(caseBid.value) + (caseBid.fallback ? FB_HTML() : '');
       const spread = (caseAsk.value != null && caseBid.value != null && !caseAsk.fallback && !caseBid.fallback)
         ? caseAsk.value - caseBid.value : null;
-      $('case-spread').textContent = spread == null ? '–' : fmt(spread) + (caseBid.value ? ' (' + nf(spread / caseBid.value * 100, 1) + ' %)' : '');
-      $('case-main').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB : '') + '<small>Kaufpreis</small>';
+      $('case-spread').textContent = spread == null ? '–' : fmt(spread) + (caseBid.value ? ' (' + nf(spread / caseBid.value * 100, 1) + PCT() + ')' : '');
+      $('case-main').innerHTML = fmt(caseAsk.value) + (caseAsk.fallback ? FB_HTML() : '') + '<small>' + t('purchasePrice') + '</small>';
 
       // EV-Karte
       $('ev-bid').textContent = fmt(evB);
@@ -423,19 +545,19 @@
 
       // Kaufen & öffnen
       const cost = state.ownPrice != null ? state.ownPrice : caseAsk.value;
-      $('buy-cost').innerHTML = fmt(cost) + (state.ownPrice != null ? ' (eigen)' : (caseAsk.fallback ? FB : ''));
+      $('buy-cost').innerHTML = fmt(cost) + (state.ownPrice != null ? ' (' + t('own') + ')' : (caseAsk.fallback ? FB_HTML() : ''));
       $('buy-ev').textContent = fmt(evSel);
       const buyDiff = (cost != null && evSel != null) ? evSel - cost : null;
       $('buy-diff').textContent = fmtSigned(buyDiff);
-      setVerdict($('verdict-buy'), buyDiff, cost, 'Lohnt sich', 'Lohnt sich nicht');
+      setVerdict($('verdict-buy'), buyDiff, cost, t('worth'), t('notWorth'));
 
       // Eigene Case
       const sell = caseBid.value;
-      $('own-sell').innerHTML = fmt(sell) + (caseBid.fallback ? FB : '');
+      $('own-sell').innerHTML = fmt(sell) + (caseBid.fallback ? FB_HTML() : '');
       $('own-ev').textContent = fmt(evSel);
       const ownDiff = (sell != null && evSel != null) ? evSel - sell : null;
       $('own-diff').textContent = fmtSigned(ownDiff);
-      setVerdict($('verdict-own'), ownDiff, sell, 'Öffnen', 'Verkaufen');
+      setVerdict($('verdict-own'), ownDiff, sell, t('open'), t('sell'));
 
       renderTable(basis, evSel, basisLabel);
     }
@@ -476,23 +598,23 @@
           </tr>`;
         }
         const p = state.prices[d.code] || {};
-        const tip = `${d.code} · Kaufgebot ${fmt(p.bid)} · Angebot ${fmt(p.ask)} · API ${fmt(p.market)}`;
+        const tip = `${d.code} · ${t('tipBid')} ${fmt(p.bid)} · ${t('tipAsk')} ${fmt(p.ask)} · API ${fmt(p.market)}`;
         const share = (r.ev != null && total) ? r.ev / total : 0;
         const barW = Math.round(share / maxShare * 70);
         html += `<tr>
           <td title="${d.code}">${d.name}</td>
           <td><span class="rar ${d.rarity}">${RARITY[d.rarity].label}</span></td>
           <td class="num">${fmtPctPlain(d.chance)}</td>
-          <td class="num" title="Ø ${nf(r.ea, 2)}">${r.range[0]}–${r.range[1]} <span class="dim">(Ø ${nf(r.ea, 1)})</span></td>
+          <td class="num" title="${t('avg')} ${nf(r.ea, 2)}">${r.range[0]}–${r.range[1]} <span class="dim">(${t('avg')} ${nf(r.ea, 1)})</span></td>
           <td class="num dim">${d.pp}</td>
-          <td class="num price-cell" title="${tip}">${fmt(r.price)}${r.fallback ? FB : ''}</td>
+          <td class="num price-cell" title="${tip}">${fmt(r.price)}${r.fallback ? FB_HTML() : ''}</td>
           <td class="num">${fmt(r.ev)}</td>
           <td class="sharecell"><div class="share"><div class="bar" style="width:${barW}px"></div><span class="txt">${r.ev != null && total ? fmtPctPlain(share, 1) : '–'}</span></div></td>
         </tr>`;
       });
 
       html += `<tr class="total">
-        <td colspan="6">Erwartungswert (${basisLabel})</td>
+        <td colspan="6">${t('total', { basis: basisLabel })}</td>
         <td class="num">${fmt(total)}</td>
         <td></td>
       </tr>`;
@@ -508,7 +630,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       }
-      throw new Error('Rate-Limit (429)');
+      throw new Error(t('rateLimit'));
     }
     const trpc = (path, input) => fetchJson(API + path + (input ? '?input=' + encodeURIComponent(JSON.stringify(input)) : ''));
 
@@ -559,31 +681,35 @@
     function updateObStatus() {
       const el = $('ob-status');
       if (state.obLoaded < state.obTotal) {
-        el.innerHTML = `Orderbücher ${state.obLoaded}/${state.obTotal}<span class="loading-dot"></span>`;
+        el.innerHTML = `${t('orderBooks')} ${state.obLoaded}/${state.obTotal}<span class="loading-dot"></span>`;
       } else {
         el.textContent = '';
       }
+    }
+
+    function updateStatus() {
+      const st = $('status'), s = state.status;
+      if (s.kind === 'loading') { st.className = 'status'; st.textContent = t('loading'); }
+      else if (s.kind === 'partial') { st.className = 'status err'; st.textContent = t('asOf', { time: s.time }) + ' · ' + t('missing', { n: s.failed }); }
+      else if (s.kind === 'ok') { st.className = 'status'; st.textContent = t('asOf', { time: s.time }) + ' · api2.warera.io'; }
+      else { st.className = 'status err'; st.textContent = t('loadError', { msg: s.msg }); }
     }
 
     async function refresh() {
       if (state.loading) return;
       state.loading = true;
       const btn = $('btn-refresh'); btn.disabled = true;
-      const st = $('status'); st.className = 'status'; st.textContent = 'Lade …';
+      state.status = { kind: 'loading' }; updateStatus();
       try {
         await Promise.all([loadPrices(), loadConfig()]);
         render();
         const failed = await loadOrderBooks();
-        const time = new Date().toLocaleTimeString('de-DE');
-        if (failed > 0) {
-          st.className = 'status err';
-          st.textContent = `Stand: ${time} · ${failed} Orderbücher fehlen`;
-        } else {
-          st.textContent = 'Stand: ' + time + ' · api2.warera.io';
-        }
+        const time = new Date().toLocaleTimeString(LOCALES[LANG]);
+        state.status = failed > 0 ? { kind: 'partial', time, failed } : { kind: 'ok', time };
+        updateStatus();
       } catch (e) {
-        st.className = 'status err';
-        st.textContent = 'Fehler beim Laden: ' + e.message;
+        state.status = { kind: 'error', msg: e.message };
+        updateStatus();
         render();
       } finally {
         state.loading = false; btn.disabled = false;

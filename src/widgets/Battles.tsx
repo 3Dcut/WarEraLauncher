@@ -5,7 +5,7 @@ import { countryName } from '../warera/dates';
 import { settings } from '../state';
 import { useVisibleInterval, Segmented } from '../ui/primitives';
 import { Icon } from '../ui/icons';
-import { t, formatNumber, type MessageKey } from '../i18n';
+import { t, tn, type MessageKey } from '../i18n';
 
 const POINTS_TO_WIN = 300;
 
@@ -67,7 +67,7 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
             { value: 'all', label: t('widgets.battles.worldwide') },
           ]}
         />
-        {battles && <span class="muted">{t('widgets.battles.active', { count: formatNumber(battles.length) })}</span>}
+        {battles && <span class="muted">{tn('widgets.battles.active', battles.length)}</span>}
       </div>
       {!battles && <div class="widget-empty">{error ? t('widgets.battles.unreachable') : t('widgets.battles.loading')}</div>}
       {battles && battles.length === 0 && <div class="widget-empty">{scope === 'mine' ? t('widgets.battles.noneFor', { country: mine }) : t('widgets.battles.none')}</div>}
