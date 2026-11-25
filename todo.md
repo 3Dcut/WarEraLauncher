@@ -18,8 +18,13 @@
 - [x] Mobil: ein Fenster mit Tabs, Werkzeuge als Schublade
 - [x] Schriften lokal (keine Google-Fonts-Anfragen), PWA-Manifest
 
+## v2.1 – Sprachen
+- [x] Wörterbuch je Bereich (src/i18n/messages), Deutsch, Englisch, Schwedisch; Wahl in Einstellungen, Palette und per ?lang=
+- [x] Tool-Beschreibungen, Kategorien und Vorlagen mehrsprachig, Tool-URLs mit {lang}
+- [x] Kisten-Seite (/cases/) übersetzt; alte Oberfläche (legacy.html) bleibt deutsch
+- [ ] Schwedische Texte von Muttersprachlern gegenlesen lassen
+
 ## Ideen für später
-- [ ] Englische Oberfläche (Texte liegen gesammelt in den Komponenten, Umstellung auf ein Wörterbuch nötig)
 - [ ] AzuraCast-Status per SSE statt Polling
 - [ ] Preisverlauf serverseitig (Cloudflare Worker, warera.de läuft bereits über Cloudflare)
 - [ ] Schlafmodus für lange verdeckte Tools (Speicher sparen)
