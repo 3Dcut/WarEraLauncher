@@ -18,10 +18,20 @@
 - [x] Mobil: ein Fenster mit Tabs, Werkzeuge als Schublade
 - [x] Schriften lokal (keine Google-Fonts-Anfragen), PWA-Manifest
 
+## v2.1 – Abgleich nach den Spiel-Updates (November 2026)
+- [x] Case-EV-Rechner entfernt: Wooden Cases sind nicht mehr handelbar (`isTradable: false`), der Markt blendet nicht handelbare Waren aus
+- [x] Mein Charakter: Balken aus `user.getUserSkills`, weil `user.getUserLite` keine Skills mehr liefert; Unternehmergeist durch Produktion ersetzt
+- [x] Front: Turnierschlachten (Teams statt Länder) werden lesbar angezeigt
+- [x] Tools entfernt: Wages (404), Income Calc (Domain abgelaufen, Jobmarkt und Unternehmergeist gibt es nicht mehr), Prod. Bonus (Deposits, Spezialisierung und Ethik-Boni seit v0.27 abgeschafft), Phantomant und CountryStats (Zertifikate seit Mai 2026 abgelaufen)
+- [x] Build Tool zeigt auf intel.warera.wiki/builder, wie es die alte Seite selbst empfiehlt
+- [ ] Market Monitor beobachten: aus der Cloud nicht erreichbar, Zertifikat läuft am 28.11.2026 ab
+- [ ] /wahl/ bettet wahl.warera.de ein, die Subdomain hat keinen DNS-Eintrag mehr
+- [ ] Battle Sim führt noch Unternehmergeist als Skill, Kampfwerte prüfen
+
 ## Ideen für später
 - [ ] Englische Oberfläche (Texte liegen gesammelt in den Komponenten, Umstellung auf ein Wörterbuch nötig)
 - [ ] AzuraCast-Status per SSE statt Polling
 - [ ] Preisverlauf serverseitig (Cloudflare Worker, warera.de läuft bereits über Cloudflare)
 - [ ] Schlafmodus für lange verdeckte Tools (Speicher sparen)
-- [ ] Weitere Tools prüfen: intel.warera.wiki, economic-build-warera.netlify.app
+- [ ] Weitere Tools prüfen: intel.warera.wiki (Economy, Market, Military, Radar; bettet sich nicht ein), economic-build-warera.netlify.app
 - [ ] Erinnerungen (z. B. Energie voll) als Browser-Benachrichtigung

@@ -48,6 +48,13 @@ tests/                Vitest
 scripts/              copy-static.mjs (Daten/Audio nach dist), check-tools.mjs (Erreichbarkeit/Einbettung)
 ```
 
+## WarEra-API
+
+Die Widgets lesen die öffentliche tRPC-API unter `api2.warera.io` (ohne Schlüssel, 100 Anfragen pro Minute und IP).
+Welche Prozeduren es gibt, welche Parameter sie erwarten und was sich nach einem Spiel-Update geändert hat
+(neue Felder, entfernte Prozeduren), steht im [API-Explorer von RealMarijn](https://warera.realmarijn.nl/api-explorer).
+Nach größeren Updates lohnt ein Abgleich mit `src/warera/api.ts`.
+
 ## Daten pflegen (ohne Code)
 
 Die JSON-Dateien im Repo-Root werden zur Laufzeit geladen und beim Deploy geprüft.

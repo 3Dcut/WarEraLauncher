@@ -1,6 +1,6 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Signal } from '@preact/signals';
-import { getActiveBattles, getCountries, getRegions, type Battle, type CountryInfo } from '../warera/api';
+import { getActiveBattles, getCountries, getRegions, getTournamentTeamNumber, type Battle, type BattleSide, type CountryInfo } from '../warera/api';
 import { countryName } from '../warera/dates';
 import { settings } from '../state';
 import { useVisibleInterval, Segmented } from '../ui/primitives';
@@ -13,6 +13,7 @@ const TYPE_LABEL: Record<string, string> = {
   resistance: 'Widerstand',
   revolt: 'Aufstand',
   civilWar: 'Bürgerkrieg',
+  tournament: 'Turnier',
 };
 
 export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
@@ -20,21 +21,29 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
   const [battles, setBattles] = useState<Battle[] | null>(null);
   const [countries, setCountries] = useState<Record<string, CountryInfo>>({});
   const [regions, setRegions] = useState<Record<string, string>>({});
+  const [teams, setTeams] = useState<Record<string, number | null>>({});
   const [error, setError] = useState(false);
   const countryId = settings.value.countryId;
+  const scopeRef = useRef(scope);
+  scopeRef.current = scope;
 
-  useVisibleInterval(
-    () => {
-      getActiveBattles(scope === 'mine' ? countryId : null)
-        .then((list) => {
-          setBattles(list);
-          setError(false);
-        })
-        .catch(() => setError(true));
-    },
-    60_000,
-    visible.value,
-  );
+  const load = () => {
+    const wanted = scope;
+    getActiveBattles(wanted === 'mine' ? countryId : null)
+      .then((list) => {
+        // Eine verspätete Antwort für den vorherigen Filter darf die neue Liste nicht überschreiben.
+        if (scopeRef.current !== wanted) return;
+        setBattles(list);
+        setError(false);
+      })
+      .catch(() => setError(true));
+  };
+
+  useVisibleInterval(load, 60_000, visible.value);
+  // Nach dem Umschalten sofort laden, statt bis zum nächsten Takt "Lade Schlachten …" zu zeigen.
+  useEffect(() => {
+    if (visible.value) load();
+  }, [scope]);
   useVisibleInterval(
     () => {
       if (!Object.keys(countries).length) getCountries().then(setCountries).catch(() => undefined);
@@ -44,12 +53,37 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
     visible.value,
   );
 
-  const name = (id: string) => {
+  // Turnierschlachten haben statt Ländern Teams, die nur eine Nummer tragen.
+  useEffect(() => {
+    const missing = [...new Set((battles ?? []).flatMap((b) => [b.attacker.tournamentTeam, b.defender.tournamentTeam]))].filter(
+      (id): id is string => !!id && !(id in teams),
+    );
+    for (const id of missing) {
+      getTournamentTeamNumber(id)
+        .then((n) => setTeams((t) => ({ ...t, [id]: n })))
+        .catch(() => setTeams((t) => ({ ...t, [id]: null })));
+    }
+  }, [battles]);
+
+  const countryLabel = (id: string) => {
     const c = countries[id];
     return c ? countryName(c.code, c.name) : '…';
   };
-  const code = (id: string) => countries[id]?.code?.toUpperCase() ?? '??';
-  const mine = countryId ? name(countryId) : 'Mein Land';
+  const teamNumber = (side: BattleSide) => (side.tournamentTeam ? teams[side.tournamentTeam] : undefined);
+  const name = (side: BattleSide) => {
+    if (side.country) return countryLabel(side.country);
+    if (side.tournamentTeam) {
+      const n = teamNumber(side);
+      return n == null ? 'Turnierteam' : `Team ${n}`;
+    }
+    return '…';
+  };
+  const code = (side: BattleSide) => {
+    if (side.country) return countries[side.country]?.code?.toUpperCase() ?? '??';
+    const n = teamNumber(side);
+    return n == null ? 'T' : `T${n}`;
+  };
+  const mine = countryId ? countryLabel(countryId) : 'Mein Land';
 
   return (
     <div class="battles">
@@ -87,15 +121,15 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
               </div>
               <div class="battle__sides">
                 <div class="side side--att">
-                  <span class="cc">{code(b.attacker.country)}</span>
-                  <span class="side__name">{name(b.attacker.country)}</span>
+                  <span class="cc">{code(b.attacker)}</span>
+                  <span class="side__name">{name(b.attacker)}</span>
                 </div>
                 <div class="battle__score mono" title="Gewonnene Runden">
                   {b.attacker.wonRoundsCount ?? 0}:{b.defender.wonRoundsCount ?? 0}
                 </div>
                 <div class="side side--def">
-                  <span class="side__name">{name(b.defender.country)}</span>
-                  <span class="cc">{code(b.defender.country)}</span>
+                  <span class="side__name">{name(b.defender)}</span>
+                  <span class="cc">{code(b.defender)}</span>
                 </div>
               </div>
               <div class="round" aria-label={`Aktuelle Runde: ${a} zu ${d} von ${POINTS_TO_WIN} Punkten`}>

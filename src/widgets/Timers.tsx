@@ -3,7 +3,7 @@ import { formatClock, formatCountdown } from '../core/clock';
 import { useNow } from '../ui/primitives';
 
 const ROWS: { key: keyof NonNullable<typeof gameDates.value>; label: string; hint: string }[] = [
-  { key: 'nextRegenAt', label: 'Regeneration', hint: 'Energie, Gesundheit, Hunger +10 %' },
+  { key: 'nextRegenAt', label: 'Regeneration', hint: 'Energie, Gesundheit, Hunger, Produktion +10 %' },
   { key: 'nextDayAt', label: 'Tageswechsel', hint: 'Neuer Spieltag' },
   { key: 'dailyMissionRegenAt', label: 'Tagesmissionen', hint: 'Neue Missionen' },
   { key: 'weeklyMissionRegenAt', label: 'Wochenmissionen', hint: 'Neue Missionen' },

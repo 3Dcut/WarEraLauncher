@@ -28,7 +28,6 @@ export const ITEM_NAMES: Record<string, string> = {
   scraps: 'Schrott',
   case1: 'Kiste I',
   case2: 'Kiste II',
-  woodenCase: 'Holzkiste',
 };
 
 interface Snapshot {
@@ -97,6 +96,8 @@ export function MarketWidget({ visible }: { visible: Signal<boolean> }) {
     if (!prices) return [];
     const reference = history.find((h) => Date.now() - h.t < 24 * 3600_000) ?? history[0];
     return Object.entries(prices)
+      // getPrices nennt auch Waren, die nicht mehr handelbar sind (etwa woodenCase); die blenden wir aus.
+      .filter(([code]) => items[code]?.tradable !== false)
       .map(([code, price]) => {
         const before = reference?.p[code];
         const change = before ? (price - before) / before : null;

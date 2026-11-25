@@ -18,11 +18,11 @@
       "id": "wirtschaft",
       "name": "Wirtschaft",
       "icon": "💰",
-      "desc": "Rechner links, Markt und Löhne rechts",
+      "desc": "Rechner links, Markt und Firmen rechts",
       "layout": {
         "row": [
-          { "tabs": ["company-calc", "income-calc", "dismantle-calc"] },
-          { "column": [{ "tabs": ["widget:market", "market-monitor"] }, { "tabs": ["wages", "production-bonus"] }] }
+          { "tabs": ["company-calc", "dismantle-calc"] },
+          { "column": [{ "tabs": ["widget:market", "market-monitor"] }, { "tabs": ["national-companies"] }] }
         ]
       }
     },
@@ -34,7 +34,7 @@
       "layout": {
         "row": [
           { "tabs": ["battle-sim"] },
-          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["phantomant", "map"] }] }
+          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["map"] }] }
         ]
       }
     },
@@ -44,7 +44,7 @@
       "icon": "📊",
       "desc": "Statistikseiten nebeneinander",
       "layout": {
-        "row": [{ "tabs": ["warerastats", "countrystats"] }, { "tabs": ["national-companies", "market-monitor"] }]
+        "row": [{ "tabs": ["warerastats"] }, { "tabs": ["national-companies", "market-monitor"] }]
       }
     }
   ]

@@ -3,12 +3,8 @@
     "category": "Wirtschaft",
     "icon": "💰",
     "tools": [
-      {"id": "income-calc", "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵", "desc": "Einkommen berechnen", "tags": ["einkommen", "lohn", "rechner"]},
       {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": "Firmen durchrechnen", "tags": ["firma", "produktion", "rechner"]},
-      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]},
-      {"id": "production-bonus", "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️", "desc": "Produktionsbonus berechnen", "tags": ["produktion", "bonus"]},
-      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": "Löhne im Überblick", "tags": ["lohn", "jobs", "statistik"]},
-      {"id": "case-ev", "name": "Case EV", "url": "https://warera.de/cases/", "emoji": "📦", "desc": "Erwartungswert einer Wooden Case nach Orderbuch", "tags": ["case", "kiste", "erwartungswert", "markt", "rechner"]}
+      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]}
     ]
   },
   {
@@ -16,16 +12,14 @@
     "icon": "⚔️",
     "tools": [
       {"id": "map", "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️", "desc": "Interaktive Weltkarte", "embed": false, "tags": ["karte", "regionen"]},
-      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"]},
-      {"id": "phantomant", "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜", "tags": ["kampf"]}
+      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"]}
     ]
   },
   {
     "category": "Statistiken",
     "icon": "📊",
     "tools": [
-      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken rund um WarEra", "tags": ["statistik", "ranking"]},
-      {"id": "countrystats", "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍", "desc": "Länderstatistiken im Zeitverlauf", "tags": ["land", "entwicklung", "statistik"]},
+      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken zu Waren und Ausrüstung", "tags": ["statistik", "items", "ausrüstung"]},
       {"id": "market-monitor", "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒", "desc": "Marktpreise und Orderbücher", "tags": ["markt", "preise", "handel"]},
       {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": "Firmen eines Landes", "tags": ["firmen", "land"]}
     ]
@@ -34,7 +28,7 @@
     "category": "Misc",
     "icon": "🧰",
     "tools": [
-      {"id": "build-tool", "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️", "desc": "Builds planen", "tags": ["build", "skills"]},
+      {"id": "build-tool", "name": "Build Tool", "url": "https://intel.warera.wiki/builder", "emoji": "🏗️", "desc": "Builds optimieren (Warera Intel, Nachfolger des alten Build Tools)", "embed": false, "tags": ["build", "skills", "intel"]},
       {"id": "stackedit", "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝", "desc": "Markdown-Editor, etwa für Zeitungsartikel", "tags": ["artikel", "zeitung", "markdown"]},
       {"id": "arcanaera", "name": "ArcanaEra", "url": "https://arcana.warera.wiki", "emoji": "🔮", "tags": ["wiki"]},
       {"id": "cardera", "name": "Cardera", "url": "https://cardera.warera.de/de", "emoji": "🃏", "desc": "Das Warera-Kartenspiel: Karten sammeln, Deck bauen, Duelle. Anmeldung einmal im neuen Tab.", "tags": ["karten", "kartenspiel", "tcg", "deck", "duell", "spiel"]}

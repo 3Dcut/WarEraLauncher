@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Signal } from '@preact/signals';
-import { getUser, searchUsers, type UserLite } from '../warera/api';
+import { getUser, getUserSkills, searchUsers, type Skills, type UserLite } from '../warera/api';
 import { gameDates, countryName } from '../warera/dates';
 import { getCountries, type CountryInfo } from '../warera/api';
 import { settings, updateSettings } from '../state';
@@ -12,7 +12,7 @@ const BARS: { key: string; label: string; tone: string }[] = [
   { key: 'energy', label: 'Energie', tone: 'energy' },
   { key: 'health', label: 'Gesundheit', tone: 'health' },
   { key: 'hunger', label: 'Hunger', tone: 'hunger' },
-  { key: 'entrepreneurship', label: 'Unternehmergeist', tone: 'entre' },
+  { key: 'production', label: 'Produktion', tone: 'production' },
 ];
 
 /** Balken regenerieren zur vollen Stunde um hourlyBarRegen; daraus folgt der Zeitpunkt "voll". */
@@ -31,6 +31,7 @@ export function CharacterWidget({ visible }: { visible: Signal<boolean> }) {
 
 function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }) {
   const [user, setUser] = useState<UserLite | null>(null);
+  const [skills, setSkills] = useState<Skills>({});
   const [error, setError] = useState<string | null>(null);
   const [countries, setCountries] = useState<Record<string, CountryInfo>>({});
 
@@ -42,6 +43,9 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
           setError(null);
         })
         .catch(() => setError('Profil konnte nicht geladen werden.'));
+      getUserSkills(id)
+        .then(setSkills)
+        .catch(() => undefined);
       if (!Object.keys(countries).length) getCountries().then(setCountries).catch(() => undefined);
     },
     120_000,
@@ -71,8 +75,9 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
       </header>
 
       <div class="bars">
+        {!Object.keys(skills).length && <span class="muted">Balken werden geladen …</span>}
         {BARS.map((b) => {
-          const skill = user.skills?.[b.key];
+          const skill = skills[b.key];
           if (!skill || skill.total == null) return null;
           const current = skill.currentBarValue ?? 0;
           const total = skill.total;

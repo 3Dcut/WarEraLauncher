@@ -1,6 +1,9 @@
 // Schlanker Client für die öffentliche WarEra-API (tRPC über GET, CORS offen, ohne Schlüssel,
 // Limit 100 Anfragen pro Minute und IP). Antworten werden zwischengespeichert; große Listen
 // (Länder, Regionen, Spielkonfiguration) nur als verkleinerte Auszüge im localStorage.
+//
+// Nachschlagewerk für Prozeduren, Parameter und Änderungen nach Spiel-Updates (welche
+// Felder neu sind, welche Prozeduren entfernt wurden): https://warera.realmarijn.nl/api-explorer
 
 import { fetchJson, HttpError } from '../core/http';
 import { load, save } from '../core/storage';
@@ -98,18 +101,19 @@ export interface ItemInfo {
   type: string;
   pp: number | null;
   needs: Record<string, number> | null;
+  /** false bei Waren, die nicht gehandelt werden können; getPrices nennt mitunter noch alte Preise dafür (z. B. woodenCase). */
+  tradable: boolean;
 }
 
 export function getItems(): Promise<Record<string, ItemInfo>> {
-  return cached('items', 24 * 3600_000, async () => {
-    const cfg = await trpc<{ items?: Record<string, { type?: string; productionPoints?: number; productionNeeds?: Record<string, number> | null }> }>(
-      'gameConfig.getGameConfig',
-      undefined,
-      3600_000,
-    );
+  // Neuer Schlüssel, weil ältere Auszüge noch kein tradable-Feld kennen.
+  return cached('items:v2', 24 * 3600_000, async () => {
+    const cfg = await trpc<{
+      items?: Record<string, { type?: string; productionPoints?: number; productionNeeds?: Record<string, number> | null; isTradable?: boolean }>;
+    }>('gameConfig.getGameConfig', undefined, 3600_000);
     const out: Record<string, ItemInfo> = {};
     for (const [code, item] of Object.entries(cfg.items ?? {})) {
-      out[code] = { type: item.type ?? 'unknown', pp: item.productionPoints ?? null, needs: item.productionNeeds ?? null };
+      out[code] = { type: item.type ?? 'unknown', pp: item.productionPoints ?? null, needs: item.productionNeeds ?? null, tradable: item.isTradable !== false };
     }
     return out;
   });
@@ -143,7 +147,9 @@ export function getRegions(): Promise<Record<string, string>> {
 // ------------------------------------------------------------------ Schlachten
 
 export interface BattleSide {
-  country: string;
+  /** Fehlt bei Turnierschlachten, dort kämpfen Teams statt Länder. */
+  country?: string;
+  tournamentTeam?: string;
   region?: string;
   wonRoundsCount?: number;
   moneyPool?: number;
@@ -166,13 +172,21 @@ export async function getActiveBattles(countryId: string | null): Promise<Battle
   return data.items ?? [];
 }
 
+/** Turnierteams tragen keinen Namen, nur eine laufende Nummer innerhalb des Turniers. */
+export async function getTournamentTeamNumber(teamId: string): Promise<number | null> {
+  const team = await trpc<{ number?: number }>('tournamentTeam.getById', { tournamentTeamId: teamId }, 6 * 3600_000);
+  return team?.number ?? null;
+}
+
 // ------------------------------------------------------------------ Spieler
 
-interface SkillBar {
+export interface SkillBar {
   currentBarValue?: number;
   total?: number;
   hourlyBarRegen?: number;
 }
+
+export type Skills = Record<string, SkillBar | undefined>;
 
 export interface UserLite {
   _id: string;
@@ -180,12 +194,17 @@ export interface UserLite {
   country?: string;
   avatarUrl?: string;
   leveling?: { level?: number; dailyXpLeft?: number; availableSkillPoints?: number };
-  skills?: Record<string, SkillBar | undefined>;
   militaryRank?: number;
 }
 
 export function getUser(userId: string, ttlMs = 2 * 60_000): Promise<UserLite> {
   return trpc<UserLite>('user.getUserLite', { userId }, ttlMs);
+}
+
+/** getUserLite liefert keine Skills mehr (geprüft 2026-11-25); die Balken kommen aus dieser Prozedur. */
+export async function getUserSkills(userId: string, ttlMs = 2 * 60_000): Promise<Skills> {
+  const data = await trpc<{ skills?: Skills }>('user.getUserSkills', { userId }, ttlMs);
+  return data?.skills ?? {};
 }
 
 export async function searchUsers(name: string): Promise<UserLite[]> {
