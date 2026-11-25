@@ -2,34 +2,40 @@ import { useEffect, useRef } from 'preact/hooks';
 import { helpOpen, toasts, dismissToast } from '../state';
 import { Dialog } from './primitives';
 import { Icon } from './icons';
+import type { ComponentChildren } from 'preact';
+import { t, tx } from '../i18n';
 
-const SHORTCUTS: [string[], string][] = [
-  [['Strg', 'K'], 'Befehlspalette: Tools, Widgets, Sender, Aktionen'],
-  [['/'], 'Befehlspalette (außerhalb von Eingabefeldern)'],
-  [['Alt', '1…9'], 'Zum Arbeitsbereich 1 bis 9 wechseln'],
-  [['Alt', 'R'], 'Aktives Tool neu laden'],
-  [['Alt', 'M'], 'Radio an/aus'],
-  [['Alt', 'W'], 'WarEra als Fenster öffnen'],
-  [['Alt', 'T'], 'Theme wechseln'],
-  [['Alt', 'B'], 'Seitenleiste ein-/ausklappen'],
-  [['?'], 'Diese Übersicht'],
-];
+function shortcuts(): [string[], string][] {
+  return [
+    [[t('settings.key.ctrl'), 'K'], t('settings.help.palette')],
+    [['/'], t('settings.help.paletteSlash')],
+    [['Alt', '1…9'], t('settings.help.workspace')],
+    [['Alt', 'R'], t('settings.help.reload')],
+    [['Alt', 'M'], t('settings.help.radio')],
+    [['Alt', 'W'], t('settings.help.game')],
+    [['Alt', 'T'], t('settings.help.theme')],
+    [['Alt', 'B'], t('settings.help.sidebar')],
+    [['?'], t('settings.help.overview')],
+  ];
+}
 
-const TIPS: string[] = [
-  'Tools aus der Seitenleiste auf eine Kante ziehen teilt die Fläche, auf die Mitte ziehen stapelt sie als Tab.',
-  'Tabs lassen sich zwischen Fenstern verschieben; die eingebetteten Seiten laden dabei nicht neu.',
-  'Mit Umschalt beim Ziehen eines Tabs oder über das Fenster-Symbol oben rechts wird ein Tool zum schwebenden Fenster.',
-  'Rechtsklick auf einen Tab öffnet weitere Aktionen wie Neu laden oder Andere schließen.',
-  'Doppelklick auf einen Arbeitsbereich benennt ihn um; per Drag & Drop lassen sich Arbeitsbereiche sortieren.',
-  'Über das Menü eines Arbeitsbereichs teilst du dein Layout als Link, etwa im Discord.',
-];
+function tips(): ComponentChildren[] {
+  return [
+    t('settings.tip.drag'),
+    t('settings.tip.tabs'),
+    tx('settings.tip.float', { shift: t('settings.key.shift') }),
+    t('settings.tip.context'),
+    t('settings.tip.rename'),
+    t('settings.tip.share'),
+  ];
+}
 
 export function HelpDialog() {
   return (
-    <Dialog open={helpOpen.value} onClose={() => (helpOpen.value = false)} title="Tastenkürzel & Tipps" icon="keyboard" class="help">
+    <Dialog open={helpOpen.value} onClose={() => (helpOpen.value = false)} title={t('settings.help.title')} icon="keyboard" class="help">
       <table class="shortcut-table">
         <tbody>
-          {SHORTCUTS.map(([keys, text]) => (
+          {shortcuts().map(([keys, text]) => (
             <tr>
               <td>
                 {keys.map((k, i) => (
@@ -44,10 +50,10 @@ export function HelpDialog() {
           ))}
         </tbody>
       </table>
-      <h3>Tipps</h3>
+      <h3>{t('settings.help.tips')}</h3>
       <ul class="tips">
-        {TIPS.map((t) => (
-          <li>{t}</li>
+        {tips().map((tip) => (
+          <li>{tip}</li>
         ))}
       </ul>
     </Dialog>
@@ -67,23 +73,23 @@ export function Toasts() {
 
   return (
     <div ref={ref} popover="manual" class="toasts" role="status" aria-live="polite">
-      {list.map((t) => (
-        <div class={`toast toast--${t.kind}`} key={t.id}>
-          <Icon name={t.kind === 'warn' ? 'warning' : t.kind === 'success' ? 'check' : t.kind === 'live' ? 'antenna' : 'info'} />
-          <span class="toast__msg">{t.message}</span>
-          {t.action && (
+      {list.map((n) => (
+        <div class={`toast toast--${n.kind}`} key={n.id}>
+          <Icon name={n.kind === 'warn' ? 'warning' : n.kind === 'success' ? 'check' : n.kind === 'live' ? 'antenna' : 'info'} />
+          <span class="toast__msg">{n.message}</span>
+          {n.action && (
             <button
               type="button"
               class="btn btn--sm btn--primary"
               onClick={() => {
-                t.action!.run();
-                dismissToast(t.id);
+                n.action!.run();
+                dismissToast(n.id);
               }}
             >
-              {t.action.label}
+              {n.action.label}
             </button>
           )}
-          <button type="button" class="icon-btn icon-btn--sm" aria-label="Hinweis schließen" onClick={() => dismissToast(t.id)}>
+          <button type="button" class="icon-btn icon-btn--sm" aria-label={t('settings.toastClose')} onClick={() => dismissToast(n.id)}>
             <Icon name="x" size={14} />
           </button>
         </div>
