@@ -5,14 +5,15 @@ import { countryName } from '../warera/dates';
 import { settings } from '../state';
 import { useVisibleInterval, Segmented } from '../ui/primitives';
 import { Icon } from '../ui/icons';
+import { t, formatNumber, type MessageKey } from '../i18n';
 
 const POINTS_TO_WIN = 300;
 
-const TYPE_LABEL: Record<string, string> = {
-  war: 'Krieg',
-  resistance: 'Widerstand',
-  revolt: 'Aufstand',
-  civilWar: 'Bürgerkrieg',
+const TYPE_LABEL: Record<string, MessageKey> = {
+  war: 'widgets.battles.type.war',
+  resistance: 'widgets.battles.type.resistance',
+  revolt: 'widgets.battles.type.revolt',
+  civilWar: 'widgets.battles.type.civilWar',
 };
 
 export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
@@ -49,13 +50,13 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
     return c ? countryName(c.code, c.name) : '…';
   };
   const code = (id: string) => countries[id]?.code?.toUpperCase() ?? '??';
-  const mine = countryId ? name(countryId) : 'Mein Land';
+  const mine = countryId ? name(countryId) : t('widgets.battles.myCountry');
 
   return (
     <div class="battles">
       <div class="battles__bar">
         <Segmented
-          name="Schlachten filtern"
+          name={t('widgets.battles.filter')}
           value={scope}
           onChange={(v) => {
             setScope(v);
@@ -63,13 +64,13 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
           }}
           options={[
             { value: 'mine', label: mine },
-            { value: 'all', label: 'Weltweit' },
+            { value: 'all', label: t('widgets.battles.worldwide') },
           ]}
         />
-        {battles && <span class="muted">{battles.length} aktiv</span>}
+        {battles && <span class="muted">{t('widgets.battles.active', { count: formatNumber(battles.length) })}</span>}
       </div>
-      {!battles && <div class="widget-empty">{error ? 'Schlachten nicht erreichbar.' : 'Lade Schlachten …'}</div>}
-      {battles && battles.length === 0 && <div class="widget-empty">Gerade keine laufenden Schlachten{scope === 'mine' ? ` mit Beteiligung von ${mine}` : ''}.</div>}
+      {!battles && <div class="widget-empty">{error ? t('widgets.battles.unreachable') : t('widgets.battles.loading')}</div>}
+      {battles && battles.length === 0 && <div class="widget-empty">{scope === 'mine' ? t('widgets.battles.noneFor', { country: mine }) : t('widgets.battles.none')}</div>}
       <ul class="battle-list">
         {battles?.map((b) => {
           const a = b.currentRound?.attacker?.points ?? 0;
@@ -79,9 +80,9 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
           return (
             <li class={`battle ${ours ? `battle--${ours}` : ''}`}>
               <div class="battle__head">
-                <span class="badge">{TYPE_LABEL[b.type ?? ''] ?? b.type ?? 'Schlacht'}</span>
+                <span class="badge">{TYPE_LABEL[b.type ?? ''] ? t(TYPE_LABEL[b.type ?? '']) : (b.type ?? t('widgets.battles.type.default'))}</span>
                 {region && <span class="battle__region">{region}</span>}
-                <a class="icon-btn" href={`https://app.warera.io/battle/${b._id}`} target="_blank" rel="noopener" title="Im Spiel ansehen" aria-label="Im Spiel ansehen">
+                <a class="icon-btn" href={`https://app.warera.io/battle/${b._id}`} target="_blank" rel="noopener" title={t('widgets.battles.viewInGame')} aria-label={t('widgets.battles.viewInGame')}>
                   <Icon name="external" size={14} />
                 </a>
               </div>
@@ -90,7 +91,7 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
                   <span class="cc">{code(b.attacker.country)}</span>
                   <span class="side__name">{name(b.attacker.country)}</span>
                 </div>
-                <div class="battle__score mono" title="Gewonnene Runden">
+                <div class="battle__score mono" title={t('widgets.battles.roundsWon')}>
                   {b.attacker.wonRoundsCount ?? 0}:{b.defender.wonRoundsCount ?? 0}
                 </div>
                 <div class="side side--def">
@@ -98,13 +99,13 @@ export function BattlesWidget({ visible }: { visible: Signal<boolean> }) {
                   <span class="cc">{code(b.defender.country)}</span>
                 </div>
               </div>
-              <div class="round" aria-label={`Aktuelle Runde: ${a} zu ${d} von ${POINTS_TO_WIN} Punkten`}>
+              <div class="round" aria-label={t('widgets.battles.roundAria', { a, d, goal: POINTS_TO_WIN })}>
                 <div class="round__att" style={{ width: `${Math.min(100, (a / POINTS_TO_WIN) * 100)}%` }} />
                 <div class="round__def" style={{ width: `${Math.min(100, (d / POINTS_TO_WIN) * 100)}%` }} />
               </div>
               <div class="battle__meta mono">
                 <span>{a}</span>
-                <span class="muted">Runde · Ziel {POINTS_TO_WIN}</span>
+                <span class="muted">{t('widgets.battles.roundGoal', { goal: POINTS_TO_WIN })}</span>
                 <span>{d}</span>
               </div>
             </li>

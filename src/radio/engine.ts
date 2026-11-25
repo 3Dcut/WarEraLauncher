@@ -6,9 +6,11 @@ import { berlinParts, parseLautTime } from '../core/clock';
 import { fetchJson, fetchLocalJson, fetchText } from '../core/http';
 import { load, save, loadLegacy } from '../core/storage';
 import { settings, toast } from '../state';
+import { t } from '../i18n';
 import { STATIONS, AZURA_BASE, getStation, isStationId, type StationId } from './stations';
 import {
   parseLautFormat,
+  type AutoReason,
   parseAzura,
   pickStation,
   dueClip,
@@ -56,7 +58,7 @@ const prefs = initialPrefs();
 export const station = signal<StationId | null>(prefs.lastStation);
 export const phase = signal<RadioPhase>('idle');
 export const autoMode = signal<boolean>(prefs.auto);
-export const autoReason = signal<string>('');
+export const autoReason = signal<AutoReason | null>(null);
 export const volume = signal<number>(prefs.volume);
 export const status = signal<StatusSnapshot | null>(null);
 export const nowPlaying = signal<NowPlaying | null>(null);
@@ -231,7 +233,7 @@ export function setAuto(on: boolean, silent = false): void {
       if (decision.station) play(decision.station, { user: false });
     });
   } else if (!silent) {
-    autoReason.value = '';
+    autoReason.value = null;
   }
 }
 
@@ -333,12 +335,12 @@ function wireStreamEvents(): void {
 let previousLevels: Record<string, string> = {};
 
 export async function pollStatus(): Promise<void> {
-  const t = Date.now();
+  const ts = Date.now();
   const [main, nacht, azura, ice] = await Promise.all([
-    fetchJson<{ format?: string }>(`https://api.laut.fm/station/war-era-de?t=${t}`).catch(() => null),
-    fetchJson<{ format?: string }>(`https://api.laut.fm/station/warera-nachtwache?t=${t}`).catch(() => null),
-    fetchJson<AzuraNowPlaying>(`${AZURA_BASE}/api/nowplaying/warera_radio?t=${t}`).catch(() => null),
-    fetchJson<IcecastStatus>(`${AZURA_BASE}/radio/8000/status-json.xsl?t=${t}`).catch(() => null),
+    fetchJson<{ format?: string }>(`https://api.laut.fm/station/war-era-de?t=${ts}`).catch(() => null),
+    fetchJson<{ format?: string }>(`https://api.laut.fm/station/warera-nachtwache?t=${ts}`).catch(() => null),
+    fetchJson<AzuraNowPlaying>(`${AZURA_BASE}/api/nowplaying/warera_radio?t=${ts}`).catch(() => null),
+    fetchJson<IcecastStatus>(`${AZURA_BASE}/radio/8000/status-json.xsl?t=${ts}`).catch(() => null),
   ]);
   if (!main && !nacht && !azura && !ice) return; // offline: letzten Stand behalten
 
@@ -367,8 +369,8 @@ function announceLiveChanges(snapshot: StatusSnapshot): void {
       const now = next[s.id];
       const becameHot = (now === 'live' || now === 'force') && before !== 'live' && before !== 'force';
       if (!becameHot) continue;
-      const msg = `${s.name} ist jetzt ${now === 'force' ? 'auf FORCE' : 'LIVE'}`;
-      toast(msg, 'live', station.value === s.id && isPlaying.value ? undefined : { label: 'Einschalten', run: () => play(s.id, { user: true }) }, 9000);
+      const msg = t(now === 'force' ? 'radio.live.force' : 'radio.live.live', { name: s.name });
+      toast(msg, 'live', station.value === s.id && isPlaying.value ? undefined : { label: t('radio.live.tuneIn'), run: () => play(s.id, { user: true }) }, 9000);
       notify(msg);
     }
   }
@@ -391,7 +393,7 @@ async function fetchNowPlaying(): Promise<void> {
   try {
     if (id === 'warera-azura') {
       const data = await fetchJson<AzuraNowPlaying>(`${AZURA_BASE}/api/nowplaying/warera_radio?t=${Date.now()}`).catch(() => null);
-      let title = 'AzuraCast Live-Stream';
+      let title = t('radio.azura.title');
       let listeners: string | null = null;
       if (data) {
         const song = data.now_playing?.song;
@@ -571,7 +573,7 @@ function updateMediaSession(): void {
     ms.playbackState = isPlaying.value ? 'playing' : phase.value === 'paused' ? 'paused' : 'none';
     if (s) {
       ms.metadata = new MediaMetadata({
-        title: activeClip.value ? `Einspieler: ${activeClip.value}` : nowPlaying.value?.title || s.name,
+        title: activeClip.value ? t('radio.clip.active', { name: activeClip.value }) : nowPlaying.value?.title || s.name,
         artist: `WarEra Radio · ${s.name}`,
         album: 'WarEra Launcher',
         artwork: [{ src: new URL('./icon-512.png', document.baseURI).href, sizes: '512x512', type: 'image/png' }],
@@ -627,7 +629,7 @@ export function initRadio(): void {
     if (e.data?.type === 'playing' && e.data.tabId !== tabId && (isPlaying.value || phase.value === 'blocked')) {
       pause({ user: false });
       otherTabPlaying.value = true;
-      toast('Das Radio läuft jetzt in einem anderen Fenster.', 'info');
+      toast(t('radio.otherTab'), 'info');
     }
   });
 

@@ -4,6 +4,7 @@ import { settings, updateSettings, toggleFavorite, isMobile, mobileSidebarOpen }
 import { openLaunchable, openIds, DRAG_MIME } from '../workspace/dock';
 import { load, save } from '../core/storage';
 import { Icon } from './icons';
+import { t } from '../i18n';
 
 function startDrag(e: DragEvent, id: string): void {
   if (!e.dataTransfer) return;
@@ -45,14 +46,14 @@ function Item({ item }: { item: Launchable }) {
         </span>
         <span class="tool-item__name">{item.name}</span>
         {external && (
-          <span class="tool-item__flag" title="Öffnet sich separat (Seite erlaubt keine Einbettung)">
+          <span class="tool-item__flag" title={t('shell.sidebar.external')}>
             <Icon name="external" size={12} />
           </span>
         )}
-        {dead && <span class="badge badge--warn">offline</span>}
-        {open && <span class="tool-item__open" title="Im aktuellen Arbeitsbereich geöffnet" />}
+        {dead && <span class="badge badge--warn">{t('shell.sidebar.offline')}</span>}
+        {open && <span class="tool-item__open" title={t('shell.sidebar.openHere')} />}
       </button>
-      <button type="button" class={`tool-item__fav ${fav ? 'is-fav' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label={fav ? `${item.name} aus Favoriten entfernen` : `${item.name} zu Favoriten`} aria-pressed={fav}>
+      <button type="button" class={`tool-item__fav ${fav ? 'is-fav' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label={fav ? t('shell.sidebar.favRemove', { name: item.name }) : t('shell.sidebar.favAdd', { name: item.name })} aria-pressed={fav}>
         <Icon name="star" size={14} filled={fav} />
       </button>
     </li>
@@ -105,8 +106,8 @@ export function Sidebar() {
   if (collapsed) {
     const rail = [...favorites, ...WIDGETS.filter((w) => !settings.value.favorites.includes(w.id))];
     return (
-      <aside class="sidebar sidebar--rail" aria-label="Werkzeuge">
-        <button type="button" class="icon-btn" onClick={() => updateSettings({ sidebarCollapsed: false })} aria-label="Seitenleiste ausklappen" title="Seitenleiste ausklappen (Alt+B)">
+      <aside class="sidebar sidebar--rail" aria-label={t('shell.sidebar.aria')}>
+        <button type="button" class="icon-btn" onClick={() => updateSettings({ sidebarCollapsed: false })} aria-label={t('shell.sidebar.expand')} title={t('shell.sidebar.expandTitle')}>
           <Icon name="chevronRight" />
         </button>
         <ul class="rail">
@@ -123,31 +124,31 @@ export function Sidebar() {
   }
 
   return (
-    <aside class={`sidebar ${isMobile.value ? 'sidebar--drawer' : ''} ${mobileSidebarOpen.value ? 'is-open' : ''}`} aria-label="Werkzeuge">
+    <aside class={`sidebar ${isMobile.value ? 'sidebar--drawer' : ''} ${mobileSidebarOpen.value ? 'is-open' : ''}`} aria-label={t('shell.sidebar.aria')}>
       <div class="sidebar__head">
-        <h2>Werkzeuge</h2>
+        <h2>{t('shell.sidebar.heading')}</h2>
         {isMobile.value ? (
-          <button type="button" class="icon-btn" onClick={() => (mobileSidebarOpen.value = false)} aria-label="Schließen">
+          <button type="button" class="icon-btn" onClick={() => (mobileSidebarOpen.value = false)} aria-label={t('shell.close')}>
             <Icon name="x" />
           </button>
         ) : (
-          <button type="button" class="icon-btn" onClick={() => updateSettings({ sidebarCollapsed: true })} aria-label="Seitenleiste einklappen" title="Seitenleiste einklappen (Alt+B)">
+          <button type="button" class="icon-btn" onClick={() => updateSettings({ sidebarCollapsed: true })} aria-label={t('shell.sidebar.collapse')} title={t('shell.sidebar.collapseTitle')}>
             <Icon name="chevronLeft" />
           </button>
         )}
       </div>
       <label class="filter" for="sidebar-filter">
         <Icon name="search" size={14} />
-        <input id="sidebar-filter" type="search" placeholder="Filtern …" value={filter} onInput={(e) => setFilter((e.target as HTMLInputElement).value)} autocomplete="off" />
+        <input id="sidebar-filter" type="search" placeholder={t('shell.sidebar.filter')} value={filter} onInput={(e) => setFilter((e.target as HTMLInputElement).value)} autocomplete="off" />
       </label>
-      <p class="sidebar__hint">Klicken öffnet, Ziehen platziert frei im Layout.</p>
+      <p class="sidebar__hint">{t('shell.sidebar.hint')}</p>
       <div class="sidebar__scroll">
-        {toolsError.value && <p class="notice notice--warn">{toolsError.value}</p>}
-        {!q && <Section id="favorites" title="Favoriten" icon="★" items={favorites} />}
-        {!q && <Section id="recents" title="Zuletzt benutzt" items={recents} defaultOpen={false} />}
-        <Section id="widgets" title="Live-Widgets" icon="✨" items={WIDGETS.filter(match)} />
+        {toolsError.value && <p class="notice notice--warn">{t('shell.sidebar.toolsError')}</p>}
+        {!q && <Section id="favorites" title={t('shell.sidebar.favorites')} icon="★" items={favorites} />}
+        {!q && <Section id="recents" title={t('shell.sidebar.recents')} items={recents} defaultOpen={false} />}
+        <Section id="widgets" title={t('shell.sidebar.widgets')} icon="✨" items={WIDGETS.filter(match)} />
         {categories.value.map((c) => (
-          <Section id={`cat:${c.name}`} title={c.name} icon={c.icon} items={c.tools.filter(match)} />
+          <Section id={`cat:${c.id}`} title={c.name} icon={c.icon} items={c.tools.filter(match)} />
         ))}
       </div>
     </aside>
