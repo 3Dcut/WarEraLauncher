@@ -9,15 +9,6 @@ export const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'myt
 export type Rarity = (typeof RARITIES)[number];
 export type Side = 0 | 1;
 
-export const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Gewöhnlich',
-  uncommon: 'Ungewöhnlich',
-  rare: 'Selten',
-  epic: 'Episch',
-  legendary: 'Legendär',
-  mythic: 'Mythisch',
-};
-
 export function isRarity(value: unknown): value is Rarity {
   return typeof value === 'string' && (RARITIES as readonly string[]).includes(value);
 }
@@ -31,20 +22,17 @@ export function rarityRank(rarity: Rarity | null | undefined): number {
 
 export interface CaseType {
   code: string | null;
-  name: string;
-  /** Kurz für Plaketten. */
-  short: string;
-  /** Im Satz, etwa "Abwechselnd öffnet ihr rote Kisten". */
-  plural: string;
+  /** Schlüssel für Texte (battle.case.<key>.name|short|plural). */
+  key: 'case2' | 'case1' | 'woodenCase' | 'toolbox' | 'any';
 }
 
 /** Kistentypen laut Spielkonfiguration; null = jede Kiste zählt. */
 export const CASE_TYPES: CaseType[] = [
-  { code: 'case2', name: 'Rote Kiste (Elite)', short: 'Rote Kisten', plural: 'rote Kisten' },
-  { code: 'case1', name: 'Grüne Kiste', short: 'Grüne Kisten', plural: 'grüne Kisten' },
-  { code: 'woodenCase', name: 'Holzkiste', short: 'Holzkisten', plural: 'Holzkisten' },
-  { code: 'toolbox', name: 'Werkzeugkiste', short: 'Werkzeugkisten', plural: 'Werkzeugkisten' },
-  { code: null, name: 'Jede Kiste', short: 'Alle Kisten', plural: 'beliebige Kisten' },
+  { code: 'case2', key: 'case2' },
+  { code: 'case1', key: 'case1' },
+  { code: 'woodenCase', key: 'woodenCase' },
+  { code: 'toolbox', key: 'toolbox' },
+  { code: null, key: 'any' },
 ];
 
 export function caseType(code: string | null | undefined): CaseType {
@@ -53,51 +41,47 @@ export function caseType(code: string | null | undefined): CaseType {
 
 // ------------------------------------------------------------------ Items
 
-const EQUIPMENT: Record<string, { name: string; emoji: string }> = {
-  helmet: { name: 'Helm', emoji: '🪖' },
-  chest: { name: 'Brustpanzer', emoji: '🦺' },
-  pants: { name: 'Hose', emoji: '👖' },
-  boots: { name: 'Stiefel', emoji: '🥾' },
-  gloves: { name: 'Handschuhe', emoji: '🧤' },
-  sickle: { name: 'Sichel', emoji: '🌾' },
-  pickaxe: { name: 'Spitzhacke', emoji: '⛏️' },
-  skillet: { name: 'Pfanne', emoji: '🍳' },
-  hammer: { name: 'Hammer', emoji: '🔨' },
-  flask: { name: 'Kolben', emoji: '⚗️' },
-  caliper: { name: 'Messschieber', emoji: '📏' },
+const EQUIPMENT_EMOJI: Record<string, string> = {
+  helmet: '🪖',
+  chest: '🦺',
+  pants: '👖',
+  boots: '🥾',
+  gloves: '🧤',
+  sickle: '🌾',
+  pickaxe: '⛏️',
+  skillet: '🍳',
+  hammer: '🔨',
+  flask: '⚗️',
+  caliper: '📏',
 };
 
-const WEAPONS: Record<string, { name: string; emoji: string; rarity: Rarity }> = {
-  knife: { name: 'Messer', emoji: '🔪', rarity: 'common' },
-  gun: { name: 'Pistole', emoji: '🔫', rarity: 'uncommon' },
-  rifle: { name: 'Gewehr', emoji: '🎯', rarity: 'rare' },
-  sniper: { name: 'Scharfschützengewehr', emoji: '🔭', rarity: 'epic' },
-  tank: { name: 'Panzer', emoji: '💥', rarity: 'legendary' },
-  jet: { name: 'Kampfjet', emoji: '✈️', rarity: 'mythic' },
+const WEAPONS: Record<string, { emoji: string; rarity: Rarity }> = {
+  knife: { emoji: '🔪', rarity: 'common' },
+  gun: { emoji: '🔫', rarity: 'uncommon' },
+  rifle: { emoji: '🎯', rarity: 'rare' },
+  sniper: { emoji: '🔭', rarity: 'epic' },
+  tank: { emoji: '💥', rarity: 'legendary' },
+  jet: { emoji: '✈️', rarity: 'mythic' },
 };
 
-const SKILL_LABEL: Record<string, string> = {
-  attack: 'Angriff',
-  criticalChance: 'Krit-Chance',
-  criticalDamages: 'Krit-Schaden',
-  armor: 'Rüstung',
-  precision: 'Präzision',
-  dodge: 'Ausweichen',
-  production: 'Produktion',
-};
+/** Grundtypen aller Items, die aus Kisten kommen können (für Namen: battle.item.<base>). */
+export const ITEM_BASES = [...Object.keys(EQUIPMENT_EMOJI), ...Object.keys(WEAPONS)];
+
+/** Bekannte Werte auf Items (für Namen: battle.skill.<name>). */
+export const SKILLS = ['attack', 'criticalChance', 'criticalDamages', 'armor', 'precision', 'dodge', 'production'];
 
 export interface ItemInfo {
-  name: string;
+  /** Grundtyp ohne Stufe (helmet3 → helmet), null bei unbekannten Items. */
+  base: string | null;
   emoji: string;
 }
 
 export function itemInfo(code: string): ItemInfo {
   const weapon = WEAPONS[code];
-  if (weapon) return { name: weapon.name, emoji: weapon.emoji };
+  if (weapon) return { base: code, emoji: weapon.emoji };
   const m = /^([a-z]+?)(\d)$/i.exec(code);
-  const base = m ? EQUIPMENT[m[1]] : undefined;
-  if (base) return { name: base.name, emoji: base.emoji };
-  return { name: code, emoji: '📦' };
+  if (m && EQUIPMENT_EMOJI[m[1]]) return { base: m[1], emoji: EQUIPMENT_EMOJI[m[1]] };
+  return { base: null, emoji: '📦' };
 }
 
 /**
@@ -108,19 +92,11 @@ export function fallbackRarity(code: string): Rarity | null {
   const weapon = WEAPONS[code];
   if (weapon) return weapon.rarity;
   const m = /^([a-z]+?)(\d)$/i.exec(code);
-  if (m && EQUIPMENT[m[1]]) {
+  if (m && EQUIPMENT_EMOJI[m[1]]) {
     const tier = Number(m[2]);
     if (tier >= 1 && tier <= 6) return RARITIES[tier - 1];
   }
   return null;
-}
-
-export function formatSkills(skills: Record<string, number> | undefined): string {
-  if (!skills) return '';
-  return Object.entries(skills)
-    .filter(([, v]) => typeof v === 'number')
-    .map(([k, v]) => `${SKILL_LABEL[k] ?? k} ${v}`)
-    .join(' · ');
 }
 
 // ------------------------------------------------------------------ Öffnungen

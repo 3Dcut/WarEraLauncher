@@ -14,6 +14,8 @@ import { resumeStored, setReducedMotion } from './engine';
 import { setFxReduced } from './fx';
 import { loadPrefs, loadKey, savePrefs, clampTarget, RATES } from './prefs';
 import { CASE_TYPES } from './logic';
+import { effect } from '@preact/signals';
+import { lang, t } from '../i18n';
 
 // Theme, Akzentfarbe und Bewegung aus den Launcher-Einstellungen übernehmen (gleiche Herkunft, gleicher Speicher)
 const THEMES = ['grau', 'feldgrau', 'pink', 'hell'];
@@ -60,6 +62,12 @@ const demo = params.get('demo') === '1';
 const autostart = params.get('start') === '1';
 
 document.body.classList.add('battle');
+// Sprache wie im Launcher (?lang=, gespeicherte Wahl, sonst Browser)
+effect(() => {
+  document.documentElement.lang = lang.value;
+  document.title = `${t('battle.title')} · WarEra Launcher`;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('battle.docDescription'));
+});
 void loadRarities();
 if (!demo && !(a || b)) resumeStored(loadKey() || null, prefs.rate);
 

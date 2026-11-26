@@ -71,7 +71,8 @@ gleiche Kategorie gibt keinen Punkt. Wer zuerst das Punkteziel erreicht (Standar
 - **Start**: Beim Start werden die letzten Öffnungen beider Spieler als Stand gemerkt (IDs und Serverzeit), nur Neues zählt.
   Mehrere auf einmal geöffnete Kisten werden der Reihe nach gewertet. Ein laufendes Battle übersteht Neuladen.
 - **Link-Parameter** (etwa für OBS): `?a=Name&b=Name&ziel=3&kiste=case2|case1|woodenCase|toolbox|alle&tempo=1|2|4|8&start=1`,
-  `?demo=1` startet eine Demo mit den Quoten der roten Kiste.
+  `?demo=1` startet eine Demo mit den Quoten der roten Kiste, `?lang=de|en|sv` wählt die Sprache wie im Launcher.
+- **Sprachen**: Texte im Wörterbuch `src/i18n/messages/battle.ts`; ohne `?lang=` gilt die Sprachwahl des Launchers.
 - **Ereignisse für später (Cardera-Wetten)**: `start`, `open`, `round` und `finish` gehen als `CustomEvent('case-battle')` an das
   eigene Fenster und, wenn eingebettet, per `postMessage` (`source: "warera-case-battle"`) an die Elternseite. Der lokale
   „Tipp“ vor der ersten Runde ist ein Platzhalter ohne Einsatz.

@@ -18,6 +18,7 @@ import settingsMsgs from './messages/settings';
 import radio from './messages/radio';
 import widgets from './messages/widgets';
 import workspace from './messages/workspace';
+import battle from './messages/battle';
 
 export type Lang = 'de' | 'en' | 'sv';
 export type LangPref = Lang | 'auto';
@@ -36,7 +37,7 @@ export function isLang(value: unknown): value is Lang {
 
 export { defineMessages } from './define';
 
-export const CATALOGS = [common, shell, settingsMsgs, radio, widgets, workspace] as const;
+export const CATALOGS = [common, shell, settingsMsgs, radio, widgets, workspace, battle] as const;
 
 type Catalog = (typeof CATALOGS)[number];
 export type MessageKey = Catalog extends infer C ? (C extends { de: infer D } ? keyof D & string : never) : never;

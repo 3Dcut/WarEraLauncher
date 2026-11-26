@@ -35,11 +35,11 @@ async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Pr
   try {
     res = await fetch(url, { headers: key ? { 'X-API-Key': key } : undefined, cache: 'no-store', signal: controller.signal });
   } catch (err) {
-    throw new ApiError((err as Error)?.name === 'AbortError' ? 'Zeitüberschreitung' : 'Netzwerkfehler', 0);
+    throw new ApiError((err as Error)?.name === 'AbortError' ? 'timeout' : 'network', 0);
   } finally {
     clearTimeout(timer);
   }
-  if (res.status === 429) throw new ApiError('Zu viele Anfragen', 429);
+  if (res.status === 429) throw new ApiError('rate-limit', 429);
   let body: unknown;
   try {
     body = await res.json();
@@ -51,7 +51,7 @@ async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Pr
     throw new ApiError(err?.message ?? `HTTP ${res.status}`, err?.data?.httpStatus ?? res.status);
   }
   return (body as BatchEntry<T>[]).map((entry) =>
-    entry.error ? new ApiError(entry.error.message ?? 'Fehler', entry.error.data?.httpStatus ?? 500) : (entry.result?.data as T),
+    entry.error ? new ApiError(entry.error.message ?? 'error', entry.error.data?.httpStatus ?? 500) : (entry.result?.data as T),
   );
 }
 

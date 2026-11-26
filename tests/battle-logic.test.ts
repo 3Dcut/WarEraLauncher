@@ -8,12 +8,16 @@ import {
   fallbackRarity,
   rollEliteItem,
   itemInfo,
-  formatSkills,
   ELITE_ODDS,
+  ITEM_BASES,
+  SKILLS,
+  CASE_TYPES,
+  RARITIES,
   type Opening,
   type Rarity,
   type RawTransaction,
 } from '../src/battle/logic';
+import battleMessages from '../src/i18n/messages/battle';
 
 let seq = 0;
 const op = (rarity: Rarity | null, at: string, code = 'helmet2'): Opening => ({
@@ -137,11 +141,20 @@ describe('Items', () => {
     expect(fallbackRarity('scraps')).toBe(null);
   });
 
-  it('kennt deutsche Namen und Werte', () => {
-    expect(itemInfo('boots3').name).toBe('Stiefel');
-    expect(itemInfo('sniper').name).toBe('Scharfschützengewehr');
-    expect(itemInfo('unbekannt').name).toBe('unbekannt');
-    expect(formatSkills({ attack: 55, criticalChance: 10 })).toBe('Angriff 55 · Krit-Chance 10');
+  it('hat für jedes Item, jeden Wert, jede Kiste und Seltenheit einen Text in jeder Sprache', () => {
+    expect(itemInfo('boots3')).toEqual({ base: 'boots', emoji: '🥾' });
+    expect(itemInfo('sniper').base).toBe('sniper');
+    expect(itemInfo('unbekannt').base).toBe(null);
+    const keys = [
+      ...ITEM_BASES.map((b) => `battle.item.${b}`),
+      ...SKILLS.map((k) => `battle.skill.${k}`),
+      ...CASE_TYPES.flatMap((c) => ['name', 'short', 'plural'].map((f) => `battle.case.${c.key}.${f}`)),
+      ...RARITIES.map((r) => `battle.rarity.${r}`),
+    ];
+    for (const l of ['de', 'en', 'sv'] as const) {
+      const dict = battleMessages[l] as Record<string, string>;
+      for (const k of keys) expect(dict[k], `${l}: ${k}`).toBeTruthy();
+    }
   });
 
   it('Demo-Würfel trifft die Quoten der roten Kiste', () => {

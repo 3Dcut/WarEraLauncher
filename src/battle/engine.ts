@@ -18,6 +18,7 @@ import {
 import { ApiError, fetchOpenings, rarityOf, type OpeningsQuery, type Player } from './api';
 import { sfx } from './sound';
 import { emit } from './events';
+import { t } from '../i18n';
 
 export type Phase = 'setup' | 'arming' | 'live' | 'finished';
 
@@ -59,7 +60,7 @@ export const match = signal<Match | null>(null);
 export const revealed = signal<[number, number]>([0, 0]);
 export const slots = signal<[Slot, Slot]>([{ kind: 'idle' }, { kind: 'idle' }]);
 export const lastRound = signal<Round | null>(null);
-export const banner = signal<{ text: string; tone: string; id: number } | null>(null);
+export const banner = signal<{ tone: 'legendary' | 'mythic'; id: number } | null>(null);
 export const poll = signal<PollInfo>({ rate: 8, actual: 0, lastOkAt: 0, throttledUntil: 0, errors: 0, message: null });
 export const fatal = signal<string | null>(null);
 
@@ -106,9 +107,9 @@ function updateMatch(patch: Partial<Match>): void {
 }
 
 let bannerSeq = 0;
-function showBanner(text: string, tone: string): void {
+function showBanner(tone: 'legendary' | 'mythic'): void {
   const id = ++bannerSeq;
-  banner.value = { text, tone, id };
+  banner.value = { tone, id };
   setTimeout(() => {
     if (banner.value?.id === id) banner.value = null;
   }, 2600);
@@ -234,12 +235,12 @@ function queriesFor(players: [Player, Player], caseCode: string | null, limit: n
 
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 401 || err.status === 403) return 'Der API-Schlüssel wurde abgelehnt. Bitte prüfen oder neu erstellen.';
-    if (err.status === 429) return 'WarEra drosselt gerade (zu viele Anfragen). Kurz warten und erneut starten.';
-    if (err.status === 0) return `Keine Verbindung zur WarEra-API (${err.message}).`;
-    return `WarEra-API: ${err.message}`;
+    if (err.status === 401 || err.status === 403) return t('battle.err.keyRejected');
+    if (err.status === 429) return t('battle.err.throttled');
+    if (err.status === 0) return err.message === 'timeout' ? t('battle.err.timeout') : t('battle.err.offline');
+    return t('battle.err.api', { message: err.message });
   }
-  return 'Unerwarteter Fehler beim Abfragen.';
+  return t('battle.err.unexpected');
 }
 
 const doneTimes: number[] = [];
@@ -301,7 +302,7 @@ async function pollOnce(gen: number): Promise<void> {
     if (err instanceof ApiError && err.status === 429) {
       lastThrottleAt = Date.now();
       throttleLevel = Math.min(3, throttleLevel + 1);
-      poll.value = { ...poll.value, throttledUntil: Date.now() + 4000, message: 'WarEra drosselt, Abfragen werden langsamer' };
+      poll.value = { ...poll.value, throttledUntil: Date.now() + 4000, message: t('battle.poll.slower') };
       return;
     }
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
@@ -376,7 +377,7 @@ async function runReveals(): Promise<void> {
       setSlot(side, { kind: 'open', opening });
       const rank = rarityRank(opening.rarity);
       sfx.reveal(rank);
-      if (rank >= 4) showBanner(rank >= 5 ? 'MYTHISCH!' : 'LEGENDÄR!', rank >= 5 ? 'mythic' : 'legendary');
+      if (rank >= 4) showBanner(rank >= 5 ? 'mythic' : 'legendary');
       emit('open', { player: name, item: opening.itemCode, rarity: opening.rarity });
       await wait(950);
       if (gen !== generation) return;

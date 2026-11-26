@@ -17,10 +17,12 @@ import {
   type Slot,
 } from './engine';
 import { findPlayer, checkKey, type Player, type Lookup } from './api';
-import { CASE_TYPES, RARITY_LABEL, caseType, formatSkills, itemInfo, rarityRank, type Opening, type Rarity, type Side } from './logic';
+import { CASE_TYPES, RARITIES, itemInfo, rarityRank, type Opening, type Rarity, type Side } from './logic';
+import { rarityLabel, itemName, skillsText, caseText, sideLabel } from './text';
 import { savePrefs, loadKey, saveKey, clampTarget, RATES, type BattlePrefs } from './prefs';
 import { setSoundEnabled, unlockAudio } from './sound';
 import { burstAt, rain } from './fx';
+import { t, tn, formatNumber } from '../i18n';
 
 export const RARITY_COLOR: Record<Rarity, string> = {
   common: '#a7b0c0',
@@ -31,7 +33,6 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   mythic: '#f43f5e',
 };
 
-const SIDE_LABEL = ['Rot', 'Blau'] as const;
 const embedded = (() => {
   try {
     return window.self !== window.top;
@@ -39,6 +40,8 @@ const embedded = (() => {
     return true;
   }
 })();
+
+const other = (side: Side): Side => (side === 0 ? 1 : 0);
 
 // ------------------------------------------------------------------ App
 
@@ -70,13 +73,14 @@ export function BattleApp({ initial }: { initial: { prefs: BattlePrefs; autostar
 // ------------------------------------------------------------------ Kopf
 
 function Header({ prefs, update }: { prefs: BattlePrefs; update: (p: Partial<BattlePrefs>) => void }) {
+  const label = prefs.sound ? t('battle.sound.off') : t('battle.sound.on');
   return (
     <header class="b-header">
       <div class="b-brand">
         <MiniCrate />
         <div>
-          <h1>Kisten-Battle</h1>
-          <p class="b-sub">Wer zieht das seltenere Item?</p>
+          <h1>{t('battle.title')}</h1>
+          <p class="b-sub">{t('battle.subtitle')}</p>
         </div>
       </div>
       <div class="b-header__right">
@@ -85,8 +89,8 @@ function Header({ prefs, update }: { prefs: BattlePrefs; update: (p: Partial<Bat
           type="button"
           class={`icon-btn ${prefs.sound ? 'is-active' : ''}`}
           aria-pressed={prefs.sound}
-          aria-label={prefs.sound ? 'Ton ausschalten' : 'Ton einschalten'}
-          title={prefs.sound ? 'Ton aus' : 'Ton an'}
+          aria-label={label}
+          title={label}
           onClick={() => {
             unlockAudio();
             update({ sound: !prefs.sound });
@@ -96,7 +100,7 @@ function Header({ prefs, update }: { prefs: BattlePrefs; update: (p: Partial<Bat
         </button>
         {!embedded && (
           <a class="btn btn--sm btn--ghost" href="../">
-            Zum Launcher
+            {t('battle.toLauncher')}
           </a>
         )}
       </div>
@@ -110,26 +114,28 @@ function LiveChip() {
   const p = poll.value;
   const [, force] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => force((n) => n + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(timer);
   }, []);
   if (ph !== 'live' || !m) return null;
-  if (m.demo) return <span class="live-chip live-chip--demo">Demo</span>;
+  if (m.demo) return <span class="live-chip live-chip--demo">{t('battle.live.demo')}</span>;
   const now = Date.now();
   const stale = p.lastOkAt && now - p.lastOkAt > 5000;
   const throttled = now < p.throttledUntil + 3000;
   const cls = throttled ? 'live-chip--warn' : stale || !p.lastOkAt ? 'live-chip--wait' : '';
-  const text = throttled ? 'gedrosselt' : !p.lastOkAt ? 'verbinde …' : stale ? 'Verbindung hakt' : 'Live';
+  const text = throttled ? t('battle.live.throttled') : !p.lastOkAt ? t('battle.live.connecting') : stale ? t('battle.live.stale') : t('battle.live.live');
   return (
-    <span class={`live-chip ${cls}`} title={p.message ?? `Ziel ${p.rate} Abfragen pro Sekunde`}>
+    <span class={`live-chip ${cls}`} title={p.message ?? t('battle.live.target', { rate: p.rate })}>
       <span class="live-chip__dot" />
       {text}
-      {!throttled && p.lastOkAt > 0 && !stale && <span class="mono">{p.actual.toLocaleString('de-DE', { maximumFractionDigits: 1 })}/s</span>}
+      {!throttled && p.lastOkAt > 0 && !stale && <span class="mono">{formatNumber(p.actual, { maximumFractionDigits: 1 })}/s</span>}
     </span>
   );
 }
 
 // ------------------------------------------------------------------ Einrichtung
+
+let autostartDone = false;
 
 function Setup({
   prefs,
@@ -156,19 +162,19 @@ function Setup({
       if (out[side]) continue;
       const name = prefs.names[side].trim();
       if (!name) {
-        setError(`Bitte den Namen für Spieler ${SIDE_LABEL[side]} eintragen.`);
+        setError(t('battle.err.nameMissing', { side: sideLabel(side) }));
         return null;
       }
       const res = await findPlayer(name, key.trim() || null).catch(() => null);
       if (!res?.match) {
-        setError(`„${name}“ wurde nicht eindeutig gefunden. Bitte aus den Vorschlägen wählen.`);
+        setError(t('battle.err.notFound', { name }));
         return null;
       }
       out[side] = res.match;
       setPlayer(side, res.match);
     }
     if (out[0]!.id === out[1]!.id) {
-      setError('Zwei verschiedene Spieler bitte, gegen sich selbst gewinnt man immer.');
+      setError(t('battle.err.samePlayer'));
       return null;
     }
     return [out[0]!, out[1]!];
@@ -182,20 +188,20 @@ function Setup({
       let duo: [Player, Player] | null;
       if (demo) {
         duo = [
-          players[0] ?? { id: 'demo-a', name: prefs.names[0].trim() || 'Kommandant Rot' },
-          players[1] ?? { id: 'demo-b', name: prefs.names[1].trim() || 'Major Blau' },
+          players[0] ?? { id: 'demo-a', name: prefs.names[0].trim() || t('battle.demo.nameA') },
+          players[1] ?? { id: 'demo-b', name: prefs.names[1].trim() || t('battle.demo.nameB') },
         ];
       } else {
         const k = key.trim();
         if (!k) {
-          setError('Für echte Battles braucht es einen WarEra-API-Schlüssel (siehe unten). Ohne Schlüssel geht nur die Demo.');
+          setError(t('battle.err.noKey'));
           return;
         }
         duo = await resolveBoth();
         if (!duo) return;
         const check = await checkKey(k);
         if (check === 'invalid') {
-          setError('Der API-Schlüssel wurde abgelehnt. Bitte prüfen oder im Spiel neu erstellen.');
+          setError(t('battle.err.keyRejected'));
           return;
         }
         saveKey(k, prefs.remember);
@@ -215,7 +221,6 @@ function Setup({
   }, []);
 
   const shownError = error ?? fatal.value;
-  const ct = caseType(prefs.caseCode);
   return (
     <main class="setup">
       <section class="setup__duel">
@@ -229,53 +234,52 @@ function Setup({
       <section class="setup__card">
         <div class="setup__options">
           <label class="field">
-            <span class="field__label">Kisten</span>
+            <span class="field__label">{t('battle.opt.cases')}</span>
             <select class="input" value={prefs.caseCode ?? ''} onChange={(e) => update({ caseCode: (e.currentTarget as HTMLSelectElement).value || null })}>
               {CASE_TYPES.map((c) => (
-                <option value={c.code ?? ''}>{c.name}</option>
+                <option value={c.code ?? ''}>{caseText(c.code, 'name')}</option>
               ))}
             </select>
           </label>
           <div class="field">
-            <span class="field__label">Punkte zum Sieg</span>
+            <span class="field__label">{t('battle.opt.target')}</span>
             <div class="stepper">
-              <button type="button" class="icon-btn" aria-label="Weniger Punkte" onClick={() => update({ target: clampTarget(prefs.target - 1) })}>
+              <button type="button" class="icon-btn" aria-label={t('battle.opt.fewer')} onClick={() => update({ target: clampTarget(prefs.target - 1) })}>
                 −
               </button>
               <span class="stepper__value mono" aria-live="polite">
                 {prefs.target}
               </span>
-              <button type="button" class="icon-btn" aria-label="Mehr Punkte" onClick={() => update({ target: clampTarget(prefs.target + 1) })}>
+              <button type="button" class="icon-btn" aria-label={t('battle.opt.more')} onClick={() => update({ target: clampTarget(prefs.target + 1) })}>
                 +
               </button>
             </div>
           </div>
           <label class="field">
-            <span class="field__label">Abfragen pro Sekunde</span>
+            <span class="field__label">{t('battle.opt.rate')}</span>
             <select class="input" value={String(prefs.rate)} onChange={(e) => update({ rate: Number((e.currentTarget as HTMLSelectElement).value) })}>
               {RATES.map((r) => (
-                <option value={String(r)}>
-                  {r} pro Sekunde{r === 8 ? ' (Maximum)' : ''}
-                </option>
+                <option value={String(r)}>{r === 8 ? t('battle.opt.rateMax', { rate: r }) : t('battle.opt.rateValue', { rate: r })}</option>
               ))}
             </select>
           </label>
         </div>
 
         <div class="field">
-          <span class="field__label">WarEra-API-Schlüssel</span>
+          <span class="field__label">{t('battle.key.label')}</span>
           <div class="key-row">
             <input
               class="input mono"
               type={showKey ? 'text' : 'password'}
               autocomplete="off"
               spellcheck={false}
-              placeholder="Schlüssel einfügen"
+              placeholder={t('battle.key.placeholder')}
+              aria-label={t('battle.key.label')}
               value={key}
               onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)}
             />
             <button type="button" class="btn btn--sm btn--ghost" onClick={() => setShowKey(!showKey)}>
-              {showKey ? 'Verbergen' : 'Zeigen'}
+              {showKey ? t('battle.key.hide') : t('battle.key.show')}
             </button>
             {key && (
               <button
@@ -286,18 +290,15 @@ function Setup({
                   saveKey('', false);
                 }}
               >
-                Vergessen
+                {t('battle.key.forget')}
               </button>
             )}
           </div>
           <label class="check">
             <input type="checkbox" checked={prefs.remember} onChange={(e) => update({ remember: (e.currentTarget as HTMLInputElement).checked })} />
-            Auf diesem Gerät merken
+            {t('battle.key.remember')}
           </label>
-          <p class="hint">
-            Kistenöffnungen stehen in den Transaktionen, und die gibt WarEra nur mit Schlüssel heraus. Im Spiel unter Profil → Einstellungen → API-Tokens
-            einen Token erstellen und hier einfügen. Er bleibt in deinem Browser und geht nur an api2.warera.io.
-          </p>
+          <p class="hint">{t('battle.key.hint')}</p>
         </div>
 
         {shownError && (
@@ -307,38 +308,28 @@ function Setup({
         )}
 
         <div class="setup__actions">
-          <button type="button" class="btn btn--primary btn--big" disabled={busy || arming} onClick={() => void start(false)}>
-            {arming ? 'Stand wird erfasst …' : busy ? 'Prüfe …' : '⚔️ Battle starten'}
+          <button type="button" class="btn btn--primary btn--big" data-action="start" disabled={busy || arming} onClick={() => void start(false)}>
+            {arming ? t('battle.start.arming') : busy ? t('battle.start.checking') : t('battle.start.go')}
           </button>
-          <button type="button" class="btn btn--ghost" disabled={busy || arming} onClick={() => void start(true)}>
-            Demo ansehen
+          <button type="button" class="btn btn--ghost" data-action="demo" disabled={busy || arming} onClick={() => void start(true)}>
+            {t('battle.start.demo')}
           </button>
         </div>
       </section>
 
       <section class="setup__rules">
-        <h2>So läuft's</h2>
+        <h2>{t('battle.rules.title')}</h2>
         <ol>
-          <li>Beide Namen eintragen, Schlüssel einfügen, starten. Ältere Öffnungen zählen nicht.</li>
-          <li>
-            Abwechselnd öffnet ihr {ct.plural} im Spiel, {SIDE_LABEL[0]} beginnt jede Runde. Die Seite erkennt jede Öffnung live aus den
-            Transaktionen.
-          </li>
-          <li>
-            Die seltenere Kategorie gewinnt die Runde: Gewöhnlich &lt; Ungewöhnlich &lt; Selten &lt; Episch &lt; Legendär &lt; Mythisch. Gleiche
-            Kategorie bringt keinem einen Punkt.
-          </li>
-          <li>Wer zuerst {prefs.target} Punkte hat, gewinnt.</li>
+          <li>{t('battle.rules.setup')}</li>
+          <li>{t('battle.rules.turns', { cases: caseText(prefs.caseCode, 'plural'), first: sideLabel(0) })}</li>
+          <li>{t('battle.rules.rarity', { order: RARITIES.map((r) => rarityLabel(r)).join(' < ') })}</li>
+          <li>{tn('battle.rules.win', prefs.target)}</li>
         </ol>
-        <p class="hint">
-          Mit Schlüssel erlaubt WarEra 500 Anfragen pro Minute. Beide Spieler stecken in einer gebündelten Anfrage, 8 pro Sekunde bleiben knapp darunter.
-        </p>
+        <p class="hint">{t('battle.rules.limit')}</p>
       </section>
     </main>
   );
 }
-
-let autostartDone = false;
 
 function PlayerField({
   side,
@@ -366,7 +357,7 @@ function PlayerField({
     setLookup(null);
     if (q.length < 2) return;
     const id = ++seq.current;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setSearching(true);
       findPlayer(q, apiKey.trim() || null)
         .then((res) => {
@@ -377,19 +368,20 @@ function PlayerField({
         .catch(() => id === seq.current && setLookup({ match: null, suggestions: [] }))
         .finally(() => id === seq.current && setSearching(false));
     }, 450);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [name]);
 
   return (
     <div class={`pfield pfield--${side}`}>
-      <span class="pfield__side">Spieler {SIDE_LABEL[side]}</span>
+      <span class="pfield__side">{t('battle.player', { side: sideLabel(side) })}</span>
       <div class="pfield__row">
         <Avatar player={player} side={side} size={52} />
         <input
           class="input pfield__input"
-          placeholder={side === 0 ? 'Name in WarEra' : 'Name des Gegners'}
+          data-side={side}
+          placeholder={side === 0 ? t('battle.field.placeholderA') : t('battle.field.placeholderB')}
           value={name}
-          aria-label={`Name Spieler ${SIDE_LABEL[side]}`}
+          aria-label={t('battle.field.aria', { side: sideLabel(side) })}
           onInput={(e) => onName((e.currentTarget as HTMLInputElement).value)}
         />
       </div>
@@ -397,10 +389,10 @@ function PlayerField({
         {player ? (
           <span class="pfield__ok">
             ✓ {player.name}
-            {player.level ? ` · Level ${player.level}` : ''}
+            {player.level ? ` · ${t('battle.field.level', { level: player.level })}` : ''}
           </span>
         ) : searching ? (
-          <span class="muted">Suche …</span>
+          <span class="muted">{t('battle.field.searching')}</span>
         ) : lookup && lookup.suggestions.length ? (
           <div class="pfield__suggest">
             {lookup.suggestions.map((s) => (
@@ -417,7 +409,7 @@ function PlayerField({
             ))}
           </div>
         ) : lookup ? (
-          <span class="muted">Nicht gefunden. Auch Profil-Link oder ID geht.</span>
+          <span class="muted">{t('battle.field.notFound')}</span>
         ) : null}
       </div>
     </div>
@@ -458,29 +450,29 @@ function Arena({ prefs }: { prefs: BattlePrefs }) {
     el.classList.add('quake');
   });
 
-  const roundNo = Math.min(s.rounds.length + 1, s.winner !== null ? s.rounds.length : Infinity);
+  const roundNo = s.winner !== null ? s.rounds.length : s.rounds.length + 1;
   const tie = slots.value[0].kind === 'open' && (slots.value[0] as { result?: string }).result === 'tie';
 
   return (
     <main class="arena" ref={ref} data-case={m.caseCode ?? 'any'}>
       <div class="arena__meta">
-        <span class="badge badge--accent">Runde {roundNo}</span>
-        <span class="badge">Erster mit {m.target} Punkten</span>
-        <span class="badge">{caseType(m.caseCode).short}</span>
-        {m.demo && <span class="badge badge--warn">Demo · zufällige Ziehungen</span>}
-        {ph === 'arming' && <span class="badge badge--accent">Neue Runde wird vorbereitet …</span>}
+        <span class="badge badge--accent">{t('battle.arena.round', { n: roundNo })}</span>
+        <span class="badge">{tn('battle.arena.firstTo', m.target)}</span>
+        <span class="badge">{caseText(m.caseCode, 'short')}</span>
+        {m.demo && <span class="badge badge--warn">{t('battle.arena.demo')}</span>}
+        {ph === 'arming' && <span class="badge badge--accent">{t('battle.arena.arming')}</span>}
       </div>
 
       <div class="arena__duel">
         <PlayerPanel side={0} />
         <div class="arena__center">
           <div class={`vs-orb ${ph === 'live' ? 'is-live' : ''}`}>VS</div>
-          <div class="arena__score mono" aria-label={`Stand ${s.points[0]} zu ${s.points[1]}`}>
+          <div class="arena__score mono" aria-label={t('battle.arena.score', { a: s.points[0], b: s.points[1] })}>
             <span class={`score--0 ${s.points[0] > s.points[1] ? 'is-ahead' : ''}`}>{s.points[0]}</span>
             <span class="score__sep">:</span>
             <span class={`score--1 ${s.points[1] > s.points[0] ? 'is-ahead' : ''}`}>{s.points[1]}</span>
           </div>
-          {tie && <div class="tie-stamp">Gleichstand</div>}
+          {tie && <div class="tie-stamp">{t('battle.arena.tie')}</div>}
         </div>
         <PlayerPanel side={1} />
       </div>
@@ -490,15 +482,15 @@ function Arena({ prefs }: { prefs: BattlePrefs }) {
       <div class="arena__actions">
         {ph === 'live' ? (
           <button type="button" class="btn btn--ghost" onClick={() => stopMatch()}>
-            Battle abbrechen
+            {t('battle.arena.abort')}
           </button>
         ) : (
           <>
             <button type="button" class="btn btn--primary" onClick={() => void rematch(prefs)}>
-              Revanche
+              {t('battle.arena.rematch')}
             </button>
             <button type="button" class="btn btn--ghost" onClick={() => stopMatch()}>
-              Neue Spieler
+              {t('battle.arena.newPlayers')}
             </button>
           </>
         )}
@@ -532,12 +524,12 @@ function ShareButton() {
       setDone(true);
       setTimeout(() => setDone(false), 2000);
     } catch {
-      prompt('Link zum Battle', url.href);
+      prompt(t('battle.share.prompt'), url.href);
     }
   };
   return (
-    <button type="button" class="btn btn--ghost" onClick={() => void share()} title="Link mit beiden Namen, etwa für OBS oder den Discord">
-      {done ? '✓ Link kopiert' : 'Link kopieren'}
+    <button type="button" class="btn btn--ghost" onClick={() => void share()} title={t('battle.share.title')}>
+      {done ? t('battle.share.copied') : t('battle.share.copy')}
     </button>
   );
 }
@@ -546,25 +538,25 @@ function PlayerPanel({ side }: { side: Side }) {
   const m = match.value!;
   const s = standing.value;
   const slot = slots.value[side];
+  const opposite = slots.value[other(side)];
   const player = m.players[side];
   const ph = phase.value;
-  const isTurn = ph === 'live' && s.turn === side && slot.kind === 'idle' && slots.value[side === 0 ? 1 : 0].kind !== 'shake';
-  const other = slots.value[side === 0 ? 1 : 0];
+  const isTurn = ph === 'live' && s.turn === side && slot.kind === 'idle' && opposite.kind !== 'shake';
   const result = slot.kind === 'open' ? slot.result : undefined;
+  const isWinner = s.winner === side;
   // Schon im Spiel geöffnet, aber noch nicht gezeigt (etwa mehrere Kisten auf einmal)
   const shownIdx = slot.kind === 'idle' ? -1 : m.openings[side].findIndex((o) => o.id === slot.opening.id);
   const queued = shownIdx >= 0 ? m.openings[side].length - shownIdx - 1 : backlog.value[side];
-  const waitsForOther = slot.kind === 'open' && !result && other.kind !== 'open';
-  const isWinner = s.winner === side;
+  const waitsForOther = slot.kind === 'open' && !result && opposite.kind !== 'open';
 
   return (
     <section class={`ppanel ppanel--${side} ${isTurn ? 'is-turn' : ''} ${result ? `is-${result}` : ''} ${isWinner ? 'is-champion' : ''}`}>
       <div class="ppanel__head">
         <Avatar player={player} side={side} size={64} />
         <div class="ppanel__who">
-          <span class="ppanel__side">{SIDE_LABEL[side]}</span>
+          <span class="ppanel__side">{sideLabel(side)}</span>
           <strong class="ppanel__name">{player.name}</strong>
-          {player.level ? <span class="muted">Level {player.level}</span> : null}
+          {player.level ? <span class="muted">{t('battle.field.level', { level: player.level })}</span> : null}
         </div>
       </div>
       <Pips count={m.target} filled={s.points[side]} side={side} />
@@ -574,17 +566,17 @@ function PlayerPanel({ side }: { side: Side }) {
       </div>
       <div class="ppanel__foot">
         {isTurn ? (
-          <span class="turn-badge">Am Zug: Kiste öffnen!</span>
+          <span class="turn-badge">{t('battle.panel.turn')}</span>
         ) : slot.kind === 'shake' ? (
-          <span class="muted">Öffnet …</span>
+          <span class="muted">{t('battle.panel.opening')}</span>
         ) : waitsForOther ? (
-          <span class="muted">Wartet auf {m.players[side === 0 ? 1 : 0].name}</span>
+          <span class="muted">{t('battle.panel.waitsFor', { name: m.players[other(side)].name })}</span>
         ) : (
           <span class="muted">&nbsp;</span>
         )}
         {queued > 0 && ph === 'live' ? (
-          <span class="badge badge--tiny" title="Schon im Spiel geöffnet, wird gleich aufgedeckt und gewertet">
-            +{queued} wartet
+          <span class="badge badge--tiny" title={t('battle.panel.queuedTitle')}>
+            {t('battle.panel.queued', { count: queued })}
           </span>
         ) : null}
       </div>
@@ -597,20 +589,20 @@ function TipButton({ side }: { side: Side }) {
   const m = match.value!;
   const s = standing.value;
   if (s.rounds.length > 0 || phase.value !== 'live') {
-    return m.tip === side ? <span class="tip tip--locked">Dein Tipp</span> : null;
+    return m.tip === side ? <span class="tip tip--locked">{t('battle.tip.yours')}</span> : null;
   }
   return (
-    <button type="button" class={`tip ${m.tip === side ? 'is-active' : ''}`} onClick={() => setTip(m.tip === side ? null : side)} title="Nur auf diesem Gerät, ohne Einsatz">
-      {m.tip === side ? '★ Dein Tipp' : '☆ Darauf tippe ich'}
+    <button type="button" class={`tip ${m.tip === side ? 'is-active' : ''}`} onClick={() => setTip(m.tip === side ? null : side)} title={t('battle.tip.title')}>
+      {m.tip === side ? t('battle.tip.active') : t('battle.tip.pick')}
     </button>
   );
 }
 
 function Pips({ count, filled, side }: { count: number; filled: number; side: Side }) {
   return (
-    <div class={`pips pips--${side}`} aria-label={`${filled} von ${count} Punkten`}>
+    <div class={`pips pips--${side}`} aria-label={t('battle.pips', { filled, count })}>
       {Array.from({ length: count }, (_, i) => (
-        <span class={`pip ${i < filled ? 'is-on' : ''}`} key={i} style={{ '--i': i } as Record<string, number>} />
+        <span class={`pip ${i < filled ? 'is-on' : ''}`} key={i} />
       ))}
     </div>
   );
@@ -665,13 +657,12 @@ function MiniCrate() {
 }
 
 function ItemCard({ opening }: { opening: Opening }) {
-  const info = itemInfo(opening.itemCode);
-  const stats = formatSkills(opening.skills);
+  const stats = skillsText(opening.skills);
   return (
     <div class={`item-card ${opening.rarity ? `rar-${opening.rarity}` : 'rar-unknown'}`}>
-      <span class="item-card__emoji">{info.emoji}</span>
-      <strong class="item-card__name">{info.name}</strong>
-      <span class="item-card__rarity">{opening.rarity ? RARITY_LABEL[opening.rarity] : 'Unbekannt'}</span>
+      <span class="item-card__emoji">{itemInfo(opening.itemCode).emoji}</span>
+      <strong class="item-card__name">{itemName(opening.itemCode)}</strong>
+      <span class="item-card__rarity">{rarityLabel(opening.rarity)}</span>
       {stats && <span class="item-card__stats mono">{stats}</span>}
     </div>
   );
@@ -682,16 +673,16 @@ function ItemCard({ opening }: { opening: Opening }) {
 function History() {
   const s = standing.value;
   const m = match.value!;
-  if (!s.rounds.length) return <div class="history history--empty muted">Noch keine Runde gewertet.</div>;
+  if (!s.rounds.length) return <div class="history history--empty muted">{t('battle.history.empty')}</div>;
   return (
-    <ol class="history" aria-label="Rundenverlauf">
+    <ol class="history" aria-label={t('battle.history.label')}>
       {s.rounds.map((r) => (
         <li class={`hround ${r.winner === null ? 'is-tie' : `won-${r.winner}`}`} key={r.index}>
           <span class="hround__no">R{r.index}</span>
           <HItem opening={r.a} win={r.winner === 0} />
           <span class="hround__vs">{r.winner === null ? '=' : r.winner === 0 ? '>' : '<'}</span>
           <HItem opening={r.b} win={r.winner === 1} />
-          <span class="hround__who">{r.winner === null ? 'Gleichstand' : `Punkt ${m.players[r.winner].name}`}</span>
+          <span class="hround__who">{r.winner === null ? t('battle.arena.tie') : t('battle.history.point', { name: m.players[r.winner].name })}</span>
         </li>
       ))}
     </ol>
@@ -699,11 +690,10 @@ function History() {
 }
 
 function HItem({ opening, win }: { opening: Opening; win: boolean }) {
-  const info = itemInfo(opening.itemCode);
   return (
-    <span class={`hitem ${opening.rarity ? `rar-${opening.rarity}` : ''} ${win ? 'is-win' : ''}`} title={`${info.name} · ${opening.rarity ? RARITY_LABEL[opening.rarity] : 'Unbekannt'}`}>
-      <span>{info.emoji}</span>
-      <span class="hitem__label">{opening.rarity ? RARITY_LABEL[opening.rarity] : '?'}</span>
+    <span class={`hitem ${opening.rarity ? `rar-${opening.rarity}` : ''} ${win ? 'is-win' : ''}`} title={`${itemName(opening.itemCode)} · ${rarityLabel(opening.rarity)}`}>
+      <span>{itemInfo(opening.itemCode).emoji}</span>
+      <span class="hitem__label">{rarityLabel(opening.rarity)}</span>
     </span>
   );
 }
@@ -726,7 +716,7 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
   }, [winner, s.rounds.length]);
   if (winner === null || hidden) return null;
   const champ = m.players[winner];
-  const tipText = m.tip === null ? null : m.tip === winner ? 'Dein Tipp war richtig! 🎉' : 'Dein Tipp lag daneben.';
+  const tipText = m.tip === null ? null : m.tip === winner ? t('battle.victory.tipRight') : t('battle.victory.tipWrong');
   return (
     <div class={`victory victory--${winner}`} role="dialog" aria-modal="true" aria-labelledby="victory-title">
       <div class="victory__card">
@@ -734,7 +724,7 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
           👑
         </div>
         <Avatar player={champ} side={winner} size={120} />
-        <p class="victory__eyebrow">Sieg</p>
+        <p class="victory__eyebrow">{t('battle.victory.eyebrow')}</p>
         <h2 id="victory-title" class="victory__name">
           {champ.name}
         </h2>
@@ -742,19 +732,19 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
           {s.points[0]} : {s.points[1]}
         </p>
         <p class="muted">
-          nach {s.rounds.length} {s.rounds.length === 1 ? 'Runde' : 'Runden'}
-          {best ? ` · bester Zug: ${itemInfo(best.itemCode).name} (${best.rarity ? RARITY_LABEL[best.rarity] : '?'})` : ''}
+          {tn('battle.victory.after', s.rounds.length)}
+          {best ? ` · ${t('battle.victory.best', { item: itemName(best.itemCode), rarity: rarityLabel(best.rarity) })}` : ''}
         </p>
         {tipText && <p class="victory__tip">{tipText}</p>}
         <div class="victory__actions">
           <button type="button" class="btn btn--primary btn--big" onClick={() => void rematch(prefs)}>
-            Revanche
+            {t('battle.arena.rematch')}
           </button>
           <button type="button" class="btn btn--ghost" onClick={() => stopMatch()}>
-            Neue Spieler
+            {t('battle.arena.newPlayers')}
           </button>
           <button type="button" class="btn btn--ghost" onClick={() => setHidden(true)}>
-            Verlauf ansehen
+            {t('battle.victory.history')}
           </button>
         </div>
       </div>
@@ -769,7 +759,7 @@ function Banner() {
   if (!b) return null;
   return (
     <div class={`big-banner big-banner--${b.tone}`} key={b.id} aria-hidden="true">
-      <span>{b.text}</span>
+      <span>{b.tone === 'mythic' ? t('battle.banner.mythic') : t('battle.banner.legendary')}</span>
     </div>
   );
 }
@@ -785,13 +775,12 @@ function Announcer() {
     for (const side of [0, 1] as Side[]) {
       const slot = sl[side];
       if (slot.kind === 'open' && !slot.result) {
-        const info = itemInfo(slot.opening.itemCode);
-        setText(`${m.players[side].name} zieht ${info.name}, ${slot.opening.rarity ? RARITY_LABEL[slot.opening.rarity] : 'unbekannt'}.`);
+        setText(t('battle.announce.pull', { name: m.players[side].name, item: itemName(slot.opening.itemCode), rarity: rarityLabel(slot.opening.rarity) }));
         return;
       }
     }
     if (sl[0].kind === 'open' && sl[0].result && r) {
-      setText(r.winner === null ? `Runde ${r.index}: Gleichstand.` : `Runde ${r.index}: Punkt für ${m.players[r.winner].name}.`);
+      setText(r.winner === null ? t('battle.announce.tie', { n: r.index }) : t('battle.announce.point', { n: r.index, name: m.players[r.winner].name }));
     }
   });
   return (
