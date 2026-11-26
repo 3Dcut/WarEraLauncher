@@ -19,6 +19,13 @@ describe('tools.json', () => {
     for (const t of raw) for (const url of allVariants(t.url)) expect(localizedUrl(url, 'de').startsWith('https://'), url).toBe(true);
   });
 
+  it('nennt für ausgeblendete Tools einen Grund', () => {
+    for (const t of defs.flatMap((c) => c.tools).filter((t) => t.hidden)) {
+      const notes = allVariants(t.note);
+      expect(notes.length > 0 && notes.every((n) => n.trim().length > 0), String(t.id)).toBe(true);
+    }
+  });
+
   it('hat eindeutige IDs', () => {
     const ids = cats.flatMap((c) => c.tools.map((t) => t.id));
     expect(new Set(ids).size).toBe(ids.length);

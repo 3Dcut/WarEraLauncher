@@ -66,16 +66,15 @@
       },
       "icon": "💰",
       "desc": {
-        "de": "Rechner links, Markt und Löhne rechts",
-        "en": "Calculators on the left, market and wages on the right",
-        "sv": "Räknare till vänster, marknad och löner till höger"
+        "de": "Rechner links, Markt und Firmen rechts",
+        "en": "Calculators on the left, market and companies on the right",
+        "sv": "Räknare till vänster, marknad och företag till höger"
       },
       "layout": {
         "row": [
           {
             "tabs": [
               "company-calc",
-              "income-calc",
               "dismantle-calc"
             ]
           },
@@ -89,8 +88,7 @@
               },
               {
                 "tabs": [
-                  "wages",
-                  "production-bonus"
+                  "national-companies"
                 ]
               }
             ]
@@ -127,7 +125,6 @@
               },
               {
                 "tabs": [
-                  "phantomant",
                   "map"
                 ]
               }
@@ -154,7 +151,7 @@
           {
             "tabs": [
               "warerastats",
-              "countrystats"
+              "arcanaera"
             ]
           },
           {

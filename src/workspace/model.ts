@@ -1,7 +1,7 @@
 import { signal, effect } from '@preact/signals';
 import { load, save, remove, loadLegacy } from '../core/storage';
 import { fetchLocalJson } from '../core/http';
-import { allTools, findLaunchable } from '../data/tools';
+import { allTools, findOffered } from '../data/tools';
 import { t, localized, allVariants, messageVariants, type LocalizedText, type MessageKey } from '../i18n';
 
 /** Vereinfachte Layoutbeschreibung für Vorlagen und geteilte Links. */
@@ -84,7 +84,7 @@ export function sanitizeTree(node: unknown, depth = 0, seen: Set<string> = new S
   if (Array.isArray(n.tabs)) {
     const tabs: string[] = [];
     for (const t of n.tabs as unknown[]) {
-      if (typeof t !== 'string' || seen.has(t) || !findLaunchable(t) || tabs.length >= 12) continue;
+      if (typeof t !== 'string' || seen.has(t) || !findOffered(t) || tabs.length >= 12) continue;
       seen.add(t);
       tabs.push(t);
     }
@@ -126,7 +126,8 @@ export function ensureWorkspaces(defaults: string[]): { legacyTree: LayoutNode |
     const list: Workspace[] = [];
     for (const id of defaults) {
       const p = presetById(id);
-      if (p) list.push({ id: p.id, name: p.name, icon: p.icon, preset: p.id });
+      // Vorlagen, von denen nach dem Ausblenden nicht erreichbarer Tools nichts übrig bleibt, gar nicht erst anlegen
+      if (p && sanitizeTree(p.layout)) list.push({ id: p.id, name: p.name, icon: p.icon, preset: p.id });
     }
     legacyTree = legacyOpenTools();
     if (legacyTree) list.push({ id: 'meine-tools', name: t('workspace.myTools'), icon: '🧭' });

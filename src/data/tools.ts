@@ -1,6 +1,7 @@
 import { signal, computed, effect } from '@preact/signals';
 import { fetchLocalJson } from '../core/http';
 import { t, lang, localized, localizedUrl, allVariants, type Lang, type LocalizedText } from '../i18n';
+import { reachability, type ReachMap } from './reachability';
 
 /**
  * Eintrag in tools.json. Nur name und url sind Pflicht, alles andere ist optional.
@@ -16,6 +17,10 @@ export interface ToolDef {
   /** false = Seite verbietet Einbettung, wird als Karte mit Öffnen-Knopf gezeigt. */
   embed?: boolean;
   tags?: string[];
+  /** true = vorübergehend ausgeblendet, etwa weil das Tool nicht an das aktuelle Spiel angepasst ist. */
+  hidden?: boolean;
+  /** Grund fürs Ausblenden oder sonstiger Hinweis, erscheint auf der Karte offener Panels. */
+  note?: LocalizedText;
 }
 
 export interface CategoryDef {
@@ -24,7 +29,8 @@ export interface CategoryDef {
   tools: ToolDef[];
 }
 
-export type ToolHealth = 'ok' | 'blocked' | 'dead' | 'unknown';
+/** Ergebnis des Build-Checks: dead = 404/410, down = Netzwerk-, Zertifikats- oder Serverfehler. */
+export type ToolHealth = 'ok' | 'blocked' | 'dead' | 'down' | 'unknown';
 
 export interface Tool {
   id: string;
@@ -39,6 +45,10 @@ export interface Tool {
   /** Sprachunabhängige Kennung der Kategorie (aus dem deutschen bzw. ersten Namen). */
   categoryId: string;
   health: ToolHealth;
+  /** HTTP-Status aus dem Build-Check, falls der Server geantwortet hat. */
+  healthCode: number | null;
+  hidden: boolean;
+  note: string;
 }
 
 export interface WidgetDef {
@@ -58,7 +68,7 @@ export type Launchable = Tool | WidgetDef;
 
 interface StatusFile {
   checkedAt?: string;
-  results?: Record<string, { status?: ToolHealth }>;
+  results?: Record<string, { status?: ToolHealth; code?: number }>;
 }
 
 // Namen und Beschreibungen sind Getter: Sie lesen die aktuelle Sprache erst beim Zugriff,
@@ -115,6 +125,9 @@ export const GAME_TOOL: Tool = {
   },
   categoryId: 'spiel',
   health: 'ok',
+  healthCode: null,
+  hidden: false,
+  note: '',
 };
 
 export const categories = signal<{ id: string; name: string; icon: string; tools: Tool[] }[]>([]);
@@ -127,6 +140,39 @@ export const launchables = computed<Launchable[]>(() => [...WIDGETS, ...allTools
 
 export function findLaunchable(id: string): Launchable | undefined {
   return launchables.value.find((l) => l.id === id);
+}
+
+/**
+ * Warum ein Tool gerade nicht angeboten wird, oder null, wenn alles in Ordnung ist.
+ * Die Prüfung im Browser zeigt den aktuellen Zustand aus Sicht der Nutzer und entscheidet bei
+ * Netzwerk-, DNS- und Zertifikatsfehlern. Statuscodes sieht sie nicht (no-cors), eine Fehlerseite
+ * gilt ihr als erreichbar; deshalb behalten 404 und Serverfehler aus dem Build-Check Vorrang.
+ */
+export function unavailableReason(item: Launchable, reach: ReachMap = reachability.value): string | null {
+  if (item.kind !== 'tool' || item.id === GAME_TOOL.id) return null;
+  if (item.hidden) return item.note ? t('shell.unavailable.hiddenNote', { note: item.note }) : t('shell.unavailable.hidden');
+  if (item.health === 'dead') return t('shell.unavailable.dead');
+  if (item.health === 'down' && item.healthCode != null && item.healthCode >= 500) return t('shell.unavailable.serverError', { code: item.healthCode });
+  const probe = reach[item.id];
+  if (probe) return probe.ok ? null : t('shell.unavailable.unreachable');
+  if (item.health === 'down') return t('shell.unavailable.down');
+  return null;
+}
+
+export function isOffered(item: Launchable): boolean {
+  return unavailableReason(item) === null;
+}
+
+/** Nur die Tools, die gerade angeboten werden: für Seitenleiste, Befehlspalette und Vorlagen. */
+export const offeredCategories = computed(() =>
+  categories.value.map((c) => ({ ...c, tools: c.tools.filter(isOffered) })).filter((c) => c.tools.length > 0),
+);
+
+export const offeredLaunchables = computed<Launchable[]>(() => launchables.value.filter(isOffered));
+
+export function findOffered(id: string): Launchable | undefined {
+  const item = findLaunchable(id);
+  return item && isOffered(item) ? item : undefined;
 }
 
 export function slugify(value: string): string {
@@ -172,6 +218,7 @@ export function normalizeCategories(defs: CategoryDef[], status?: StatusFile, l:
             while (seen.has(id)) id += '-2';
             seen.add(id);
             const health = status?.results?.[id]?.status ?? 'unknown';
+            const healthCode = status?.results?.[id]?.code ?? null;
             return {
               id,
               kind: 'tool',
@@ -185,6 +232,9 @@ export function normalizeCategories(defs: CategoryDef[], status?: StatusFile, l:
               category,
               categoryId,
               health,
+              healthCode,
+              hidden: t.hidden === true,
+              note: isText(t.note) ? localized(t.note, l) : '',
             };
           }),
       };

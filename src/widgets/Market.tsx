@@ -30,7 +30,6 @@ const ITEM_CODES = new Set([
   'scraps',
   'case1',
   'case2',
-  'woodenCase',
 ]);
 
 function itemName(code: string): string {
@@ -103,6 +102,8 @@ export function MarketWidget({ visible }: { visible: Signal<boolean> }) {
     if (!prices) return [];
     const reference = history.find((h) => Date.now() - h.t < 24 * 3600_000) ?? history[0];
     return Object.entries(prices)
+      // getPrices nennt auch Waren, die nicht mehr handelbar sind (etwa woodenCase); die blenden wir aus.
+      .filter(([code]) => items[code]?.tradable !== false)
       .map(([code, price]) => {
         const before = reference?.p[code];
         const change = before ? (price - before) / before : null;

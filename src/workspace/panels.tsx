@@ -14,7 +14,7 @@ import type {
   DockviewApi,
   IDockviewPanel,
 } from 'dockview';
-import { findLaunchable, type Tool } from '../data/tools';
+import { findLaunchable, unavailableReason, type Tool } from '../data/tools';
 import { t } from '../i18n';
 import { iconSvg } from '../ui/icons';
 import { ExternalCard, MissingCard } from '../ui/ExternalCard';
@@ -62,6 +62,13 @@ export class ItemRenderer implements IContentRenderer {
     if (item.kind === 'widget') {
       this.element.classList.add('panel-widget');
       render(<WidgetHost kind={item.widget} visible={this.visible} />, this.element);
+      return;
+    }
+    // Aus einem gespeicherten Layout: Tool inzwischen ausgeblendet oder nicht erreichbar
+    const unavailable = unavailableReason(item);
+    if (unavailable) {
+      this.element.classList.add('panel-external');
+      render(<ExternalCard tool={item} unavailable={unavailable} onClose={() => params.api.close()} />, this.element);
       return;
     }
     if (!item.embed) {

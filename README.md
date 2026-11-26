@@ -10,6 +10,9 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Eingebettete Tools laden beim Verschieben nicht neu.** Dockview rendert jedes Iframe in einer festen Ebene
   (`renderer: 'always'`); Tabs im Hintergrund laden erst, wenn sie zum ersten Mal sichtbar werden.
 - **Seiten, die Einbettung verbieten**, erscheinen als Karte mit „Als Fenster öffnen“ bzw. „Neuer Tab“.
+- **Nur erreichbare Tools werden angeboten.** Der Browser prüft die Tools selbst (beim Start, danach alle paar Minuten),
+  der tägliche Build-Check ergänzt Statuscodes. Was nicht gültig erreichbar ist, verschwindet aus Seitenleiste, Palette
+  und Vorlagen und kommt von selbst zurück, sobald es wieder antwortet. Bereits offene Panels zeigen stattdessen eine Karte mit dem Grund.
 - **Live-Widgets** über `api2.warera.io`: Zeiten (Regeneration, Tageswechsel, Missionen, Wahlen), Mein Charakter
   (Balken mit „voll um …“), Markt (Preise, lokaler Verlauf, Wert pro Produktionspunkt, Orderbuch), Front (laufende Schlachten).
 - **Radio** als Pille in der Kopfleiste, als Widget und als Mini-Player (Document Picture-in-Picture, bleibt über dem Spiel);
@@ -21,7 +24,7 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Befehlspalette** mit <kbd>Strg</kbd>+<kbd>K</kbd>, Favoriten, zuletzt benutzte Tools, Tastenkürzel (<kbd>?</kbd> zeigt alle).
 - **Sprachen**: Deutsch, Englisch und Schwedisch, umschaltbar in den Einstellungen, in der Befehlspalette oder per Adresse
   (`?lang=de`, `?lang=en`, `?lang=sv`). Ohne Angabe gilt die gespeicherte Wahl, sonst die Browsersprache; wer den Launcher
-  schon vor der Übersetzung genutzt hat, bleibt bei Deutsch. Die Kisten-Seite (`/cases/`) folgt derselben Wahl.
+  schon vor der Übersetzung genutzt hat, bleibt bei Deutsch. Das Kisten-Battle (`/battle/`) folgt derselben Wahl.
 - **Anpassung**: vier Themes (Grau, Feldgrau, Pink, Hell), eigene Akzentfarbe, Dichte, Glas-Effekt, Animationen;
   Layout als Link teilen, Einstellungen exportieren/importieren. Die alte Oberfläche bleibt unter `/legacy.html` erreichbar.
 
@@ -101,6 +104,13 @@ window.addEventListener('message', (e) => {
 
 Ändert sich der Schlüssel, bekommen freigegebene, offene Tools die neue Nachricht von selbst.
 
+## WarEra-API
+
+Die Widgets lesen die öffentliche tRPC-API unter `api2.warera.io` (ohne Schlüssel, 100 Anfragen pro Minute und IP).
+Welche Prozeduren es gibt, welche Parameter sie erwarten und was sich nach einem Spiel-Update geändert hat
+(neue Felder, entfernte Prozeduren), steht im [API-Explorer von RealMarijn](https://warera.realmarijn.nl/api-explorer).
+Nach größeren Updates lohnt ein Abgleich mit `src/warera/api.ts`.
+
 ## Daten pflegen (ohne Code)
 
 Die JSON-Dateien im Repo-Root werden zur Laufzeit geladen und beim Deploy geprüft.
@@ -112,14 +122,24 @@ Die JSON-Dateien im Repo-Root werden zur Laufzeit geladen und beim Deploy geprü
   "desc": "Schlachten simulieren", "tags": ["schlacht"], "embed": true }
 ```
 
-`"embed": false` markiert Seiten, die sich nicht einbetten lassen. Das erkennt aber auch der wöchentliche Tool-Check von selbst.
+`"embed": false` markiert Seiten, die sich nicht einbetten lassen. Das erkennt aber auch der tägliche Tool-Check von selbst.
 
-`name`, `url`, `desc` und `category` dürfen statt eines Strings ein Objekt je Sprache sein. Fehlt eine Sprache, gilt
+`"hidden": true` blendet ein Tool vorübergehend aus, etwa wenn es nicht an das aktuelle Spiel angepasst ist; `"note"` nennt
+den Grund (Pflicht bei ausgeblendeten Tools, der Test prüft das). Vorlagen dürfen ausgeblendete Tools weiter enthalten,
+sie fallen beim Aufbau weg und kehren zurück, sobald `hidden` entfernt wird.
+
+Ob ein Tool angeboten wird, entscheidet `unavailableReason` in `src/data/tools.ts`: ausgeblendet, 404 oder Serverfehler aus
+dem Build-Check schließen es immer aus; ob die Seite gerade erreichbar ist (DNS, Zertifikat, Verbindung), prüft der Browser
+in `src/data/reachability.ts` per `HEAD`-Anfrage ohne Cookies und Referrer. Die Tool-Seiten sehen dadurch eine kurze Anfrage
+von jeder Person, die den Launcher öffnet.
+
+`name`, `url`, `desc`, `note` und `category` dürfen statt eines Strings ein Objekt je Sprache sein. Fehlt eine Sprache, gilt
 zuerst Englisch, dann Deutsch. In URLs steht `{lang}` für die aktuelle Sprache:
 
 ```json
-{ "id": "case-ev", "name": "Case EV", "url": "https://warera.de/cases/?lang={lang}",
-  "desc": { "de": "Erwartungswert einer Wooden Case", "en": "Expected value of a Wooden Case", "sv": "Väntevärde för en Wooden Case" } }
+{ "id": "case-battle", "name": { "de": "Kisten-Battle", "en": "Case Battle", "sv": "Lådduell" },
+  "url": "https://warera.de/battle/?lang={lang}",
+  "desc": { "de": "Seltenere Kategorie punktet", "en": "The rarer category scores", "sv": "Den sällsyntare kategorin får poäng" } }
 ```
 
 Dasselbe gilt für `name` und `desc` der Vorlagen in **workspaces.json**.
@@ -149,4 +169,4 @@ Die alte Oberfläche (`legacy.html`) ist auf `noindex` gesetzt und verweist per 
 
 Push auf `main` startet `.github/workflows/deploy.yml`: Typprüfung, Tests, Build, Tool-Check (schreibt `tools-status.json`),
 Upload von `dist/` nach GitHub Pages. Schlägt ein Test fehl, bleibt die letzte funktionierende Version online.
-Einmal pro Woche baut der Workflow neu, damit der Tool-Status aktuell bleibt.
+Einmal am Tag baut der Workflow neu, damit der Tool-Status aktuell bleibt.

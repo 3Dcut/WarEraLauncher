@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import { categories, WIDGETS, findLaunchable, toolsError, type Launchable } from '../data/tools';
+import { offeredCategories, WIDGETS, findLaunchable, findOffered, toolsError, type Launchable } from '../data/tools';
 import { settings, updateSettings, toggleFavorite, isMobile, mobileSidebarOpen } from '../state';
 import { openLaunchable, openIds, DRAG_MIME } from '../workspace/dock';
 import { load, save } from '../core/storage';
@@ -29,7 +29,6 @@ function Item({ item }: { item: Launchable }) {
   const fav = settings.value.favorites.includes(item.id);
   const open = openIds.value.includes(item.id);
   const external = item.kind === 'tool' && !item.embed;
-  const dead = item.kind === 'tool' && item.health === 'dead';
   return (
     <li class={`tool-item ${open ? 'is-open' : ''}`}>
       <button
@@ -50,7 +49,6 @@ function Item({ item }: { item: Launchable }) {
             <Icon name="external" size={12} />
           </span>
         )}
-        {dead && <span class="badge badge--warn">{t('shell.sidebar.offline')}</span>}
         {open && <span class="tool-item__open" title={t('shell.sidebar.openHere')} />}
       </button>
       <button type="button" class={`tool-item__fav ${fav ? 'is-fav' : ''}`} onClick={() => toggleFavorite(item.id)} aria-label={fav ? t('shell.sidebar.favRemove', { name: item.name }) : t('shell.sidebar.favAdd', { name: item.name })} aria-pressed={fav}>
@@ -96,10 +94,10 @@ export function Sidebar() {
   const collapsed = settings.value.sidebarCollapsed && !isMobile.value;
   const q = filter.trim().toLowerCase();
   const match = (l: Launchable) => !q || `${l.name} ${l.desc} ${l.tags.join(' ')} ${l.category}`.toLowerCase().includes(q);
-  const favorites = settings.value.favorites.map(findLaunchable).filter((l): l is Launchable => !!l);
+  const favorites = settings.value.favorites.map(findOffered).filter((l): l is Launchable => !!l);
   const recents = settings.value.recents
     .filter((id) => !settings.value.favorites.includes(id))
-    .map(findLaunchable)
+    .map(findOffered)
     .filter((l): l is Launchable => !!l)
     .slice(0, 4);
 
@@ -147,7 +145,7 @@ export function Sidebar() {
         {!q && <Section id="favorites" title={t('shell.sidebar.favorites')} icon="★" items={favorites} />}
         {!q && <Section id="recents" title={t('shell.sidebar.recents')} items={recents} defaultOpen={false} />}
         <Section id="widgets" title={t('shell.sidebar.widgets')} icon="✨" items={WIDGETS.filter(match)} />
-        {categories.value.map((c) => (
+        {offeredCategories.value.map((c) => (
           <Section id={`cat:${c.id}`} title={c.name} icon={c.icon} items={c.tools.filter(match)} />
         ))}
       </div>

@@ -9,6 +9,7 @@ interface ToolEntry {
   name: Text;
   url: Text;
   desc?: Text;
+  hidden?: boolean;
 }
 
 /** Der <noscript>-Block ist deutsch; mehrsprachige Einträge liefern deshalb ihre deutsche Fassung. */
@@ -25,9 +26,11 @@ function seoToolList(): Plugin {
     transformIndexHtml(html) {
       const categories = JSON.parse(readFileSync('tools.json', 'utf8')) as { category: Text; tools: ToolEntry[] }[];
       const list = categories
+        .filter((c) => c.tools.some((t) => !t.hidden))
         .map(
           (c) =>
             `<h3>${escapeHtml(de(c.category))}</h3><ul>${c.tools
+              .filter((t) => !t.hidden)
               .map((t) => {
                 const url = de(t.url).replace(/\{lang\}/g, 'de');
                 const desc = de(t.desc);

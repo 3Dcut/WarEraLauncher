@@ -14,7 +14,8 @@ import './styles/widgets.css';
 
 import { render } from 'preact';
 import { App } from './ui/App';
-import { loadTools } from './data/tools';
+import { loadTools, allTools } from './data/tools';
+import { startReachabilityChecks } from './data/reachability';
 import { loadPresets, ensureWorkspaces, decodeShare, addWorkspace, newId } from './workspace/model';
 import { queueTree, switchWorkspace } from './workspace/dock';
 import { initTheme } from './theme';
@@ -52,6 +53,7 @@ async function start(): Promise<void> {
   root.textContent = '';
   render(<App legacyTree={legacyTree} />, root);
 
+  startReachabilityChecks(() => allTools.value.filter((t) => !t.hidden).map((t) => ({ id: t.id, url: t.url })));
   initRadio();
   // Kurzlinks warera.de/r, /n, /a starten direkt einen Sender
   startRadioFromLink();
