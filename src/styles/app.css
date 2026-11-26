@@ -1415,3 +1415,42 @@ html.is-dragging iframe {
 :root[data-motion='off'] .autostart__play {
   animation: none;
 }
+
+/* ---------- API-Schlüssel in den Einstellungen ---------- */
+.key-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-status {
+  font-size: 0.85em;
+  font-weight: 700;
+}
+
+.key-status--ok {
+  color: var(--ok);
+}
+
+.key-status--bad {
+  color: var(--danger);
+}
+
+.key-origins {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 0.88em;
+}
+
+.key-origins li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.dialog--narrow {
+  width: min(440px, calc(100vw - 24px));
+}

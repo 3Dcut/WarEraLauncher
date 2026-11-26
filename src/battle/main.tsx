@@ -12,8 +12,9 @@ import { BattleApp } from './BattleApp';
 import { loadRarities } from './api';
 import { resumeStored, setReducedMotion } from './engine';
 import { setFxReduced } from './fx';
-import { loadPrefs, loadKey, savePrefs, clampTarget, RATES } from './prefs';
-import { CASE_TYPES } from './logic';
+import { loadPrefs, savePrefs } from './prefs';
+import { caseFromParam } from './logic';
+import { apiKey } from '../core/apiKey';
 import { effect } from '@preact/signals';
 import { lang, t } from '../i18n';
 
@@ -42,21 +43,14 @@ window.addEventListener('storage', (e) => {
   if (!e.key || e.key === 'wl2:settings') applyTheme();
 });
 
-// Voreinstellungen aus dem Link: ?a=Name&b=Name&ziel=3&kiste=case2&tempo=8&demo=1&start=1
+// Voreinstellungen aus dem Link: ?a=Name&b=Name&kiste=rot|gruen&start=1 (etwa für OBS), ?demo=1 zum Ausprobieren
 const params = new URLSearchParams(location.search);
 const prefs = loadPrefs();
 const a = params.get('a');
 const b = params.get('b');
 if (a !== null || b !== null) prefs.names = [a ?? prefs.names[0], b ?? prefs.names[1]];
-const target = params.get('ziel') ?? params.get('target');
-if (target) prefs.target = clampTarget(target);
-const kiste = params.get('kiste') ?? params.get('case');
-if (kiste) {
-  const code = kiste === 'alle' || kiste === 'any' ? null : kiste;
-  if (CASE_TYPES.some((c) => c.code === code)) prefs.caseCode = code;
-}
-const tempo = Number(params.get('tempo') ?? params.get('rate'));
-if ((RATES as readonly number[]).includes(tempo)) prefs.rate = tempo;
+const kiste = caseFromParam(params.get('kiste') ?? params.get('case'));
+if (kiste) prefs.caseCode = kiste;
 savePrefs(prefs);
 const demo = params.get('demo') === '1';
 const autostart = params.get('start') === '1';
@@ -69,7 +63,7 @@ effect(() => {
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('battle.docDescription'));
 });
 void loadRarities();
-if (!demo && !(a || b)) resumeStored(loadKey() || null, prefs.rate);
+if (!demo && !(a || b)) resumeStored(apiKey.value || null);
 
 const root = document.getElementById('battle')!;
 root.textContent = '';

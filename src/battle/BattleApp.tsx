@@ -12,14 +12,15 @@ import {
   lastRound,
   startMatch,
   stopMatch,
-  setTip,
-  setRate,
+  keyRejected,
   type Slot,
 } from './engine';
 import { findPlayer, checkKey, type Player, type Lookup } from './api';
-import { CASE_TYPES, RARITIES, itemInfo, rarityRank, type Opening, type Rarity, type Side } from './logic';
-import { rarityLabel, itemName, skillsText, caseText, sideLabel } from './text';
-import { savePrefs, loadKey, saveKey, clampTarget, RATES, type BattlePrefs } from './prefs';
+import { CASE_TYPES, itemInfo, rarityRank, type Opening, type Rarity, type Side } from './logic';
+import { rarityLabel, itemName, skillsText, caseLabel, sideLabel } from './text';
+import { savePrefs, type BattlePrefs } from './prefs';
+import { apiKey, setApiKey } from '../core/apiKey';
+import { InfoTip } from '../ui/InfoTip';
 import { setSoundEnabled, unlockAudio } from './sound';
 import { burstAt, rain } from './fx';
 import { t, tn, formatNumber } from '../i18n';
@@ -43,6 +44,9 @@ const embedded = (() => {
 
 const other = (side: Side): Side => (side === 0 ? 1 : 0);
 
+/** Offizielle Regeln des Case Battles Club (Artikel in WarEra). */
+const RULES_URL = 'https://app.warera.io/article/6b04958ff12a5eba606a5875';
+
 // ------------------------------------------------------------------ App
 
 export function BattleApp({ initial }: { initial: { prefs: BattlePrefs; autostart: boolean; demo: boolean } }) {
@@ -56,7 +60,6 @@ export function BattleApp({ initial }: { initial: { prefs: BattlePrefs; autostar
   };
 
   useEffect(() => setSoundEnabled(prefs.sound), [prefs.sound]);
-  useEffect(() => setRate(prefs.rate), [prefs.rate]);
 
   const ph = phase.value;
   return (
@@ -85,6 +88,9 @@ function Header({ prefs, update }: { prefs: BattlePrefs; update: (p: Partial<Bat
       </div>
       <div class="b-header__right">
         <LiveChip />
+        <a class="rules-link" href={RULES_URL} target="_blank" rel="noopener" title={t('battle.rules.credit')}>
+          {t('battle.rules.link')}
+        </a>
         <button
           type="button"
           class={`icon-btn ${prefs.sound ? 'is-active' : ''}`}
@@ -147,11 +153,14 @@ function Setup({
   initial: { autostart: boolean; demo: boolean };
 }) {
   const [players, setPlayers] = useState<[Player | null, Player | null]>([null, null]);
-  const [key, setKey] = useState(loadKey());
-  const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rejected, setRejected] = useState(false);
   const [busy, setBusy] = useState(false);
   const arming = phase.value === 'arming';
+  const key = apiKey.value;
+  // Schlüssel kommt aus dem Launcher; das Feld erscheint nur, wenn keiner da ist oder er abgelehnt wurde
+  const [showKey] = useState(() => !key);
+  const keyField = showKey || rejected || keyRejected.value || !key;
 
   const setPlayer = (side: Side, p: Player | null) => setPlayers((cur) => (side === 0 ? [p, cur[1]] : [cur[0], p]));
   const setName = (side: Side, name: string) => update({ names: side === 0 ? [name, prefs.names[1]] : [prefs.names[0], name] });
@@ -165,7 +174,7 @@ function Setup({
         setError(t('battle.err.nameMissing', { side: sideLabel(side) }));
         return null;
       }
-      const res = await findPlayer(name, key.trim() || null).catch(() => null);
+      const res = await findPlayer(name, key || null).catch(() => null);
       if (!res?.match) {
         setError(t('battle.err.notFound', { name }));
         return null;
@@ -192,21 +201,21 @@ function Setup({
           players[1] ?? { id: 'demo-b', name: prefs.names[1].trim() || t('battle.demo.nameB') },
         ];
       } else {
-        const k = key.trim();
-        if (!k) {
+        if (!key) {
           setError(t('battle.err.noKey'));
           return;
         }
         duo = await resolveBoth();
         if (!duo) return;
-        const check = await checkKey(k);
+        const check = await checkKey(key);
         if (check === 'invalid') {
+          setRejected(true);
           setError(t('battle.err.keyRejected'));
           return;
         }
-        saveKey(k, prefs.remember);
+        setRejected(false);
       }
-      await startMatch({ players: duo, caseCode: prefs.caseCode, target: prefs.target, rate: prefs.rate, key: demo ? null : key.trim(), demo });
+      await startMatch({ players: duo, caseCode: prefs.caseCode, key: demo ? null : key, demo });
     } finally {
       setBusy(false);
     }
@@ -231,102 +240,57 @@ function Setup({
         <PlayerField side={1} name={prefs.names[1]} player={players[1]} onName={(n) => setName(1, n)} onPlayer={(p) => setPlayer(1, p)} apiKey={key} />
       </section>
 
-      <section class="setup__card">
-        <div class="setup__options">
-          <label class="field">
-            <span class="field__label">{t('battle.opt.cases')}</span>
-            <select class="input" value={prefs.caseCode ?? ''} onChange={(e) => update({ caseCode: (e.currentTarget as HTMLSelectElement).value || null })}>
-              {CASE_TYPES.map((c) => (
-                <option value={c.code ?? ''}>{caseText(c.code, 'name')}</option>
-              ))}
-            </select>
-          </label>
-          <div class="field">
-            <span class="field__label">{t('battle.opt.target')}</span>
-            <div class="stepper">
-              <button type="button" class="icon-btn" aria-label={t('battle.opt.fewer')} onClick={() => update({ target: clampTarget(prefs.target - 1) })}>
-                −
-              </button>
-              <span class="stepper__value mono" aria-live="polite">
-                {prefs.target}
-              </span>
-              <button type="button" class="icon-btn" aria-label={t('battle.opt.more')} onClick={() => update({ target: clampTarget(prefs.target + 1) })}>
-                +
-              </button>
-            </div>
-          </div>
-          <label class="field">
-            <span class="field__label">{t('battle.opt.rate')}</span>
-            <select class="input" value={String(prefs.rate)} onChange={(e) => update({ rate: Number((e.currentTarget as HTMLSelectElement).value) })}>
-              {RATES.map((r) => (
-                <option value={String(r)}>{r === 8 ? t('battle.opt.rateMax', { rate: r }) : t('battle.opt.rateValue', { rate: r })}</option>
-              ))}
-            </select>
-          </label>
+      <form
+        class="setup__go"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void start(false);
+        }}
+      >
+        <div class="case-toggle" role="radiogroup" aria-label={t('battle.case.label')}>
+          {CASE_TYPES.map((c) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={prefs.caseCode === c.code}
+              class={`case-toggle__opt case-toggle__opt--${c.key} ${prefs.caseCode === c.code ? 'is-on' : ''}`}
+              onClick={() => update({ caseCode: c.code })}
+            >
+              <span class="case-toggle__crate" aria-hidden="true" />
+              {caseLabel(c.code)}
+            </button>
+          ))}
         </div>
 
-        <div class="field">
-          <span class="field__label">{t('battle.key.label')}</span>
-          <div class="key-row">
+        {keyField && (
+          <div class="key-inline">
             <input
               class="input mono"
-              type={showKey ? 'text' : 'password'}
+              type="password"
               autocomplete="off"
               spellcheck={false}
-              placeholder={t('battle.key.placeholder')}
+              placeholder={t('battle.key.label')}
               aria-label={t('battle.key.label')}
               value={key}
-              onInput={(e) => setKey((e.currentTarget as HTMLInputElement).value)}
+              onInput={(e) => {
+                setRejected(false);
+                setApiKey((e.currentTarget as HTMLInputElement).value);
+              }}
             />
-            <button type="button" class="btn btn--sm btn--ghost" onClick={() => setShowKey(!showKey)}>
-              {showKey ? t('battle.key.hide') : t('battle.key.show')}
-            </button>
-            {key && (
-              <button
-                type="button"
-                class="btn btn--sm btn--ghost btn--danger-text"
-                onClick={() => {
-                  setKey('');
-                  saveKey('', false);
-                }}
-              >
-                {t('battle.key.forget')}
-              </button>
-            )}
+            <InfoTip text={t('battle.key.tooltip')} label={t('battle.key.label')} />
           </div>
-          <label class="check">
-            <input type="checkbox" checked={prefs.remember} onChange={(e) => update({ remember: (e.currentTarget as HTMLInputElement).checked })} />
-            {t('battle.key.remember')}
-          </label>
-          <p class="hint">{t('battle.key.hint')}</p>
-        </div>
-
-        {shownError && (
-          <p class="setup__error" role="alert">
-            {shownError}
-          </p>
         )}
 
-        <div class="setup__actions">
-          <button type="button" class="btn btn--primary btn--big" data-action="start" disabled={busy || arming} onClick={() => void start(false)}>
-            {arming ? t('battle.start.arming') : busy ? t('battle.start.checking') : t('battle.start.go')}
-          </button>
-          <button type="button" class="btn btn--ghost" data-action="demo" disabled={busy || arming} onClick={() => void start(true)}>
-            {t('battle.start.demo')}
-          </button>
-        </div>
-      </section>
+        <button type="submit" class="btn btn--primary btn--big" data-action="start" disabled={busy || arming}>
+          {arming ? t('battle.start.arming') : busy ? t('battle.start.checking') : t('battle.start.go')}
+        </button>
+      </form>
 
-      <section class="setup__rules">
-        <h2>{t('battle.rules.title')}</h2>
-        <ol>
-          <li>{t('battle.rules.setup')}</li>
-          <li>{t('battle.rules.turns', { cases: caseText(prefs.caseCode, 'plural'), first: sideLabel(0) })}</li>
-          <li>{t('battle.rules.rarity', { order: RARITIES.map((r) => rarityLabel(r)).join(' < ') })}</li>
-          <li>{tn('battle.rules.win', prefs.target)}</li>
-        </ol>
-        <p class="hint">{t('battle.rules.limit')}</p>
-      </section>
+      {shownError && (
+        <p class="setup__error" role="alert">
+          {shownError}
+        </p>
+      )}
     </main>
   );
 }
@@ -457,8 +421,8 @@ function Arena({ prefs }: { prefs: BattlePrefs }) {
     <main class="arena" ref={ref} data-case={m.caseCode ?? 'any'}>
       <div class="arena__meta">
         <span class="badge badge--accent">{t('battle.arena.round', { n: roundNo })}</span>
-        <span class="badge">{tn('battle.arena.firstTo', m.target)}</span>
-        <span class="badge">{caseText(m.caseCode, 'short')}</span>
+        <span class="badge">FT{m.target}</span>
+        {m.caseCode === 'case1' && <span class="badge badge--green">{t('battle.case.greenNote')}</span>}
         {m.demo && <span class="badge badge--warn">{t('battle.arena.demo')}</span>}
         {ph === 'arming' && <span class="badge badge--accent">{t('battle.arena.arming')}</span>}
       </div>
@@ -494,7 +458,6 @@ function Arena({ prefs }: { prefs: BattlePrefs }) {
             </button>
           </>
         )}
-        <ShareButton />
       </div>
     </main>
   );
@@ -504,34 +467,8 @@ async function rematch(prefs: BattlePrefs): Promise<void> {
   const m = match.value;
   if (!m) return;
   unlockAudio();
-  await startMatch({ players: m.players, caseCode: m.caseCode, target: m.target, rate: prefs.rate, key: m.demo ? null : loadKey(), demo: m.demo });
-}
-
-function ShareButton() {
-  const [done, setDone] = useState(false);
-  const m = match.value;
-  if (!m) return null;
-  const share = async () => {
-    const url = new URL(location.href);
-    url.search = '';
-    url.hash = '';
-    url.searchParams.set('a', m.players[0].name);
-    url.searchParams.set('b', m.players[1].name);
-    url.searchParams.set('ziel', String(m.target));
-    if (m.caseCode !== 'case2') url.searchParams.set('kiste', m.caseCode ?? 'alle');
-    try {
-      await navigator.clipboard.writeText(url.href);
-      setDone(true);
-      setTimeout(() => setDone(false), 2000);
-    } catch {
-      prompt(t('battle.share.prompt'), url.href);
-    }
-  };
-  return (
-    <button type="button" class="btn btn--ghost" onClick={() => void share()} title={t('battle.share.title')}>
-      {done ? t('battle.share.copied') : t('battle.share.copy')}
-    </button>
-  );
+  void prefs;
+  await startMatch({ players: m.players, caseCode: m.caseCode ?? 'case2', key: m.demo ? null : apiKey.value, demo: m.demo });
 }
 
 function PlayerPanel({ side }: { side: Side }) {
@@ -580,21 +517,7 @@ function PlayerPanel({ side }: { side: Side }) {
           </span>
         ) : null}
       </div>
-      <TipButton side={side} />
     </section>
-  );
-}
-
-function TipButton({ side }: { side: Side }) {
-  const m = match.value!;
-  const s = standing.value;
-  if (s.rounds.length > 0 || phase.value !== 'live') {
-    return m.tip === side ? <span class="tip tip--locked">{t('battle.tip.yours')}</span> : null;
-  }
-  return (
-    <button type="button" class={`tip ${m.tip === side ? 'is-active' : ''}`} onClick={() => setTip(m.tip === side ? null : side)} title={t('battle.tip.title')}>
-      {m.tip === side ? t('battle.tip.active') : t('battle.tip.pick')}
-    </button>
   );
 }
 
@@ -716,7 +639,6 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
   }, [winner, s.rounds.length]);
   if (winner === null || hidden) return null;
   const champ = m.players[winner];
-  const tipText = m.tip === null ? null : m.tip === winner ? t('battle.victory.tipRight') : t('battle.victory.tipWrong');
   return (
     <div class={`victory victory--${winner}`} role="dialog" aria-modal="true" aria-labelledby="victory-title">
       <div class="victory__card">
@@ -735,7 +657,6 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
           {tn('battle.victory.after', s.rounds.length)}
           {best ? ` · ${t('battle.victory.best', { item: itemName(best.itemCode), rarity: rarityLabel(best.rarity) })}` : ''}
         </p>
-        {tipText && <p class="victory__tip">{tipText}</p>}
         <div class="victory__actions">
           <button type="button" class="btn btn--primary btn--big" onClick={() => void rematch(prefs)}>
             {t('battle.arena.rematch')}

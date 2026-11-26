@@ -23,8 +23,8 @@ export function skillsText(skills: Record<string, number> | undefined): string {
     .join(' · ');
 }
 
-export function caseText(code: string | null | undefined, kind: 'name' | 'short' | 'plural'): string {
-  return t(key(`battle.case.${caseType(code).key}.${kind}`));
+export function caseLabel(code: string | null | undefined): string {
+  return t(key(`battle.case.${caseType(code).key}`));
 }
 
 export function sideLabel(side: Side): string {

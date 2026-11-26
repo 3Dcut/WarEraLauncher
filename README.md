@@ -17,6 +17,7 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Kurzlinks fürs Radio**: [warera.de/r](https://warera.de/r) startet das Hauptradio, `/n` die Nachtwache, `/a` den Azura-Livestream.
   Sperrt der Browser den Ton bis zur ersten Nutzeraktion, erscheint ein großer Startknopf.
 - **Kisten-Battle** unter [warera.de/battle](https://warera.de/battle) (auch als Tool im Launcher), siehe unten.
+- **WarEra-API-Schlüssel** einmal in den Einstellungen hinterlegen; eigene Tools nutzen ihn, fremde nach Freigabe.
 - **Befehlspalette** mit <kbd>Strg</kbd>+<kbd>K</kbd>, Favoriten, zuletzt benutzte Tools, Tastenkürzel (<kbd>?</kbd> zeigt alle).
 - **Sprachen**: Deutsch, Englisch und Schwedisch, umschaltbar in den Einstellungen, in der Befehlspalette oder per Adresse
   (`?lang=de`, `?lang=en`, `?lang=sv`). Ohne Angabe gilt die gespeicherte Wahl, sonst die Browsersprache; wer den Launcher
@@ -59,26 +60,46 @@ scripts/              copy-static.mjs (Daten/Audio nach dist), check-tools.mjs (
 
 ## Kisten-Battle (`/battle`)
 
-Zwei Spieler öffnen abwechselnd Kisten (Standard: rote Elite-Kisten, Itemcode `case2`). Die n-te Öffnung von A tritt gegen die
-n-te von B an, die seltenere Kategorie gewinnt die Runde (Gewöhnlich < Ungewöhnlich < Selten < Episch < Legendär < Mythisch),
-gleiche Kategorie gibt keinen Punkt. Wer zuerst das Punkteziel erreicht (Standard 3), gewinnt.
+Umsetzung der [offiziellen Regeln des Case Battles Club](https://app.warera.io/article/6b04958ff12a5eba606a5875) (Nexuzu),
+auf der Seite oben rechts verlinkt: zwei Spieler öffnen je eine rote Kiste pro Runde, die höhere Seltenheit gewinnt die Runde
+(Gewöhnlich < Ungewöhnlich < Selten < Episch < Legendär < Mythisch), gleiche Seltenheit gibt keinen Punkt, FT3.
+Die Oberfläche ist bewusst knapp: zwei Namen, Schalter Rot/Grün (Standard Rot, Grün als Ausweichmöglichkeit), Start.
+FT3 und der Abfragetakt sind feste Regeln, keine Einstellungen.
 
-- **Datenquelle**: `transaction.getPaginatedTransactions` mit `transactionType: "openCase"` je Spieler. Die API gibt Transaktionen
-  nur mit persönlichem Schlüssel heraus (Header `X-API-Key`, im Spiel unter Profil → Einstellungen → API-Tokens). Der Schlüssel bleibt
-  im Browser (`wb:apiKey`, absichtlich nicht unter `wl2:`, damit er beim Einstellungs-Export nicht mitwandert).
+- **Datenquelle**: `transaction.getPaginatedTransactions` mit `transactionType: "openCase"` und `itemCode` `case2` (rot) bzw.
+  `case1` (grün) je Spieler. Die API gibt Transaktionen nur mit persönlichem Schlüssel heraus (Header `X-API-Key`).
 - **Takt**: Beide Spieler stecken in einer gebündelten tRPC-Anfrage. Mit Schlüssel erlaubt WarEra 500 Anfragen pro Minute,
-  daher höchstens 8 pro Sekunde (bis zu vier gleichzeitig); bei HTTP 429 wird automatisch langsamer abgefragt.
+  daher 8 pro Sekunde (bis zu vier gleichzeitig); bei HTTP 429 wird automatisch langsamer abgefragt.
 - **Start**: Beim Start werden die letzten Öffnungen beider Spieler als Stand gemerkt (IDs und Serverzeit), nur Neues zählt.
   Mehrere auf einmal geöffnete Kisten werden der Reihe nach gewertet. Ein laufendes Battle übersteht Neuladen.
-- **Link-Parameter** (etwa für OBS): `?a=Name&b=Name&ziel=3&kiste=case2|case1|woodenCase|toolbox|alle&tempo=1|2|4|8&start=1`,
-  `?demo=1` startet eine Demo mit den Quoten der roten Kiste, `?lang=de|en|sv` wählt die Sprache wie im Launcher.
-- **Sprachen**: Texte im Wörterbuch `src/i18n/messages/battle.ts`; ohne `?lang=` gilt die Sprachwahl des Launchers.
+- **Link-Parameter** (etwa für OBS): `?a=Name&b=Name&kiste=rot|gruen&start=1`, `?demo=1` startet eine Demo mit den Quoten der
+  roten Kiste, `?lang=de|en|sv` wählt die Sprache wie im Launcher.
 - **Ereignisse für später (Cardera-Wetten)**: `start`, `open`, `round` und `finish` gehen als `CustomEvent('case-battle')` an das
-  eigene Fenster und, wenn eingebettet, per `postMessage` (`source: "warera-case-battle"`) an die Elternseite. Der lokale
-  „Tipp“ vor der ersten Runde ist ein Platzhalter ohne Einsatz.
+  eigene Fenster und, wenn eingebettet, per `postMessage` (`source: "warera-case-battle"`) an die Elternseite.
 
 Code: `src/battle/` (Logik in `logic.ts` mit Tests in `tests/battle-logic.test.ts`, Ablauf in `engine.ts`, Oberfläche in
-`BattleApp.tsx`), Einstieg `battle/index.html` als zweiter Vite-Einstieg.
+`BattleApp.tsx`), Texte in `src/i18n/messages/battle.ts`, Einstieg `battle/index.html` als zweiter Vite-Einstieg.
+
+## WarEra-API-Schlüssel
+
+Der persönliche Schlüssel (im Spiel unter Profil → Einstellungen → API-Tokens) wird einmal in den Einstellungen des Launchers
+eingetragen und nur lokal gespeichert (`warera:apiKey`, absichtlich nicht unter `wl2:`, damit er beim Export der Einstellungen
+nicht in der Datei landet; „Alles zurücksetzen“ löscht ihn mit). Er wird geprüft und an Tools weitergegeben:
+
+- **Eigene Seiten unter warera.de** (Kisten-Battle) lesen ihn direkt. Fehlt er dort, erscheint ein Feld, das ihn ebenfalls
+  für den Launcher speichert.
+- **Eingebettete fremde Tools** fragen per `postMessage` an. Beim ersten Mal fragt der Launcher nach, ob diese Herkunft den
+  Schlüssel bekommen darf; die Entscheidung lässt sich in den Einstellungen wieder vergessen.
+
+```js
+// im eingebetteten Tool
+window.parent.postMessage({ type: 'warera:api-key:request' }, '*');
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'warera:api-key') useKey(e.data.key); // null mit reason "denied" oder "missing"
+});
+```
+
+Ändert sich der Schlüssel, bekommen freigegebene, offene Tools die neue Nachricht von selbst.
 
 ## Daten pflegen (ohne Code)
 

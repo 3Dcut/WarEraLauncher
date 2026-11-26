@@ -7,6 +7,8 @@ import { countryName } from '../warera/dates';
 import { Dialog, Switch, Segmented } from './primitives';
 import { Icon } from './icons';
 import { t, LANGS, langChoice, setLang, compareText, type LangPref } from '../i18n';
+import { apiKey, setApiKey, verifyApiKey, originDecisions, decideOrigin, forgetApiKeyData } from '../core/apiKey';
+import { InfoTip } from './InfoTip';
 
 const THEME_SWATCH: Record<string, [string, string, string]> = {
   grau: ['#0b1020', '#182238', '#f0b429'],
@@ -171,6 +173,7 @@ export function SettingsDialog() {
             ))}
           </select>
         </div>
+        <ApiKeyField />
       </section>
 
       <section class="settings__section">
@@ -232,6 +235,7 @@ export function SettingsDialog() {
               class="btn btn--danger"
               onClick={() => {
                 clearAll();
+                forgetApiKeyData();
                 location.reload();
               }}
             >
@@ -248,5 +252,71 @@ export function SettingsDialog() {
         </div>
       </section>
     </Dialog>
+  );
+}
+
+/** Persönlicher WarEra-API-Schlüssel: gilt für den Launcher und wird an Tools weitergegeben. */
+function ApiKeyField() {
+  const [show, setShow] = useState(false);
+  const [status, setStatus] = useState<'ok' | 'invalid' | null>(null);
+  const key = apiKey.value;
+  const decisions = Object.entries(originDecisions.value);
+
+  useEffect(() => {
+    setStatus(null);
+    if (key.length < 8) return;
+    let stale = false;
+    const timer = setTimeout(() => {
+      void verifyApiKey(key).then((r) => !stale && setStatus(r === 'error' ? null : r));
+    }, 600);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [key]);
+
+  return (
+    <div class="field">
+      <div class="field__label">
+        <span>
+          <label for="api-key">{t('settings.apiKey')}</label>
+          <InfoTip text={t('settings.apiKeyHelp')} label={t('settings.apiKey')} />
+        </span>
+        {status && <span class={status === 'ok' ? 'key-status key-status--ok' : 'key-status key-status--bad'}>{status === 'ok' ? `✓ ${t('settings.apiKeyOk')}` : t('settings.apiKeyInvalid')}</span>}
+      </div>
+      <div class="key-row">
+        <input
+          id="api-key"
+          class="input mono"
+          type={show ? 'text' : 'password'}
+          autocomplete="off"
+          spellcheck={false}
+          placeholder={t('settings.apiKeyPlaceholder')}
+          value={key}
+          onInput={(e) => setApiKey((e.target as HTMLInputElement).value)}
+        />
+        <button type="button" class="btn btn--ghost btn--sm" onClick={() => setShow(!show)}>
+          {show ? t('settings.apiKeyHide') : t('settings.apiKeyShow')}
+        </button>
+        {key && (
+          <button type="button" class="btn btn--ghost btn--sm btn--danger-text" onClick={() => setApiKey('')}>
+            {t('settings.apiKeyRemove')}
+          </button>
+        )}
+      </div>
+      {decisions.length > 0 && (
+        <ul class="key-origins">
+          {decisions.map(([origin, decision]) => (
+            <li>
+              <span class="mono">{origin.replace(/^https?:\/\//, '')}</span>
+              <span class={decision === 'allow' ? 'key-status--ok' : 'muted'}>{decision === 'allow' ? t('settings.apiKeyAllowed') : t('settings.apiKeyDenied')}</span>
+              <button type="button" class="link-btn" onClick={() => decideOrigin(origin, null)}>
+                {t('settings.apiKeyForget')}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

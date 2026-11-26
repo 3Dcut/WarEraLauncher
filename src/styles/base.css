@@ -627,3 +627,69 @@ html.vt-theme::view-transition-new(root) {
 :root[data-motion='off']::view-transition-group(*) {
   animation: none !important;
 }
+
+/* ---------- Info-Tooltip: ⓘ mit Erklärung bei Hover, Fokus oder Antippen ---------- */
+.info-tip {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  vertical-align: middle;
+  cursor: help;
+  background: transparent;
+  padding: 0;
+}
+
+.info-tip:hover,
+.info-tip:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+.info-tip__bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: max-content;
+  max-width: min(300px, 80vw);
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity var(--dur-1),
+    transform var(--dur-1),
+    visibility var(--dur-1);
+  pointer-events: none;
+}
+
+.info-tip:hover .info-tip__bubble,
+.info-tip:focus .info-tip__bubble,
+.info-tip:focus-within .info-tip__bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}

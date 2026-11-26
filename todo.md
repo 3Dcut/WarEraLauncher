@@ -25,14 +25,15 @@
 - [ ] Schwedische Texte von Muttersprachlern gegenlesen lassen
 
 ## v2.2 – Kisten-Battle und Radio-Kurzlinks
-- [x] Kisten-Battle unter /battle: Spieler per Name, Profil-Link oder ID, Live-Erkennung aus openCase-Transaktionen
+- [x] Kisten-Battle unter /battle nach den offiziellen Regeln (rote Kisten, FT3): nur Namen, Schalter Rot/Grün, Start; Live-Erkennung aus openCase-Transaktionen
 - [x] Gebündelte Abfragen (bis 8/s, Drosselung bei 429), Stand beim Start, Warteschlange bei Mehrfachöffnungen, Fortsetzen nach Neuladen
 - [x] Animationen (Kiste wackelt, Strahlen, Konfetti, Banner bei Legendär/Mythisch, Siegerkrone), Töne per Web Audio, Demo-Modus
 - [x] Kurzlinks warera.de/r, /n, /a starten Hauptradio, Nachtwache, Azura; Startknopf, wenn Autoplay gesperrt ist
+- [x] WarEra-API-Schlüssel in den Einstellungen, lokal gespeichert, für eigene Tools direkt, für eingebettete Tools per postMessage nach Freigabe
 - [x] Kisten-Battle auf Deutsch, Englisch und Schwedisch (Wörterbuch src/i18n/messages/battle.ts; Schwedisch gegenlesen lassen)
 
 ## Ideen für später
-- [ ] Kisten-Battle mit Cardera verbinden: Gems setzen und auf den Sieger wetten (Ereignisse und Tipp-Platzhalter sind vorbereitet)
+- [ ] Kisten-Battle mit Cardera verbinden: Gems setzen und auf den Sieger wetten (Ereignisse und Schlüsselweitergabe sind vorbereitet)
 - [ ] Kisten-Battle als Turnier (mehrere Paarungen, Rangliste)
 - [ ] AzuraCast-Status per SSE statt Polling
 - [ ] Preisverlauf serverseitig (Cloudflare Worker, warera.de läuft bereits über Cloudflare)

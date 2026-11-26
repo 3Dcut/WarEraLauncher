@@ -21,23 +21,32 @@ export function rarityRank(rarity: Rarity | null | undefined): number {
 // ------------------------------------------------------------------ Kisten
 
 export interface CaseType {
-  code: string | null;
-  /** Schlüssel für Texte (battle.case.<key>.name|short|plural). */
-  key: 'case2' | 'case1' | 'woodenCase' | 'toolbox' | 'any';
+  code: 'case2' | 'case1';
+  /** Schlüssel für Texte (battle.case.<key>). */
+  key: 'red' | 'green';
 }
 
-/** Kistentypen laut Spielkonfiguration; null = jede Kiste zählt. */
+/** Offiziell nur rote Kisten (Elite, case2); grün (case1) als Ausweichmöglichkeit. */
 export const CASE_TYPES: CaseType[] = [
-  { code: 'case2', key: 'case2' },
-  { code: 'case1', key: 'case1' },
-  { code: 'woodenCase', key: 'woodenCase' },
-  { code: 'toolbox', key: 'toolbox' },
-  { code: null, key: 'any' },
+  { code: 'case2', key: 'red' },
+  { code: 'case1', key: 'green' },
 ];
 
+/** Rot, wenn nichts oder etwas Unbekanntes angegeben ist. */
 export function caseType(code: string | null | undefined): CaseType {
-  return CASE_TYPES.find((c) => c.code === (code ?? null)) ?? CASE_TYPES[0];
+  return CASE_TYPES.find((c) => c.code === code) ?? CASE_TYPES[0];
 }
+
+/** Liest "rot"/"red"/"case2" bzw. "gruen"/"grün"/"green"/"case1" aus einem Link. */
+export function caseFromParam(value: string | null | undefined): CaseType['code'] | null {
+  const v = (value ?? '').trim().toLowerCase();
+  if (['rot', 'red', 'röd', 'case2', 'elite'].includes(v)) return 'case2';
+  if (['gruen', 'grün', 'green', 'grön', 'case1'].includes(v)) return 'case1';
+  return null;
+}
+
+/** Offizielles Format: wer zuerst drei Runden gewinnt (FT3). */
+export const TARGET = 3;
 
 // ------------------------------------------------------------------ Items
 

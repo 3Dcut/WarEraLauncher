@@ -4,6 +4,12 @@ import { defineMessages } from '../define';
 export default defineMessages({
   de: {
     'shell.close': 'Schließen',
+    'shell.apiKey.title': 'API-Schlüssel teilen?',
+    'shell.apiKey.body': '„{tool}“ ({origin}) möchte deinen WarEra-API-Schlüssel nutzen.',
+    'shell.apiKey.allow': 'Erlauben',
+    'shell.apiKey.deny': 'Nicht erlauben',
+    'shell.apiKey.missing': '„{tool}“ möchte deinen WarEra-API-Schlüssel, es ist aber keiner hinterlegt.',
+    'shell.apiKey.openSettings': 'Einstellungen',
     'shell.brand.aria': 'WarEra Launcher',
     'shell.app.heading': 'WarEra Launcher – Community-Tools, Live-Daten und Radio für WarEra',
     'shell.app.stage': 'Arbeitsfläche',
@@ -94,6 +100,12 @@ export default defineMessages({
   },
   en: {
     'shell.close': 'Close',
+    'shell.apiKey.title': 'Share API key?',
+    'shell.apiKey.body': '“{tool}” ({origin}) wants to use your WarEra API key.',
+    'shell.apiKey.allow': 'Allow',
+    'shell.apiKey.deny': 'Don’t allow',
+    'shell.apiKey.missing': '“{tool}” wants your WarEra API key, but none is saved.',
+    'shell.apiKey.openSettings': 'Settings',
     'shell.brand.aria': 'WarEra Launcher',
     'shell.app.heading': 'WarEra Launcher – community tools, live data and radio for WarEra',
     'shell.app.stage': 'Workspace area',
@@ -184,6 +196,12 @@ export default defineMessages({
   },
   sv: {
     'shell.close': 'Stäng',
+    'shell.apiKey.title': 'Dela API-nyckel?',
+    'shell.apiKey.body': '”{tool}” ({origin}) vill använda din WarEra-API-nyckel.',
+    'shell.apiKey.allow': 'Tillåt',
+    'shell.apiKey.deny': 'Tillåt inte',
+    'shell.apiKey.missing': '”{tool}” vill ha din WarEra-API-nyckel, men ingen är sparad.',
+    'shell.apiKey.openSettings': 'Inställningar',
     'shell.brand.aria': 'WarEra Launcher',
     'shell.app.heading': 'WarEra Launcher – communityverktyg, livedata och radio för WarEra',
     'shell.app.stage': 'Arbetsyta',

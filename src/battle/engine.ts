@@ -18,6 +18,7 @@ import {
 import { ApiError, fetchOpenings, rarityOf, type OpeningsQuery, type Player } from './api';
 import { sfx } from './sound';
 import { emit } from './events';
+import { TARGET } from './logic';
 import { t } from '../i18n';
 
 export type Phase = 'setup' | 'arming' | 'live' | 'finished';
@@ -52,6 +53,9 @@ export interface PollInfo {
 
 const MATCH_KEY = 'wb:match';
 
+/** Abfragen pro Sekunde: knapp unter dem Limit von 500 pro Minute, das WarEra mit Schlüssel erlaubt. */
+const RATE = 8;
+
 // ------------------------------------------------------------------ Zustand
 
 export const phase = signal<Phase>('setup');
@@ -61,8 +65,11 @@ export const revealed = signal<[number, number]>([0, 0]);
 export const slots = signal<[Slot, Slot]>([{ kind: 'idle' }, { kind: 'idle' }]);
 export const lastRound = signal<Round | null>(null);
 export const banner = signal<{ tone: 'legendary' | 'mythic'; id: number } | null>(null);
-export const poll = signal<PollInfo>({ rate: 8, actual: 0, lastOkAt: 0, throttledUntil: 0, errors: 0, message: null });
+export const poll = signal<PollInfo>({ rate: RATE, actual: 0, lastOkAt: 0, throttledUntil: 0, errors: 0, message: null });
 export const fatal = signal<string | null>(null);
+/** Ob der letzte harte Fehler am API-Schlüssel lag (dann zeigt die Einrichtung das Schlüsselfeld). */
+export const keyRejected = signal(false);
+
 
 export const standing = computed(() => {
   const m = match.value;
@@ -119,20 +126,18 @@ function showBanner(tone: 'legendary' | 'mythic'): void {
 
 export interface StartOptions {
   players: [Player, Player];
-  caseCode: string | null;
-  target: number;
-  rate: number;
+  caseCode: string;
   key: string | null;
   demo: boolean;
-  tip?: Side | null;
 }
 
 export async function startMatch(opts: StartOptions): Promise<void> {
   const gen = ++generation;
   apiKey = opts.key;
   fatal.value = null;
+  keyRejected.value = false;
   phase.value = 'arming';
-  poll.value = { ...poll.value, rate: opts.rate, errors: 0, message: null, throttledUntil: 0, actual: 0 };
+  poll.value = { ...poll.value, rate: RATE, errors: 0, message: null, throttledUntil: 0, actual: 0 };
   let baselines: [Baseline, Baseline] = [makeBaseline([]), makeBaseline([])];
   if (!opts.demo) {
     try {
@@ -142,6 +147,7 @@ export async function startMatch(opts: StartOptions): Promise<void> {
       if (gen !== generation) return;
       phase.value = 'setup';
       fatal.value = describeError(err);
+      keyRejected.value = isKeyError(err);
       return;
     }
   }
@@ -150,12 +156,12 @@ export async function startMatch(opts: StartOptions): Promise<void> {
     match.value = {
       players: opts.players,
       caseCode: opts.caseCode,
-      target: opts.target,
+      target: TARGET,
       baselines,
       openings: [[], []],
       startedAt: Date.now(),
       demo: opts.demo,
-      tip: opts.tip ?? null,
+      tip: null,
     };
     revealed.value = [0, 0];
     slots.value = [{ kind: 'idle' }, { kind: 'idle' }];
@@ -164,13 +170,13 @@ export async function startMatch(opts: StartOptions): Promise<void> {
   });
   persist();
   sfx.start();
-  emit('start', { players: opts.players.map((p) => p.name), target: opts.target, caseCode: opts.caseCode });
+  emit('start', { players: opts.players.map((p) => p.name), target: TARGET, caseCode: opts.caseCode });
   if (opts.demo) void demoLoop(gen);
   else void pollLoop(gen);
 }
 
 /** Setzt ein nach Neuladen gefundenes Spiel fort, ohne bereits Gesehenes erneut zu animieren. */
-export function resumeStored(key: string | null, rate: number): boolean {
+export function resumeStored(key: string | null): boolean {
   let stored: (Match & { phase?: Phase }) | null = null;
   try {
     stored = JSON.parse(localStorage.getItem(MATCH_KEY) ?? 'null');
@@ -188,7 +194,6 @@ export function resumeStored(key: string | null, rate: number): boolean {
     revealed.value = [m.openings[0].length, m.openings[1].length];
     slots.value = [{ kind: 'idle' }, { kind: 'idle' }];
     lastRound.value = s.rounds[s.rounds.length - 1] ?? null;
-    poll.value = { ...poll.value, rate };
     phase.value = s.winner !== null || storedPhase === 'finished' ? 'finished' : 'live';
   });
   if (phase.value === 'live') {
@@ -210,14 +215,6 @@ export function stopMatch(): void {
   persist();
 }
 
-export function setTip(side: Side | null): void {
-  updateMatch({ tip: side });
-}
-
-export function setRate(rate: number): void {
-  poll.value = { ...poll.value, rate };
-}
-
 function finish(winner: Side): void {
   generation++;
   phase.value = 'finished';
@@ -231,6 +228,10 @@ function finish(winner: Side): void {
 
 function queriesFor(players: [Player, Player], caseCode: string | null, limit: number): OpeningsQuery[] {
   return players.map((p) => ({ userId: p.id, caseCode, limit }));
+}
+
+function isKeyError(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 401 || err.status === 403);
 }
 
 function describeError(err: unknown): string {
@@ -308,6 +309,7 @@ async function pollOnce(gen: number): Promise<void> {
     if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
       generation++;
       fatal.value = describeError(err);
+      keyRejected.value = true;
       phase.value = 'setup';
       persist();
       return;

@@ -20,6 +20,7 @@ import { queueTree, switchWorkspace } from './workspace/dock';
 import { initTheme } from './theme';
 import { initRadio } from './radio/engine';
 import { startRadioFromLink } from './radio/link';
+import { initApiKeyBridge } from './ui/ApiKeyBridge';
 import { startGameDates } from './warera/dates';
 import { initShortcuts } from './shortcuts';
 import { toast } from './state';
@@ -54,6 +55,8 @@ async function start(): Promise<void> {
   initRadio();
   // Kurzlinks warera.de/r, /n, /a starten direkt einen Sender
   startRadioFromLink();
+  // Eingebettete Tools dürfen den API-Schlüssel nach Freigabe anfragen
+  initApiKeyBridge();
   startGameDates();
   initShortcuts();
   // Link eingefügt, während der Launcher schon offen ist

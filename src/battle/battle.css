@@ -61,8 +61,7 @@ body.battle {
 
 .panel,
 .pfield,
-.setup__card,
-.setup__rules,
+.setup__go,
 .ppanel,
 .history {
   background: color-mix(in oklch, var(--surface) 88%, transparent);
@@ -76,12 +75,6 @@ body.battle {
   padding: 0 24px;
   font-size: 1.12em;
   border-radius: var(--radius-l);
-}
-
-.hint {
-  color: var(--text-muted);
-  font-size: 0.88em;
-  line-height: 1.45;
 }
 
 /* ---------- Kopf ---------- */
@@ -242,7 +235,6 @@ body.battle {
 
 .pfield__side,
 .ppanel__side,
-.field__label,
 .victory__eyebrow {
   font-family: var(--font-ui);
   font-size: 0.78em;
@@ -250,10 +242,6 @@ body.battle {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--side, var(--text-dim));
-}
-
-.field__label {
-  color: var(--text-dim);
 }
 
 .pfield__row {
@@ -319,72 +307,6 @@ body.battle {
   }
 }
 
-.setup__card,
-.setup__rules {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.setup__options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 4px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-m);
-  background: var(--ground-2);
-  width: fit-content;
-}
-
-.stepper .icon-btn {
-  font-size: 1.3em;
-  color: var(--text);
-}
-
-.stepper__value {
-  min-width: 2ch;
-  text-align: center;
-  font-size: 1.2em;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.key-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-dim);
-  cursor: pointer;
-  width: fit-content;
-}
-
-.check input {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-}
-
 .setup__error {
   padding: 10px 12px;
   border-radius: var(--radius-m);
@@ -394,23 +316,115 @@ body.battle {
   font-weight: 600;
 }
 
-.setup__actions {
+/* ---------- Start: Rot/Grün-Schalter, Schlüssel (nur wenn nötig), Start ---------- */
+.setup__go {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
   align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px;
 }
 
-.setup__rules h2 {
-  font-size: 1.2em;
+.case-toggle {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 99px;
+  border: 1px solid var(--line-strong);
+  background: var(--ground-2);
 }
 
-.setup__rules ol {
-  margin: 0;
-  padding-left: 1.3em;
-  display: grid;
-  gap: 6px;
+.case-toggle__opt {
+  --tc: #f43f5e;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px 0 10px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
   color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 1em;
+  transition:
+    background var(--dur-2),
+    color var(--dur-2),
+    box-shadow var(--dur-2);
+}
+
+.case-toggle__opt--green {
+  --tc: #22c55e;
+}
+
+.case-toggle__opt:hover {
+  color: var(--text);
+}
+
+.case-toggle__opt.is-on {
+  background: color-mix(in oklch, var(--tc) 22%, transparent);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--tc) 60%, transparent), 0 0 18px color-mix(in oklch, var(--tc) 30%, transparent);
+}
+
+.case-toggle__crate {
+  position: relative;
+  width: 24px;
+  height: 20px;
+  border-radius: 5px;
+  background: linear-gradient(color-mix(in oklch, var(--tc) 85%, #fff), color-mix(in oklch, var(--tc) 70%, #000));
+  border: 2px solid color-mix(in oklch, var(--tc) 40%, #000);
+  opacity: 0.55;
+  transition: opacity var(--dur-2), transform var(--dur-2) var(--ease-spring);
+}
+
+.case-toggle__crate::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 6px;
+  height: 7px;
+  margin-left: -3px;
+  border-radius: 2px;
+  background: #f5c451;
+}
+
+.case-toggle__opt.is-on .case-toggle__crate {
+  opacity: 1;
+  transform: scale(1.12) rotate(-6deg);
+}
+
+.key-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: min(320px, 100%);
+}
+
+.rules-link {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--text-dim);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.9em;
+  text-decoration: none;
+  border-radius: var(--radius-m);
+}
+
+.rules-link:hover {
+  color: var(--accent);
+  background: var(--surface-2);
+}
+
+.badge--green {
+  background: color-mix(in oklch, #22c55e 18%, transparent);
+  color: #22c55e;
 }
 
 /* ---------- Avatar ---------- */
@@ -755,31 +769,6 @@ body.battle {
   60% {
     transform: scale(1.5);
   }
-}
-
-.tip {
-  height: 28px;
-  padding: 0 12px;
-  border-radius: 99px;
-  border: 1px dashed var(--line-strong);
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 0.85em;
-}
-
-.tip:hover,
-.tip.is-active,
-.tip--locked {
-  border-style: solid;
-  border-color: var(--r-legendary);
-  color: var(--r-legendary);
-}
-
-.tip--locked {
-  display: inline-flex;
-  align-items: center;
 }
 
 /* ---------- Kistenbühne ---------- */
@@ -1350,11 +1339,6 @@ body.battle {
   font-weight: 700;
 }
 
-.victory__tip {
-  font-weight: 700;
-  color: var(--r-legendary);
-}
-
 .victory__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1420,14 +1404,29 @@ body.battle {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .setup__vs span {
-    width: 52px;
-    height: 52px;
-    font-size: 1.2em;
+  .setup__duel {
+    gap: 0;
   }
 
-  .setup__options {
-    grid-template-columns: minmax(0, 1fr);
+  .pfield {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .pfield__status {
+    min-height: 20px;
+  }
+
+  .setup__vs {
+    position: relative;
+    z-index: 1;
+    margin: -16px 0;
+  }
+
+  .setup__vs span {
+    width: 48px;
+    height: 48px;
+    font-size: 1.1em;
   }
 
   .arena__center {
@@ -1462,7 +1461,12 @@ body.battle {
     text-align: left;
   }
 
-  .key-row {
-    flex-wrap: wrap;
+  .setup__go {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .case-toggle {
+    align-self: center;
   }
 }

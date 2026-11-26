@@ -13,6 +13,9 @@ import {
   SKILLS,
   CASE_TYPES,
   RARITIES,
+  TARGET,
+  caseType,
+  caseFromParam,
   type Opening,
   type Rarity,
   type RawTransaction,
@@ -148,7 +151,7 @@ describe('Items', () => {
     const keys = [
       ...ITEM_BASES.map((b) => `battle.item.${b}`),
       ...SKILLS.map((k) => `battle.skill.${k}`),
-      ...CASE_TYPES.flatMap((c) => ['name', 'short', 'plural'].map((f) => `battle.case.${c.key}.${f}`)),
+      ...CASE_TYPES.map((c) => `battle.case.${c.key}`),
       ...RARITIES.map((r) => `battle.rarity.${r}`),
     ];
     for (const l of ['de', 'en', 'sv'] as const) {
@@ -173,5 +176,16 @@ describe('Items', () => {
     expect(counts.uncommon / n).toBeLessThan(0.53);
     expect(counts.epic / n).toBeGreaterThan(0.13);
     expect(counts.epic / n).toBeLessThan(0.17);
+  });
+});
+
+describe('Kisten und Format', () => {
+  it('spielt offiziell rote Kisten im Format FT3, grün nur auf Wunsch', () => {
+    expect(TARGET).toBe(3);
+    expect(caseType(null).code).toBe('case2');
+    expect(caseType('case1').key).toBe('green');
+    expect(caseFromParam('grün')).toBe('case1');
+    expect(caseFromParam('Red')).toBe('case2');
+    expect(caseFromParam('holz')).toBe(null);
   });
 });

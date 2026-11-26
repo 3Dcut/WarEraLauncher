@@ -5,6 +5,7 @@ import { CommandPalette } from './CommandPalette';
 import { SettingsDialog } from './SettingsDialog';
 import { HelpDialog, Toasts } from './Overlays';
 import { RadioAutostart } from './RadioAutostart';
+import { ApiKeyConsent } from './ApiKeyBridge';
 import { mountStage, rebuildAllDocks } from '../workspace/dock';
 import { isMobile, mobileSidebarOpen, settings } from '../state';
 import { t } from '../i18n';
@@ -39,6 +40,7 @@ export function App({ legacyTree }: { legacyTree: LayoutNode | null }) {
       <SettingsDialog />
       <HelpDialog />
       <RadioAutostart />
+      <ApiKeyConsent />
       <Toasts />
     </div>
   );
