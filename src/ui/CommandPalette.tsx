@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import fuzzysort from 'fuzzysort';
-import { launchables, findLaunchable, GAME_TOOL, type Launchable } from '../data/tools';
+import { offeredLaunchables, findOffered, GAME_TOOL, type Launchable } from '../data/tools';
 import { paletteOpen, settingsOpen, helpOpen, settings, updateSettings, THEMES } from '../state';
 import { openLaunchable, switchWorkspace, activeDock } from '../workspace/dock';
 import { workspaces, presets } from '../workspace/model';
@@ -35,7 +35,7 @@ function toolCommand(l: Launchable): Command {
 }
 
 function buildCommands(): Command[] {
-  const list: Command[] = launchables.value.map(toolCommand);
+  const list: Command[] = offeredLaunchables.value.map(toolCommand);
   workspaces.value.forEach((w, i) =>
     list.push({ id: `ws:${w.id}`, group: 'Arbeitsbereiche', title: w.name, emoji: w.icon, hint: i < 9 ? `Alt+${i + 1}` : undefined, keywords: 'arbeitsbereich workspace', run: () => switchWorkspace(w.id) }),
   );
@@ -91,10 +91,10 @@ export function CommandPalette() {
     if (!open) return [];
     const q = query.trim();
     if (!q) {
-      const fav = settings.value.favorites.map(findLaunchable).filter((l): l is Launchable => !!l).map((l) => ({ ...toolCommand(l), group: 'Favoriten' }));
+      const fav = settings.value.favorites.map(findOffered).filter((l): l is Launchable => !!l).map((l) => ({ ...toolCommand(l), group: 'Favoriten' }));
       const rec = settings.value.recents
         .filter((id) => !settings.value.favorites.includes(id))
-        .map(findLaunchable)
+        .map(findOffered)
         .filter((l): l is Launchable => !!l)
         .slice(0, 5)
         .map((l) => ({ ...toolCommand(l), group: 'Zuletzt' }));

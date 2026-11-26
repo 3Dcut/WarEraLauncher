@@ -10,6 +10,9 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Eingebettete Tools laden beim Verschieben nicht neu.** Dockview rendert jedes Iframe in einer festen Ebene
   (`renderer: 'always'`); Tabs im Hintergrund laden erst, wenn sie zum ersten Mal sichtbar werden.
 - **Seiten, die Einbettung verbieten**, erscheinen als Karte mit „Als Fenster öffnen“ bzw. „Neuer Tab“.
+- **Nur erreichbare Tools werden angeboten.** Der Browser prüft die Tools selbst (beim Start, danach alle paar Minuten),
+  der tägliche Build-Check ergänzt Statuscodes. Was nicht gültig erreichbar ist, verschwindet aus Seitenleiste, Palette
+  und Vorlagen und kommt von selbst zurück, sobald es wieder antwortet. Bereits offene Panels zeigen stattdessen eine Karte mit dem Grund.
 - **Live-Widgets** über `api2.warera.io`: Zeiten (Regeneration, Tageswechsel, Missionen, Wahlen), Mein Charakter
   (Balken mit „voll um …“), Markt (Preise, lokaler Verlauf, Wert pro Produktionspunkt, Orderbuch), Front (laufende Schlachten).
 - **Radio** als Pille in der Kopfleiste, als Widget und als Mini-Player (Document Picture-in-Picture, bleibt über dem Spiel);
@@ -66,7 +69,16 @@ Die JSON-Dateien im Repo-Root werden zur Laufzeit geladen und beim Deploy geprü
   "desc": "Schlachten simulieren", "tags": ["schlacht"], "embed": true }
 ```
 
-`"embed": false` markiert Seiten, die sich nicht einbetten lassen. Das erkennt aber auch der wöchentliche Tool-Check von selbst.
+`"embed": false` markiert Seiten, die sich nicht einbetten lassen. Das erkennt aber auch der tägliche Tool-Check von selbst.
+
+`"hidden": true` blendet ein Tool vorübergehend aus, etwa wenn es nicht an das aktuelle Spiel angepasst ist; `"note"` nennt
+den Grund (Pflicht bei ausgeblendeten Tools, der Test prüft das). Vorlagen dürfen ausgeblendete Tools weiter enthalten,
+sie fallen beim Aufbau weg und kehren zurück, sobald `hidden` entfernt wird.
+
+Ob ein Tool angeboten wird, entscheidet `unavailableReason` in `src/data/tools.ts`: ausgeblendet, 404 oder Serverfehler aus
+dem Build-Check schließen es immer aus; ob die Seite gerade erreichbar ist (DNS, Zertifikat, Verbindung), prüft der Browser
+in `src/data/reachability.ts` per `HEAD`-Anfrage ohne Cookies und Referrer. Die Tool-Seiten sehen dadurch eine kurze Anfrage
+von jeder Person, die den Launcher öffnet.
 
 **workspaces.json**: Vorlagen für Arbeitsbereiche. Ein Layout besteht aus `row` (nebeneinander), `column` (untereinander)
 und `tabs` (gestapelt). IDs sind Tool-IDs oder Widgets (`widget:timers`, `widget:character`, `widget:market`,
@@ -85,4 +97,4 @@ Die alte Oberfläche (`legacy.html`) ist auf `noindex` gesetzt und verweist per 
 
 Push auf `main` startet `.github/workflows/deploy.yml`: Typprüfung, Tests, Build, Tool-Check (schreibt `tools-status.json`),
 Upload von `dist/` nach GitHub Pages. Schlägt ein Test fehl, bleibt die letzte funktionierende Version online.
-Einmal pro Woche baut der Workflow neu, damit der Tool-Status aktuell bleibt.
+Einmal am Tag baut der Workflow neu, damit der Tool-Status aktuell bleibt.

@@ -5,8 +5,9 @@ on:
     branches: ["main"]
   workflow_dispatch:
   schedule:
-    # Wöchentlich neu bauen, damit der Tool-Status (erreichbar / einbettbar) aktuell bleibt
-    - cron: "17 4 * * 1"
+    # Täglich neu bauen, damit der Tool-Status (erreichbar / einbettbar) aktuell bleibt;
+    # nicht erreichbare Tools blendet die Oberfläche aus, bis der nächste Check sie wieder findet
+    - cron: "17 4 * * *"
 
 permissions:
   contents: read

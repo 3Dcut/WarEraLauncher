@@ -44,7 +44,7 @@
       "icon": "📊",
       "desc": "Statistikseiten nebeneinander",
       "layout": {
-        "row": [{ "tabs": ["warerastats"] }, { "tabs": ["national-companies", "market-monitor"] }]
+        "row": [{ "tabs": ["warerastats", "arcanaera"] }, { "tabs": ["national-companies", "market-monitor"] }]
       }
     }
   ]

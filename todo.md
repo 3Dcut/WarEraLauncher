@@ -24,9 +24,10 @@
 - [x] Front: Turnierschlachten (Teams statt Länder) werden lesbar angezeigt
 - [x] Tools entfernt: Wages (404), Income Calc (Domain abgelaufen, Jobmarkt und Unternehmergeist gibt es nicht mehr), Prod. Bonus (Deposits, Spezialisierung und Ethik-Boni seit v0.27 abgeschafft), Phantomant und CountryStats (Zertifikate seit Mai 2026 abgelaufen)
 - [x] Build Tool zeigt auf intel.warera.wiki/builder, wie es die alte Seite selbst empfiehlt
-- [ ] Market Monitor beobachten: aus der Cloud nicht erreichbar, Zertifikat läuft am 28.11.2026 ab
+- [x] Erreichbarkeits-Check: Browser prüft die Tools selbst, Build-Check täglich mit Statuscodes; nicht erreichbare Tools werden nicht angeboten (betrifft derzeit Market Monitor)
+- [x] Nicht angepasste Tools per `"hidden"` ausgeblendet: Battle Sim (Unternehmergeist), Dismantle Calc und Nat. Companies (WarEra Toolkit 1.2.0, Jobmarkt-Löhne), WarEraStats (Datenquelle defekt)
+- [ ] Ausgeblendete Tools gelegentlich prüfen und `hidden` entfernen, sobald sie aktualisiert sind
 - [ ] /wahl/ bettet wahl.warera.de ein, die Subdomain hat keinen DNS-Eintrag mehr
-- [ ] Battle Sim führt noch Unternehmergeist als Skill, Kampfwerte prüfen
 
 ## Ideen für später
 - [ ] Englische Oberfläche (Texte liegen gesammelt in den Komponenten, Umstellung auf ein Wörterbuch nötig)

@@ -18,6 +18,10 @@ describe('tools.json', () => {
     for (const t of raw) expect(t.url.startsWith('https://'), t.name).toBe(true);
   });
 
+  it('nennt für ausgeblendete Tools einen Grund', () => {
+    for (const t of defs.flatMap((c) => c.tools).filter((t) => t.hidden)) expect(t.note?.trim(), t.name).toBeTruthy();
+  });
+
   it('hat eindeutige IDs', () => {
     const ids = cats.flatMap((c) => c.tools.map((t) => t.id));
     expect(new Set(ids).size).toBe(ids.length);

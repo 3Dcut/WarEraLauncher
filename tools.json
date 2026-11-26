@@ -4,7 +4,7 @@
     "icon": "💰",
     "tools": [
       {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": "Firmen durchrechnen", "tags": ["firma", "produktion", "rechner"]},
-      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]}
+      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"], "hidden": true, "note": "Teil des WarEra Toolkit v1.2.0, das nicht an v0.27 angepasst ist; sein Firmenrechner nutzt noch Lohnkosten aus dem abgeschafften Jobmarkt (Stand 2026-11-26)."}
     ]
   },
   {
@@ -12,16 +12,16 @@
     "icon": "⚔️",
     "tools": [
       {"id": "map", "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️", "desc": "Interaktive Weltkarte", "embed": false, "tags": ["karte", "regionen"]},
-      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"]}
+      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"], "hidden": true, "note": "Führt noch den mit v0.27 entfernten Skill Unternehmergeist, nicht an das aktuelle Spiel angepasst (Stand 2026-11-26)."}
     ]
   },
   {
     "category": "Statistiken",
     "icon": "📊",
     "tools": [
-      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken zu Waren und Ausrüstung", "tags": ["statistik", "items", "ausrüstung"]},
+      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken zu Waren und Ausrüstung", "tags": ["statistik", "items", "ausrüstung"], "hidden": true, "note": "Waren- und Ausrüstungsseiten melden nur einen Fehler der Datenquelle (GraphQL 530, Stand 2026-11-26)."},
       {"id": "market-monitor", "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒", "desc": "Marktpreise und Orderbücher", "tags": ["markt", "preise", "handel"]},
-      {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": "Firmen eines Landes", "tags": ["firmen", "land"]}
+      {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": "Firmen eines Landes", "tags": ["firmen", "land"], "hidden": true, "note": "WarEra Toolkit v1.2.0: Angestellte und Löhne stehen seit dem Wegfall des Jobmarkts (v0.27) nur noch auf 0 (Stand 2026-11-26)."}
     ]
   },
   {

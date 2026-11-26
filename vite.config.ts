@@ -6,6 +6,7 @@ interface ToolEntry {
   name: string;
   url: string;
   desc?: string;
+  hidden?: boolean;
 }
 
 const escapeHtml = (value: string) => value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
@@ -18,9 +19,11 @@ function seoToolList(): Plugin {
     transformIndexHtml(html) {
       const categories = JSON.parse(readFileSync('tools.json', 'utf8')) as { category: string; tools: ToolEntry[] }[];
       const list = categories
+        .filter((c) => c.tools.some((t) => !t.hidden))
         .map(
           (c) =>
             `<h3>${escapeHtml(c.category)}</h3><ul>${c.tools
+              .filter((t) => !t.hidden)
               .map((t) => `<li><a href="${escapeHtml(t.url)}" rel="noopener">${escapeHtml(t.name)}</a>${t.desc ? ` – ${escapeHtml(t.desc)}` : ''}</li>`)
               .join('')}</ul>`,
         )

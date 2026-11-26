@@ -10,11 +10,13 @@ export function openAsWindow(tool: Pick<Tool, 'url' | 'id'>): void {
   if (!w) window.open(tool.url, '_blank', 'noopener');
 }
 
-export function ExternalCard({ tool }: { tool: Tool }) {
+/**
+ * Karte für Tools, die sich nicht einbetten lassen, oder die gerade nicht angeboten werden
+ * (ausgeblendet oder nicht erreichbar). Im zweiten Fall kommen Grund und Schließen-Knopf von außen.
+ */
+export function ExternalCard({ tool, unavailable, onClose }: { tool: Tool; unavailable?: string; onClose?: () => void }) {
   const reason =
-    tool.health === 'dead'
-      ? 'Die Seite antwortet derzeit nicht (zuletzt als offline gemeldet).'
-      : `${hostOf(tool.url)} erlaubt keine Einbettung in andere Seiten. Öffne das Tool deshalb als eigenes Fenster oder im neuen Tab.`;
+    unavailable ?? `${hostOf(tool.url)} erlaubt keine Einbettung in andere Seiten. Öffne das Tool deshalb als eigenes Fenster oder im neuen Tab.`;
   return (
     <div class="external">
       <div class="external__emoji" aria-hidden="true">
@@ -24,10 +26,17 @@ export function ExternalCard({ tool }: { tool: Tool }) {
       {tool.desc && <p class="external__desc">{tool.desc}</p>}
       <p class="external__reason">{reason}</p>
       <div class="external__actions">
-        <button type="button" class="btn btn--primary" onClick={() => openAsWindow(tool)}>
-          <Icon name="float" />
-          <span>Als Fenster öffnen</span>
-        </button>
+        {unavailable && onClose ? (
+          <button type="button" class="btn btn--primary" onClick={onClose}>
+            <Icon name="x" />
+            <span>Panel schließen</span>
+          </button>
+        ) : (
+          <button type="button" class="btn btn--primary" onClick={() => openAsWindow(tool)}>
+            <Icon name="float" />
+            <span>Als Fenster öffnen</span>
+          </button>
+        )}
         <a class="btn btn--ghost" href={tool.url} target="_blank" rel="noopener">
           <Icon name="external" />
           <span>Neuer Tab</span>

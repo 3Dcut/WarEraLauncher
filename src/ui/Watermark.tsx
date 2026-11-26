@@ -1,7 +1,7 @@
 import type { DockviewApi } from 'dockview';
 import { presets, workspaces, treeIds } from '../workspace/model';
 import { activeDock, openLaunchable } from '../workspace/dock';
-import { WIDGETS, findLaunchable } from '../data/tools';
+import { WIDGETS, findOffered } from '../data/tools';
 import { paletteOpen } from '../state';
 import { Icon } from './icons';
 
@@ -32,7 +32,7 @@ export function Watermark({ workspaceId }: { workspaceId: string; api: DockviewA
               <span class="preset-card__name">{p.name}</span>
               <span class="preset-card__items">
                 {treeIds(p.layout)
-                  .map((id) => findLaunchable(id)?.name)
+                  .map((id) => findOffered(id)?.name)
                   .filter(Boolean)
                   .slice(0, 4)
                   .join(' · ')}
