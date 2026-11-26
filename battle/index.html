@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de" data-theme="grau">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Kisten-Battle – WarEra Launcher</title>
+    <meta name="description" content="Kisten-Battle für WarEra: Zwei Spieler öffnen abwechselnd rote Kisten, die Seite erkennt jede Öffnung live. Seltenere Kategorie punktet, wer zuerst drei Punkte hat, gewinnt." />
+    <link rel="canonical" href="https://warera.de/battle/" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WarEra Launcher" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:url" content="https://warera.de/battle/" />
+    <meta property="og:title" content="Kisten-Battle – Wer zieht das seltenere Item?" />
+    <meta property="og:description" content="Zwei Spieler, rote Kisten, live aus der WarEra-API. Seltenere Kategorie punktet, Erster mit drei Punkten gewinnt." />
+    <meta property="og:image" content="https://warera.de/og-image.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://api2.warera.io" crossorigin />
+    <script>
+      // Theme vor dem ersten Zeichnen setzen, damit nichts aufblitzt
+      try {
+        var s = JSON.parse(localStorage.getItem('wl2:settings') || 'null');
+        if (s && s.theme) document.documentElement.dataset.theme = s.theme;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="battle">
+      <p style="padding: 24px; font-family: sans-serif">Kisten-Battle wird geladen …</p>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font-family: sans-serif">Das Kisten-Battle braucht JavaScript.</p>
+    </noscript>
+    <script type="module" src="/src/battle/main.tsx"></script>
+  </body>
+</html>

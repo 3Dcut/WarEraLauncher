@@ -51,3 +51,24 @@ export function getStation(id: string | null | undefined): Station | undefined {
 export function isStationId(value: unknown): value is StationId {
   return typeof value === 'string' && STATIONS.some((s) => s.id === value);
 }
+
+/** Kurznamen für Links wie warera.de/r (Hauptradio), /n (Nachtwache) und /a (Azura). */
+const ALIASES: Record<string, StationId> = {
+  r: 'war-era-de',
+  h: 'war-era-de',
+  haupt: 'war-era-de',
+  hauptradio: 'war-era-de',
+  n: 'warera-nachtwache',
+  nacht: 'warera-nachtwache',
+  nachtwache: 'warera-nachtwache',
+  a: 'warera-azura',
+  azura: 'warera-azura',
+  live: 'warera-azura',
+};
+
+export function stationFromAlias(value: string | null | undefined): StationId | null {
+  if (!value) return null;
+  const key = value.trim().toLowerCase();
+  if (isStationId(key)) return key;
+  return ALIASES[key] ?? null;
+}

@@ -1,0 +1,197 @@
+// API-Zugriff des Kisten-Battles. Transaktionen gibt die WarEra-API nur mit persönlichem
+// Schlüssel heraus (Header X-API-Key, CORS erlaubt ihn). Mehrere Abfragen werden per tRPC-Batch
+// in einer HTTP-Anfrage gebündelt; die zählt gegen das Limit (mit Schlüssel 500 pro Minute) nur einmal.
+
+import { fallbackRarity, isRarity, toOpening, type Opening, type Rarity, type RawTransaction } from './logic';
+
+const BASE = 'https://api2.warera.io/trpc';
+const TX = 'transaction.getPaginatedTransactions';
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+interface Call {
+  path: string;
+  input: unknown;
+}
+
+type BatchEntry<T> = { result?: { data?: T }; error?: { message?: string; data?: { httpStatus?: number } } };
+
+/** Führt mehrere Prozeduren in einer Anfrage aus; einzelne Fehler kommen als ApiError zurück. */
+async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Promise<(T | ApiError)[]> {
+  const paths = calls.map((c) => c.path).join(',');
+  const input: Record<string, unknown> = {};
+  calls.forEach((c, i) => (input[i] = c.input));
+  const url = `${BASE}/${paths}?batch=1&input=${encodeURIComponent(JSON.stringify(input))}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, { headers: key ? { 'X-API-Key': key } : undefined, cache: 'no-store', signal: controller.signal });
+  } catch (err) {
+    throw new ApiError((err as Error)?.name === 'AbortError' ? 'Zeitüberschreitung' : 'Netzwerkfehler', 0);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (res.status === 429) throw new ApiError('Zu viele Anfragen', 429);
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    throw new ApiError(`HTTP ${res.status}`, res.status);
+  }
+  if (!Array.isArray(body)) {
+    const err = (body as BatchEntry<T>)?.error;
+    throw new ApiError(err?.message ?? `HTTP ${res.status}`, err?.data?.httpStatus ?? res.status);
+  }
+  return (body as BatchEntry<T>[]).map((entry) =>
+    entry.error ? new ApiError(entry.error.message ?? 'Fehler', entry.error.data?.httpStatus ?? 500) : (entry.result?.data as T),
+  );
+}
+
+function unwrap<T>(value: T | ApiError): T {
+  if (value instanceof ApiError) throw value;
+  return value;
+}
+
+// ------------------------------------------------------------------ Seltenheiten
+
+let rarityTable: Record<string, Rarity> = {};
+
+/** Lädt die Seltenheiten aller Items aus der Spielkonfiguration (einmal pro Tag zwischengespeichert). */
+export async function loadRarities(): Promise<void> {
+  const KEY = 'wb:rarities';
+  try {
+    const cached = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { at: number; table: Record<string, Rarity> } | null;
+    if (cached && Date.now() - cached.at < 24 * 3600_000) {
+      rarityTable = cached.table;
+      return;
+    }
+  } catch {
+    /* gesperrter Speicher */
+  }
+  try {
+    const [cfg] = await batch<{ items?: Record<string, { rarity?: string }> }>([{ path: 'gameConfig.getGameConfig', input: {} }], null, 15_000);
+    const items = unwrap(cfg).items ?? {};
+    const table: Record<string, Rarity> = {};
+    for (const [code, item] of Object.entries(items)) if (isRarity(item.rarity)) table[code] = item.rarity;
+    rarityTable = table;
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), table }));
+    } catch {
+      /* ignoriert */
+    }
+  } catch (err) {
+    console.warn('[Battle] Spielkonfiguration nicht geladen, Seltenheit wird aus dem Itemcode abgeleitet', err);
+  }
+}
+
+export function rarityOf(code: string): Rarity | null {
+  return rarityTable[code] ?? fallbackRarity(code);
+}
+
+// ------------------------------------------------------------------ Spieler
+
+export interface Player {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  level?: number;
+}
+
+interface UserLite {
+  _id: string;
+  username: string;
+  avatarUrl?: string;
+  leveling?: { level?: number };
+}
+
+const toPlayer = (u: UserLite): Player => ({ id: u._id, name: u.username, avatarUrl: u.avatarUrl, level: u.leveling?.level });
+
+/** Liest eine Spieler-ID aus einer Eingabe: reine ID oder Profil-Link. */
+export function parseUserId(text: string): string | null {
+  const m = /(?:^|\/)([a-f\d]{24})(?:$|[/?#])/i.exec(text.trim());
+  return m ? m[1].toLowerCase() : null;
+}
+
+export interface Lookup {
+  match: Player | null;
+  suggestions: Player[];
+}
+
+export async function findPlayer(text: string, key: string | null): Promise<Lookup> {
+  const query = text.trim();
+  if (!query) return { match: null, suggestions: [] };
+  const direct = parseUserId(query);
+  if (direct) {
+    const [u] = await batch<UserLite>([{ path: 'user.getUserLite', input: { userId: direct } }], key);
+    return { match: toPlayer(unwrap(u)), suggestions: [] };
+  }
+  const [search] = await batch<{ userIds?: string[] }>([{ path: 'search.searchAnything', input: { searchText: query } }], key);
+  const ids = (unwrap(search).userIds ?? []).slice(0, 8);
+  if (!ids.length) return { match: null, suggestions: [] };
+  const users = (await batch<UserLite>(ids.map((userId) => ({ path: 'user.getUserLite', input: { userId } })), key))
+    .filter((u): u is UserLite => !(u instanceof ApiError) && !!u?._id)
+    .map(toPlayer);
+  const lower = query.toLowerCase();
+  const exact = users.find((u) => u.name.toLowerCase() === lower) ?? null;
+  return { match: exact, suggestions: exact ? [] : users };
+}
+
+// ------------------------------------------------------------------ Kistenöffnungen
+
+export interface OpeningsQuery {
+  userId: string;
+  caseCode: string | null;
+  limit: number;
+  cursor?: string;
+}
+
+export interface OpeningsPage {
+  openings: Opening[];
+  nextCursor: string | null;
+  /** Anzahl roher Einträge auf der Seite (vor dem Filtern). */
+  size: number;
+}
+
+const txInput = (q: OpeningsQuery) => ({
+  userId: q.userId,
+  transactionType: 'openCase',
+  limit: q.limit,
+  ...(q.caseCode ? { itemCode: q.caseCode } : {}),
+  ...(q.cursor ? { cursor: q.cursor } : {}),
+});
+
+/** Holt die jüngsten Kistenöffnungen mehrerer Spieler in einer Anfrage. */
+export async function fetchOpenings(queries: OpeningsQuery[], key: string): Promise<OpeningsPage[]> {
+  const results = await batch<{ items?: RawTransaction[]; nextCursor?: string }>(
+    queries.map((q) => ({ path: TX, input: txInput(q) })),
+    key,
+  );
+  return results.map((r, i) => {
+    const data = unwrap(r);
+    const items = data?.items ?? [];
+    return {
+      openings: items.map((tx) => toOpening(tx, queries[i].userId, rarityOf)).filter((o): o is Opening => !!o),
+      nextCursor: data?.nextCursor ?? null,
+      size: items.length,
+    };
+  });
+}
+
+/** Prüft den Schlüssel mit der kleinstmöglichen Abfrage. */
+export async function checkKey(key: string): Promise<'ok' | 'invalid' | 'error'> {
+  try {
+    const [r] = await batch<unknown>([{ path: TX, input: { limit: 1, transactionType: 'openCase' } }], key);
+    if (r instanceof ApiError) return r.status === 401 || r.status === 403 ? 'invalid' : 'error';
+    return 'ok';
+  } catch (err) {
+    return err instanceof ApiError && (err.status === 401 || err.status === 403) ? 'invalid' : 'error';
+  }
+}

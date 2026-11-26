@@ -23,7 +23,7 @@ for (const entry of entries) {
   console.log(`kopiert: ${entry}`);
 }
 
-// Sitemap mit dem Build-Datum; die alte Oberfläche ist per noindex ausgenommen
+// Sitemap mit dem Build-Datum; die alte Oberfläche und die Radio-Kurzlinks sind per noindex ausgenommen
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(
   'dist/sitemap.xml',
@@ -34,6 +34,12 @@ writeFileSync(
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://warera.de/battle/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
 `,

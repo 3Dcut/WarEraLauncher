@@ -17,6 +17,7 @@ import { loadPresets, ensureWorkspaces, decodeShare, addWorkspace, newId } from 
 import { queueTree, switchWorkspace } from './workspace/dock';
 import { initTheme } from './theme';
 import { initRadio } from './radio/engine';
+import { startRadioFromLink } from './radio/link';
 import { startGameDates } from './warera/dates';
 import { initShortcuts } from './shortcuts';
 import { toast } from './state';
@@ -48,6 +49,8 @@ async function start(): Promise<void> {
   render(<App legacyTree={legacyTree} />, root);
 
   initRadio();
+  // Kurzlinks warera.de/r, /n, /a starten direkt einen Sender
+  startRadioFromLink();
   startGameDates();
   initShortcuts();
   // Link eingefügt, während der Launcher schon offen ist

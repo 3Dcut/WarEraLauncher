@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { SettingsDialog } from './SettingsDialog';
 import { HelpDialog, Toasts } from './Overlays';
+import { RadioAutostart } from './RadioAutostart';
 import { mountStage, rebuildAllDocks } from '../workspace/dock';
 import { isMobile, mobileSidebarOpen, settings } from '../state';
 import type { LayoutNode } from '../workspace/model';
@@ -36,6 +37,7 @@ export function App({ legacyTree }: { legacyTree: LayoutNode | null }) {
       <CommandPalette />
       <SettingsDialog />
       <HelpDialog />
+      <RadioAutostart />
       <Toasts />
     </div>
   );

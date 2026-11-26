@@ -1346,3 +1346,72 @@ html.is-dragging iframe {
     margin-top: 6vh;
   }
 }
+
+/* ---------- Kurzlink-Start des Radios (warera.de/r, /n, /a), falls der Browser Ton sperrt ---------- */
+.autostart {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(3 6 14 / 0.55);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.autostart__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, 100%);
+  padding: 26px 22px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: center;
+  cursor: default;
+}
+
+.autostart__emoji {
+  font-size: 2.6em;
+  line-height: 1;
+}
+
+.autostart__card h2 {
+  font-size: 1.5em;
+}
+
+.autostart__play {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 8px 0 4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  animation: autostart-pulse 1.8s ease-out infinite;
+}
+
+.autostart__play:hover {
+  background: var(--accent-strong);
+}
+
+@keyframes autostart-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  100% {
+    box-shadow: 0 0 0 22px transparent;
+  }
+}
+
+:root[data-motion='reduced'] .autostart__play,
+:root[data-motion='off'] .autostart__play {
+  animation: none;
+}

@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vitest/config';
 import preact from '@preact/preset-vite';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 interface ToolEntry {
   name: string;
@@ -37,6 +38,10 @@ export default defineConfig({
   plugins: [preact(), seoToolList()],
   build: {
     target: 'es2022',
+    rollupOptions: {
+      // Zweiter Einstieg: das Kisten-Battle als eigene Seite unter /battle/
+      input: { main: resolve(import.meta.dirname, 'index.html'), battle: resolve(import.meta.dirname, 'battle/index.html') },
+    },
     sourcemap: true,
     chunkSizeWarningLimit: 900,
   },
