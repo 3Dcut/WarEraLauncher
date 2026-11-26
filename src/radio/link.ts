@@ -5,6 +5,7 @@ import { signal, effect } from '@preact/signals';
 import { play, phase } from './engine';
 import { stationFromAlias, type StationId } from './stations';
 import { toast } from '../state';
+import { t } from '../i18n';
 
 /** Sender, den ein Kurzlink angefordert hat und der noch auf den Start wartet. */
 export const linkStation = signal<StationId | null>(null);
@@ -22,7 +23,7 @@ export function startRadioFromLink(): void {
   history.replaceState(null, '', location.pathname + (rest ? `?${rest}` : '') + location.hash);
   const id = stationFromAlias(wanted);
   if (!id) {
-    toast(`Unbekannter Sender „${wanted}“. Kurzlinks: /r Hauptradio, /n Nachtwache, /a Azura.`, 'warn');
+    toast(t('radio.link.unknown', { name: wanted }), 'warn');
     return;
   }
   linkStation.value = id;

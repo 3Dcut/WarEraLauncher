@@ -1,44 +1,44 @@
 [
   {
-    "category": "Wirtschaft",
+    "category": {"de": "Wirtschaft", "en": "Economy", "sv": "Ekonomi"},
     "icon": "💰",
     "tools": [
-      {"id": "income-calc", "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵", "desc": "Einkommen berechnen", "tags": ["einkommen", "lohn", "rechner"]},
-      {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": "Firmen durchrechnen", "tags": ["firma", "produktion", "rechner"]},
-      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": "Lohnt sich das Zerlegen?", "tags": ["zerlegen", "ausrüstung", "rechner"]},
-      {"id": "production-bonus", "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️", "desc": "Produktionsbonus berechnen", "tags": ["produktion", "bonus"]},
-      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": "Löhne im Überblick", "tags": ["lohn", "jobs", "statistik"]},
-      {"id": "case-ev", "name": "Case EV", "url": "https://warera.de/cases/", "emoji": "📦", "desc": "Erwartungswert einer Wooden Case nach Orderbuch", "tags": ["case", "kiste", "erwartungswert", "markt", "rechner"]}
+      {"id": "income-calc", "name": "Income Calc", "url": "https://warera-income.vercel.app", "emoji": "💵", "desc": {"de": "Einkommen berechnen", "en": "Calculate income", "sv": "Beräkna inkomst"}, "tags": ["einkommen", "lohn", "rechner", "income", "wage", "calculator", "inkomst", "lön", "räknare"]},
+      {"id": "company-calc", "name": "Company Calc", "url": "https://3dcut.github.io/warera-company-calc/", "emoji": "🏭", "desc": {"de": "Firmen durchrechnen", "en": "Work out company profits", "sv": "Räkna igenom företag"}, "tags": ["firma", "produktion", "rechner", "company", "production", "calculator", "företag", "räknare"]},
+      {"id": "dismantle-calc", "name": "Dismantle Calc", "url": "https://warera-toolkit.vercel.app/dismantle_calculator", "emoji": "🔨", "desc": {"de": "Lohnt sich das Zerlegen?", "en": "Is dismantling worth it?", "sv": "Lönar det sig att montera ner?"}, "tags": ["zerlegen", "ausrüstung", "rechner", "dismantle", "equipment", "calculator", "montera ner", "utrustning", "räknare"]},
+      {"id": "production-bonus", "name": "Prod. Bonus", "url": "https://toolbox.warera.wiki/productionBonus", "emoji": "⚙️", "desc": {"de": "Produktionsbonus berechnen", "en": "Calculate production bonus", "sv": "Beräkna produktionsbonus"}, "tags": ["produktion", "bonus", "production"]},
+      {"id": "wages", "name": "Wages", "url": "https://warerastats.io/wages", "emoji": "💰", "desc": {"de": "Löhne im Überblick", "en": "Wages at a glance", "sv": "Löner i överblick"}, "tags": ["lohn", "jobs", "statistik", "wage", "salary", "statistics", "lön", "jobb"]},
+      {"id": "case-ev", "name": "Case EV", "url": "https://warera.de/cases/?lang={lang}", "emoji": "📦", "desc": {"de": "Erwartungswert einer Wooden Case nach Orderbuch", "en": "Expected value of a Wooden Case from the order book", "sv": "Förväntat värde för en Wooden Case enligt orderboken"}, "tags": ["case", "kiste", "erwartungswert", "markt", "rechner", "crate", "expected value", "market", "calculator", "låda", "förväntat värde", "marknad", "räknare"]}
     ]
   },
   {
-    "category": "Maps & Kampf",
+    "category": {"de": "Maps & Kampf", "en": "Maps & combat", "sv": "Kartor & strid"},
     "icon": "⚔️",
     "tools": [
-      {"id": "map", "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️", "desc": "Interaktive Weltkarte", "embed": false, "tags": ["karte", "regionen"]},
-      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": "Schlachten simulieren", "tags": ["schlacht", "schaden", "simulator"]},
-      {"id": "phantomant", "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜", "tags": ["kampf"]}
+      {"id": "map", "name": "Map", "url": "https://war-era.vercel.app", "emoji": "🗺️", "desc": {"de": "Interaktive Weltkarte", "en": "Interactive world map", "sv": "Interaktiv världskarta"}, "embed": false, "tags": ["karte", "regionen", "map", "regions", "karta", "regioner"]},
+      {"id": "battle-sim", "name": "Battle Sim", "url": "https://battle-sim.warera.wiki", "emoji": "⚔️", "desc": {"de": "Schlachten simulieren", "en": "Simulate battles", "sv": "Simulera strider"}, "tags": ["schlacht", "schaden", "simulator", "battle", "damage", "strid", "skada", "simulering"]},
+      {"id": "phantomant", "name": "Phantomant", "url": "https://phantomant.com", "emoji": "🐜", "tags": ["kampf", "combat", "strid"]}
     ]
   },
   {
-    "category": "Statistiken",
+    "category": {"de": "Statistiken", "en": "Statistics", "sv": "Statistik"},
     "icon": "📊",
     "tools": [
-      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": "Statistiken rund um WarEra", "tags": ["statistik", "ranking"]},
-      {"id": "countrystats", "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍", "desc": "Länderstatistiken im Zeitverlauf", "tags": ["land", "entwicklung", "statistik"]},
-      {"id": "market-monitor", "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒", "desc": "Marktpreise und Orderbücher", "tags": ["markt", "preise", "handel"]},
-      {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": "Firmen eines Landes", "tags": ["firmen", "land"]}
+      {"id": "warerastats", "name": "WarEraStats", "url": "https://warerastats.io/", "emoji": "📊", "desc": {"de": "Statistiken rund um WarEra", "en": "Statistics about WarEra", "sv": "Statistik om WarEra"}, "tags": ["statistik", "ranking", "statistics", "rankning"]},
+      {"id": "countrystats", "name": "CountryStats", "url": "https://countrystats.nl/?horizon=6+Months&min_level=10&countries=Germany", "emoji": "🌍", "desc": {"de": "Länderstatistiken im Zeitverlauf", "en": "Country statistics over time", "sv": "Landsstatistik över tid"}, "tags": ["land", "entwicklung", "statistik", "country", "trend", "statistics", "utveckling"]},
+      {"id": "market-monitor", "name": "Market Monitor", "url": "https://warera-market.info/monitor/", "emoji": "🛒", "desc": {"de": "Marktpreise und Orderbücher", "en": "Market prices and order books", "sv": "Marknadspriser och orderböcker"}, "tags": ["markt", "preise", "handel", "market", "prices", "trade", "marknad", "priser"]},
+      {"id": "national-companies", "name": "Nat. Companies", "url": "https://warera-toolkit.vercel.app/national_companies", "emoji": "🏢", "desc": {"de": "Firmen eines Landes", "en": "Companies of a country", "sv": "Ett lands företag"}, "tags": ["firmen", "land", "companies", "country", "firms", "företag"]}
     ]
   },
   {
-    "category": "Misc",
+    "category": {"de": "Sonstiges", "en": "Misc", "sv": "Övrigt"},
     "icon": "🧰",
     "tools": [
-      {"id": "build-tool", "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️", "desc": "Builds planen", "tags": ["build", "skills"]},
-      {"id": "stackedit", "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝", "desc": "Markdown-Editor, etwa für Zeitungsartikel", "tags": ["artikel", "zeitung", "markdown"]},
+      {"id": "build-tool", "name": "Build Tool", "url": "https://warera-build-tool.onrender.com/", "emoji": "🏗️", "desc": {"de": "Builds planen", "en": "Plan builds", "sv": "Planera builds"}, "tags": ["build", "skills", "färdigheter"]},
+      {"id": "stackedit", "name": "StackEdit", "url": "https://stackedit.io", "emoji": "📝", "desc": {"de": "Markdown-Editor, etwa für Zeitungsartikel", "en": "Markdown editor, e.g. for newspaper articles", "sv": "Markdown-redigerare, t.ex. för tidningsartiklar"}, "tags": ["artikel", "zeitung", "markdown", "article", "newspaper", "tidning"]},
       {"id": "arcanaera", "name": "ArcanaEra", "url": "https://arcana.warera.wiki", "emoji": "🔮", "tags": ["wiki"]},
-      {"id": "cardera", "name": "Cardera", "url": "https://cardera.warera.de/de", "emoji": "🃏", "desc": "Das Warera-Kartenspiel: Karten sammeln, Deck bauen, Duelle. Anmeldung einmal im neuen Tab.", "tags": ["karten", "kartenspiel", "tcg", "deck", "duell", "spiel"]},
-      {"id": "case-battle", "name": "Kisten-Battle", "url": "https://warera.de/battle/", "emoji": "🎁", "desc": "Zwei Spieler öffnen abwechselnd rote Kisten, die seltenere Kategorie punktet. Live aus den Transaktionen.", "tags": ["kiste", "case", "battle", "duell", "spiel", "wette", "rote kiste"]}
+      {"id": "cardera", "name": "Cardera", "url": {"de": "https://cardera.warera.de/de", "en": "https://cardera.warera.de/en"}, "emoji": "🃏", "desc": {"de": "Das Warera-Kartenspiel: Karten sammeln, Deck bauen, Duelle. Anmeldung einmal im neuen Tab.", "en": "The WarEra card game: collect cards, build a deck, duels. Log in once in a new tab.", "sv": "WarEras kortspel: samla kort, bygg en kortlek, duellera. Logga in en gång i en ny flik."}, "tags": ["karten", "kartenspiel", "tcg", "deck", "duell", "spiel", "cards", "card game", "duel", "game", "kort", "kortspel", "kortlek", "spel"]},
+      {"id": "case-battle", "name": {"de": "Kisten-Battle", "en": "Case Battle", "sv": "Lådduell"}, "url": "https://warera.de/battle/", "emoji": "🎁", "desc": {"de": "Zwei Spieler öffnen abwechselnd rote Kisten, die seltenere Kategorie punktet. Live aus den Transaktionen.", "en": "Two players take turns opening red cases, the rarer category scores. Live from the transactions.", "sv": "Två spelare öppnar röda lådor i tur och ordning, den sällsyntare kategorin får poäng. Live från transaktionerna."}, "tags": ["kiste", "case", "battle", "duell", "spiel", "wette", "rote kiste", "red case", "duel", "game", "bet", "låda", "spel"]}
     ]
   }
 ]

@@ -1,3 +1,5 @@
+// Zuerst: Sprache festlegen, bevor andere Module Texte oder Einstellungen anlegen
+import { initDocumentLanguage, t } from './i18n';
 import '@fontsource/rajdhani/500.css';
 import '@fontsource/rajdhani/600.css';
 import '@fontsource/rajdhani/700.css';
@@ -28,17 +30,18 @@ async function importSharedWorkspace(): Promise<string | null> {
   history.replaceState(null, '', location.pathname + location.search);
   const shared = await decodeShare(match[1]);
   if (!shared) {
-    toast('Der geteilte Link ist ungültig oder enthält keine bekannten Tools.', 'warn');
+    toast(t('settings.shareInvalid'), 'warn');
     return null;
   }
   const id = newId();
   queueTree(id, shared.l);
   addWorkspace({ id, name: shared.n, icon: shared.i });
-  toast(`Geteilter Arbeitsbereich „${shared.n}“ wurde hinzugefügt.`, 'success');
+  toast(t('settings.shareAdded', { name: shared.n }), 'success');
   return id;
 }
 
 async function start(): Promise<void> {
+  initDocumentLanguage();
   initTheme();
   const [, defaults] = await Promise.all([loadTools(), loadPresets()]);
   const { legacyTree } = ensureWorkspaces(defaults);

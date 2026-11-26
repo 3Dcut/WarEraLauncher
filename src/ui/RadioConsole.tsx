@@ -1,40 +1,46 @@
 import { STATIONS, getStation, type StationId } from '../radio/stations';
-import { levelOf, type StationLevel } from '../radio/logic';
+import { levelOf, type StationLevel, type AutoReason } from '../radio/logic';
 import * as radio from '../radio/engine';
+import { t } from '../i18n';
 import { Icon } from './icons';
 import { Switch } from './primitives';
 
-export const LEVEL_LABEL: Record<StationId, Record<StationLevel, string>> = {
-  'war-era-de': { force: 'FORCE', live: 'Live', online: 'Live', offline: 'AutoDJ' },
-  'warera-nachtwache': { force: 'FORCE', live: 'Live', online: 'Live', offline: 'AutoDJ' },
-  'warera-azura': { force: 'Live-DJ', live: 'Live-DJ', online: 'Online', offline: 'Offline' },
-};
+export function levelLabel(id: StationId, level: StationLevel): string {
+  if (id === 'warera-azura') {
+    return level === 'force' || level === 'live' ? t('radio.level.liveDj') : level === 'online' ? t('radio.level.online') : t('radio.level.offline');
+  }
+  return level === 'force' ? 'FORCE' : level === 'offline' ? 'AutoDJ' : 'Live';
+}
+
+function autoReasonText(reason: AutoReason): string {
+  return t(`radio.auto.${reason.code}`, { start: reason.start ?? '', end: reason.end ?? '' });
+}
 
 export function phaseLabel(): string {
   switch (radio.phase.value) {
     case 'connecting':
-      return 'Verbinde …';
+      return t('radio.phase.connecting');
     case 'reconnecting':
-      return 'Verbindung wird erneuert …';
+      return t('radio.phase.reconnecting');
     case 'blocked':
-      return 'Tippen zum Starten';
+      return t('radio.phase.blocked');
     case 'paused':
-      return 'Pausiert';
+      return t('radio.phase.paused');
     case 'playing':
-      return radio.activeClip.value ? 'Einspieler läuft' : 'Läuft';
+      return radio.activeClip.value ? t('radio.phase.clip') : t('radio.phase.playing');
     default:
-      return 'Aus';
+      return t('radio.phase.off');
   }
 }
 
 export function StationDot({ id }: { id: StationId }) {
   const level = levelOf(radio.status.value, id);
-  return <span class={`dot dot--${level}`} title={LEVEL_LABEL[id][level]} aria-hidden="true" />;
+  return <span class={`dot dot--${level}`} title={levelLabel(id, level)} aria-hidden="true" />;
 }
 
 export function PlayButton({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const playing = radio.isPlaying.value;
-  const label = playing ? 'Radio pausieren' : radio.phase.value === 'blocked' ? 'Radio starten' : 'Radio abspielen';
+  const label = playing ? t('radio.play.pause') : radio.phase.value === 'blocked' ? t('radio.play.start') : t('radio.play.play');
   return (
     <button type="button" data-radio-control class={`play-btn play-btn--${size} ${playing ? 'is-playing' : ''}`} onClick={() => radio.toggle()} aria-label={label} title={label}>
       <Icon name={playing ? 'pause' : 'play'} size={size === 'lg' ? 22 : size === 'sm' ? 14 : 18} />
@@ -53,7 +59,7 @@ export function VolumeSlider({ id }: { id: string }) {
         max={1}
         step={0.01}
         value={radio.volume.value}
-        aria-label="Lautstärke"
+        aria-label={t('radio.volume')}
         onInput={(e) => radio.setVolume(Number((e.target as HTMLInputElement).value))}
       />
     </label>
@@ -64,7 +70,7 @@ export function NowPlayingText() {
   const clip = radio.activeClip.value;
   const np = radio.nowPlaying.value;
   const waiting = radio.waitingClip.value;
-  const title = clip ? `🎙 Einspieler: ${clip}` : np?.title || (radio.isPlaying.value ? 'Titel wird geladen …' : 'Kein Stream aktiv');
+  const title = clip ? t('radio.np.clip', { name: clip }) : np?.title || (radio.isPlaying.value ? t('radio.np.loading') : t('radio.np.none'));
   return (
     <div class="np">
       <div class="np__title" title={title}>
@@ -72,8 +78,8 @@ export function NowPlayingText() {
       </div>
       <div class="np__meta">
         <span>{phaseLabel()}</span>
-        {np?.listeners && !clip && <span>🎧 {np.listeners} Sparschäler</span>}
-        {waiting && <span>⏳ „{waiting}“ nach diesem Song</span>}
+        {np?.listeners && !clip && <span>{t('radio.np.listeners', { count: np.listeners })}</span>}
+        {waiting && <span>{t('radio.np.waiting', { name: waiting })}</span>}
       </div>
     </div>
   );
@@ -88,7 +94,7 @@ export function RadioConsole({ idPrefix, compact = false }: { idPrefix: string; 
         <PlayButton size="lg" />
         <div class="radio-console__station">
           <span class="eyebrow">
-            {current ? `${current.emoji} ${current.name}` : 'WarEra Radio'}
+            {current ? `${current.emoji} ${current.name}` : t('radio.console.fallbackName')}
             {current && <StationDot id={current.id} />}
           </span>
           <NowPlayingText />
@@ -109,7 +115,7 @@ export function RadioConsole({ idPrefix, compact = false }: { idPrefix: string; 
               <span class="station__name">{s.name}</span>
               <span class={`level level--${level}`}>
                 <span class={`dot dot--${level}`} aria-hidden="true" />
-                {LEVEL_LABEL[s.id][level]}
+                {levelLabel(s.id, level)}
               </span>
               <Icon name={active ? 'pause' : 'play'} size={14} />
             </button>
@@ -118,14 +124,14 @@ export function RadioConsole({ idPrefix, compact = false }: { idPrefix: string; 
       </div>
 
       <div class="radio-console__auto">
-        <Switch id={`${idPrefix}-auto`} checked={radio.autoMode.value} onChange={(v) => radio.setAuto(v)} label="Automatik" hint="Folgt Live-DJs, FORCE und dem Sendeplan" />
-        {radio.autoMode.value && radio.autoReason.value && <p class="auto-reason">Gewählt, weil: {radio.autoReason.value}</p>}
+        <Switch id={`${idPrefix}-auto`} checked={radio.autoMode.value} onChange={(v) => radio.setAuto(v)} label={t('radio.auto.label')} hint={t('radio.auto.hint')} />
+        {radio.autoMode.value && radio.autoReason.value && <p class="auto-reason">{t('radio.auto.reason', { reason: autoReasonText(radio.autoReason.value) })}</p>}
       </div>
 
       {!compact && (
         <div class="radio-console__plan">
-          <h4>Nächste Einspieler</h4>
-          {upcoming.length === 0 && <p class="muted">Heute nichts mehr geplant.</p>}
+          <h4>{t('radio.plan.title')}</h4>
+          {upcoming.length === 0 && <p class="muted">{t('radio.plan.empty')}</p>}
           <ul>
             {upcoming.map((c) => (
               <li>
@@ -139,8 +145,8 @@ export function RadioConsole({ idPrefix, compact = false }: { idPrefix: string; 
 
       {!compact && (
         <details class="radio-console__fallback">
-          <summary>Stream streikt?</summary>
-          <p>Öffne die Senderseite direkt. Dort läuft der Player des Anbieters.</p>
+          <summary>{t('radio.fallback.summary')}</summary>
+          <p>{t('radio.fallback.text')}</p>
           <div class="chip-row">
             {STATIONS.map((s) => (
               <a class="chip" href={s.page} target="_blank" rel="noopener">

@@ -2,7 +2,7 @@
 // Unterstützt in Chromium-Browsern und Firefox ab 151 (Desktop); sonst ist der Knopf ausgeblendet.
 
 import { render } from 'preact';
-import { signal } from '@preact/signals';
+import { signal, effect } from '@preact/signals';
 import { gameDates } from '../warera/dates';
 import { formatCountdown } from '../core/clock';
 import { STATIONS } from '../radio/stations';
@@ -11,6 +11,7 @@ import { registerThemedDocument } from '../theme';
 import { PlayButton, NowPlayingText, VolumeSlider, StationDot } from './RadioConsole';
 import { useNow } from './primitives';
 import { toast } from '../state';
+import { t } from '../i18n';
 
 interface DocumentPictureInPicture {
   requestWindow(options?: { width?: number; height?: number }): Promise<Window>;
@@ -42,10 +43,10 @@ function MiniPlayer() {
       {dates && (
         <div class="mini__timers">
           <span>
-            Regen <b class="mono">{formatCountdown(Date.parse(dates.nextRegenAt) - now)}</b>
+            {t('shell.mini.regen')} <b class="mono">{formatCountdown(Date.parse(dates.nextRegenAt) - now)}</b>
           </span>
           <span>
-            Tag <b class="mono">{formatCountdown(Date.parse(dates.nextDayAt) - now)}</b>
+            {t('shell.mini.day')} <b class="mono">{formatCountdown(Date.parse(dates.nextDayAt) - now)}</b>
           </span>
         </div>
       )}
@@ -63,14 +64,16 @@ export async function openMiniPlayer(): Promise<void> {
   try {
     pip = await dpip.requestWindow({ width: 360, height: 250 });
   } catch {
-    toast('Der Browser hat den Mini-Player abgelehnt.', 'warn');
+    toast(t('shell.mini.denied'), 'warn');
     return;
   }
   // Stylesheets übernehmen (im Build <link>, im Entwicklungsmodus <style>)
   document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
     pip.document.head.appendChild(node.cloneNode(true));
   });
-  pip.document.title = 'WarEra Mini-Player';
+  const stopTitle = effect(() => {
+    pip.document.title = t('shell.mini.windowTitle');
+  });
   pip.document.body.classList.add('pip-body');
   const unregister = registerThemedDocument(pip.document);
   const root = pip.document.createElement('div');
@@ -79,6 +82,7 @@ export async function openMiniPlayer(): Promise<void> {
   pipOpen.value = true;
   pip.addEventListener('pagehide', () => {
     render(null, root);
+    stopTitle();
     unregister();
     pipOpen.value = false;
   });

@@ -7,6 +7,10 @@
     <meta name="description" content="Leitstand für WarEra: Community-Tools in frei anordenbaren Fenstern, Live-Timer, Marktpreise, laufende Schlachten und WarEra Radio – kostenlos im Browser." />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <link rel="canonical" href="https://warera.de/" />
+    <link rel="alternate" hreflang="de" href="https://warera.de/?lang=de" />
+    <link rel="alternate" hreflang="en" href="https://warera.de/?lang=en" />
+    <link rel="alternate" hreflang="sv" href="https://warera.de/?lang=sv" />
+    <link rel="alternate" hreflang="x-default" href="https://warera.de/" />
     <meta name="theme-color" content="#0b1020" />
     <meta name="application-name" content="WarEra Launcher" />
 
@@ -14,6 +18,8 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="WarEra Launcher" />
     <meta property="og:locale" content="de_DE" />
+    <meta property="og:locale:alternate" content="en_GB" />
+    <meta property="og:locale:alternate" content="sv_SE" />
     <meta property="og:url" content="https://warera.de/" />
     <meta property="og:title" content="WarEra Launcher – Dein Leitstand für WarEra" />
     <meta property="og:description" content="Community-Tools in freien Fenstern, Live-Timer, Markt und Front, WarEra Radio mit Automatik. Kostenlos im Browser, ohne Anmeldung." />
@@ -72,12 +78,41 @@
       }
     </script>
     <script>
-      // Theme vor dem ersten Zeichnen setzen, damit nichts aufblitzt
+      // Theme und Sprache vor dem ersten Zeichnen setzen, damit nichts aufblitzt
       try {
         var s = JSON.parse(localStorage.getItem('wl2:settings') || 'null');
         var legacy = localStorage.getItem('wl-theme');
         document.documentElement.dataset.theme = (s && s.theme) || (legacy === 'pink' ? 'pink' : 'grau');
       } catch (e) {}
+      // Gleiche Reihenfolge wie src/i18n: ?lang= > gespeicherte Wahl > Browser. Wer den Launcher schon
+      // vor der Übersetzung kannte, bekommt beim ersten Aufruf Deutsch gespeichert.
+      (function () {
+        var ok = { de: 1, en: 1, sv: 1 };
+        var pref = null;
+        try {
+          pref = JSON.parse(localStorage.getItem('wl2:lang') || 'null');
+          if (pref !== 'auto' && !ok[pref]) {
+            var known = localStorage.getItem('wl2:settings') || localStorage.getItem('wl-theme') || localStorage.getItem('wl-open-tools');
+            pref = known ? 'de' : 'auto';
+            localStorage.setItem('wl2:lang', JSON.stringify(pref));
+          }
+        } catch (e) {}
+        var fromUrl = null;
+        try {
+          fromUrl = (new URLSearchParams(location.search).get('lang') || '').slice(0, 2).toLowerCase();
+        } catch (e) {}
+        var lang = ok[fromUrl] ? fromUrl : ok[pref] ? pref : null;
+        if (!lang) {
+          var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+          for (var i = 0; i < list.length && !lang; i++) {
+            var p = String(list[i]).toLowerCase().split('-')[0];
+            if (ok[p]) lang = p;
+            else if (p === 'nb' || p === 'nn' || p === 'no' || p === 'da') lang = 'sv';
+          }
+        }
+        window.__bootLang = lang || 'en';
+        document.documentElement.lang = window.__bootLang;
+      })();
     </script>
   </head>
   <body>
@@ -85,10 +120,21 @@
       <div class="boot" role="status">
         <div class="boot__mark" aria-hidden="true"></div>
         <h1 class="boot__title">WarEra Launcher</h1>
-        <p>Community-Tools, Live-Daten und Radio werden geladen …</p>
+        <p id="boot-text">Community-Tools, Live-Daten und Radio werden geladen …</p>
         <a id="boot-fallback" href="./legacy.html" hidden>Lädt nicht? Zur alten Oberfläche</a>
       </div>
     </div>
+    <script>
+      (function () {
+        var text = {
+          en: ['Loading community tools, live data and radio …', 'Not loading? Go to the old interface'],
+          sv: ['Communityverktyg, livedata och radio laddas …', 'Laddar det inte? Till det gamla gränssnittet'],
+        }[window.__bootLang];
+        if (!text) return;
+        document.getElementById('boot-text').textContent = text[0];
+        document.getElementById('boot-fallback').textContent = text[1];
+      })();
+    </script>
     <noscript>
       <main style="padding: 24px; font-family: sans-serif; max-width: 70ch">
         <h1>WarEra Launcher</h1>

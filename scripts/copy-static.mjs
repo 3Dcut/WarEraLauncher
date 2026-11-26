@@ -23,18 +23,26 @@ for (const entry of entries) {
   console.log(`kopiert: ${entry}`);
 }
 
-// Sitemap mit dem Build-Datum; die alte Oberfläche und die Radio-Kurzlinks sind per noindex ausgenommen
+// Sitemap mit dem Build-Datum und den Sprachfassungen (?lang=); die alte Oberfläche und die Radio-Kurzlinks sind per noindex ausgenommen
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(
   'dist/sitemap.xml',
   `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://warera.de/</loc>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${['', '?lang=de', '?lang=en', '?lang=sv']
+  .map(
+    (q) => `  <url>
+    <loc>https://warera.de/${q}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
+    <priority>${q ? '0.8' : '1.0'}</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://warera.de/?lang=de" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://warera.de/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="sv" href="https://warera.de/?lang=sv" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://warera.de/" />
+  </url>`,
+  )
+  .join('\n')}
   <url>
     <loc>https://warera.de/battle/</loc>
     <lastmod>${today}</lastmod>

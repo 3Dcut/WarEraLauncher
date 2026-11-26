@@ -1,3 +1,5 @@
+import { t, formatDate } from '../i18n';
+
 // Zeitfunktionen. Sendepläne (radio_schedule.json, audio_schedule.json) sind in deutscher Zeit
 // geschrieben, deshalb rechnet der Launcher sie unabhängig von der Zeitzone des Rechners in Europe/Berlin.
 
@@ -66,22 +68,16 @@ export function formatCountdown(ms: number): string {
   const hours = Math.floor((total % 86400) / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
-  if (days > 0) return `${days} T ${String(hours).padStart(2, '0')} h`;
+  if (days > 0) return `${days} ${t('common.dayShort')} ${String(hours).padStart(2, '0')} h`;
   if (hours > 0) return `${hours}:${String(minutes).padStart(2, '0')} h`;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-const clockFormatter = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
-const dayClockFormatter = new Intl.DateTimeFormat('de-DE', {
-  weekday: 'short',
-  day: '2-digit',
-  month: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-});
+const CLOCK: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+const DAY_CLOCK: Intl.DateTimeFormatOptions = { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
 
-/** Uhrzeit in der Zeitzone des Nutzers, bei anderem Tag mit Datum. */
+/** Uhrzeit in der Zeitzone des Nutzers und in der Sprache des Launchers, bei anderem Tag mit Datum. */
 export function formatClock(date: Date, now: Date = new Date()): string {
   const sameDay = date.toDateString() === now.toDateString();
-  return sameDay ? clockFormatter.format(date) : dayClockFormatter.format(date);
+  return formatDate(date, sameDay ? CLOCK : DAY_CLOCK);
 }

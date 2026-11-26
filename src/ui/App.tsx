@@ -7,6 +7,7 @@ import { HelpDialog, Toasts } from './Overlays';
 import { RadioAutostart } from './RadioAutostart';
 import { mountStage, rebuildAllDocks } from '../workspace/dock';
 import { isMobile, mobileSidebarOpen, settings } from '../state';
+import { t } from '../i18n';
 import type { LayoutNode } from '../workspace/model';
 
 export function App({ legacyTree }: { legacyTree: LayoutNode | null }) {
@@ -27,12 +28,12 @@ export function App({ legacyTree }: { legacyTree: LayoutNode | null }) {
   const collapsed = settings.value.sidebarCollapsed && !isMobile.value;
   return (
     <div class={`app ${collapsed ? 'app--rail' : ''} ${isMobile.value ? 'app--mobile' : ''}`}>
-      <h1 class="sr-only">WarEra Launcher – Community-Tools, Live-Daten und Radio für WarEra</h1>
+      <h1 class="sr-only">{t('shell.app.heading')}</h1>
       <TopBar />
       <div class="app__body">
         <Sidebar />
         {isMobile.value && mobileSidebarOpen.value && <div class="scrim" onClick={() => (mobileSidebarOpen.value = false)} />}
-        <main class="stage" ref={stage} aria-label="Arbeitsfläche" />
+        <main class="stage" ref={stage} aria-label={t('shell.app.stage')} />
       </div>
       <CommandPalette />
       <SettingsDialog />

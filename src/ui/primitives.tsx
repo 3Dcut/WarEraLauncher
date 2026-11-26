@@ -1,6 +1,7 @@
 import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Icon } from './icons';
+import { t } from '../i18n';
 
 // ------------------------------------------------------------------ Modaler Dialog (native <dialog>)
 
@@ -39,7 +40,7 @@ export function Dialog(props: {
           <header class="dialog__head">
             {props.icon && <Icon name={props.icon} size={18} />}
             <h2>{props.title}</h2>
-            <button type="button" class="icon-btn" aria-label="Schließen" onClick={props.onClose}>
+            <button type="button" class="icon-btn" aria-label={t('shell.close')} onClick={props.onClose}>
               <Icon name="x" />
             </button>
           </header>

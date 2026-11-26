@@ -1,5 +1,6 @@
 import { signal, effect } from '@preact/signals';
 import { load, save, loadLegacy } from './core/storage';
+import { t } from './i18n';
 
 export type ThemeId = 'grau' | 'pink' | 'feldgrau' | 'hell';
 export type Density = 'compact' | 'comfortable';
@@ -24,11 +25,12 @@ export interface Settings {
 
 export const GERMANY_ID = '6813b6d446e731854c7ac79c';
 
-export const THEMES: { id: ThemeId; name: string; hint: string }[] = [
-  { id: 'grau', name: 'Grau', hint: 'Nachtblau und Gold' },
-  { id: 'feldgrau', name: 'Feldgrau', hint: 'Oliv und Khaki' },
-  { id: 'pink', name: 'Pink', hint: 'Magenta und Violett' },
-  { id: 'hell', name: 'Hell', hint: 'Heller Arbeitsplatz' },
+// name und hint sind Getter, damit sie beim Sprachwechsel aktuell bleiben
+export const THEMES: { id: ThemeId; readonly name: string; readonly hint: string }[] = [
+  { id: 'grau', get name() { return t('settings.theme.grau.name'); }, get hint() { return t('settings.theme.grau.hint'); } },
+  { id: 'feldgrau', get name() { return t('settings.theme.feldgrau.name'); }, get hint() { return t('settings.theme.feldgrau.hint'); } },
+  { id: 'pink', get name() { return t('settings.theme.pink.name'); }, get hint() { return t('settings.theme.pink.hint'); } },
+  { id: 'hell', get name() { return t('settings.theme.hell.name'); }, get hint() { return t('settings.theme.hell.hint'); } },
 ];
 
 const DEFAULTS: Settings = {

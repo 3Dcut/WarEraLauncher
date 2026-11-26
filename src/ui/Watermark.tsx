@@ -1,9 +1,10 @@
 import type { DockviewApi } from 'dockview';
-import { presets, workspaces, treeIds } from '../workspace/model';
+import { presets, workspaces, treeIds, workspaceLabel } from '../workspace/model';
 import { activeDock, openLaunchable } from '../workspace/dock';
 import { WIDGETS, findLaunchable } from '../data/tools';
 import { paletteOpen } from '../state';
 import { Icon } from './icons';
+import { t, tx } from '../i18n';
 
 /** Startansicht eines leeren Arbeitsbereichs. */
 export function Watermark({ workspaceId }: { workspaceId: string; api: DockviewApi }) {
@@ -12,17 +13,22 @@ export function Watermark({ workspaceId }: { workspaceId: string; api: DockviewA
     <div class="watermark">
       <div class="watermark__head">
         <span class="eyebrow">
-          {ws?.icon} {ws?.name ?? 'Arbeitsbereich'}
+          {ws?.icon} {ws ? workspaceLabel(ws) : t('shell.watermark.workspace')}
         </span>
-        <h2>Womit willst du anfangen?</h2>
+        <h2>{t('shell.watermark.heading')}</h2>
         <p>
-          Ziehe Tools aus der Seitenleiste auf diese Fläche, suche mit <kbd>Strg</kbd> + <kbd>K</kbd> oder übernimm eine Vorlage. Jedes
-          Fenster lässt sich später per Drag &amp; Drop stapeln, teilen oder lösen.
+          {tx('shell.watermark.text', {
+            keys: (
+              <>
+                <kbd>{t('shell.watermark.ctrl')}</kbd> + <kbd>K</kbd>
+              </>
+            ),
+          })}
         </p>
       </div>
 
-      <section class="watermark__section" aria-label="Vorlagen">
-        <h3>Vorlagen</h3>
+      <section class="watermark__section" aria-label={t('shell.watermark.presets')}>
+        <h3>{t('shell.watermark.presets')}</h3>
         <div class="preset-grid">
           {presets.value.map((p) => (
             <button type="button" class="preset-card" onClick={() => activeDock()?.applyTree(p.layout)}>
@@ -42,8 +48,8 @@ export function Watermark({ workspaceId }: { workspaceId: string; api: DockviewA
         </div>
       </section>
 
-      <section class="watermark__section" aria-label="Widgets">
-        <h3>Live-Widgets</h3>
+      <section class="watermark__section" aria-label={t('shell.watermark.widgets')}>
+        <h3>{t('shell.watermark.liveWidgets')}</h3>
         <div class="chip-row">
           {WIDGETS.map((w) => (
             <button type="button" class="chip" onClick={() => openLaunchable(w.id)}>
@@ -51,7 +57,7 @@ export function Watermark({ workspaceId }: { workspaceId: string; api: DockviewA
             </button>
           ))}
           <button type="button" class="chip chip--accent" onClick={() => (paletteOpen.value = true)}>
-            <Icon name="search" size={14} /> Alle Tools durchsuchen
+            <Icon name="search" size={14} /> {t('shell.watermark.searchAll')}
           </button>
         </div>
       </section>

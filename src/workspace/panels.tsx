@@ -3,7 +3,7 @@
 // Verschieben, Stapeln und Lösen erhalten (im Chromium-Test gemessen).
 
 import { render } from 'preact';
-import { signal, type Signal } from '@preact/signals';
+import { signal, effect, type Signal } from '@preact/signals';
 import type {
   IContentRenderer,
   GroupPanelPartInitParameters,
@@ -15,6 +15,7 @@ import type {
   IDockviewPanel,
 } from 'dockview';
 import { findLaunchable, type Tool } from '../data/tools';
+import { t } from '../i18n';
 import { iconSvg } from '../ui/icons';
 import { ExternalCard, MissingCard } from '../ui/ExternalCard';
 import { WidgetHost } from '../widgets/WidgetHost';
@@ -37,6 +38,7 @@ export class ItemRenderer implements IContentRenderer {
   private key = '';
   private slowTimer: number | undefined;
   private loaded = false;
+  private disposeEffects: (() => void)[] = [];
 
   constructor(private readonly workspaceId: string) {
     this.element = document.createElement('div');
@@ -70,6 +72,17 @@ export class ItemRenderer implements IContentRenderer {
     this.tool = item;
     this.buildFrame(item);
     frameRegistry.set(this.key, this);
+    // Hängt die Adresse eines Tools von der Sprache ab ({lang} oder je Sprache in tools.json),
+    // lädt ein bereits geöffnetes Iframe nach dem Umschalten die passende Fassung.
+    this.disposeEffects.push(
+      effect(() => {
+        const fresh = findLaunchable(ref);
+        if (!fresh || fresh.kind !== 'tool' || !this.tool || fresh.url === this.tool.url) return;
+        this.tool = fresh;
+        this.element.querySelector<HTMLAnchorElement>('.frame-loader__hint a')?.setAttribute('href', fresh.url);
+        if (this.iframe?.getAttribute('src')) this.reload();
+      }),
+    );
     // Erst nach dem Aufbau der Gruppe ist klar, welcher Tab sichtbar ist
     window.setTimeout(() => {
       if (params.api.isVisible) this.ensureLoaded();
@@ -85,23 +98,23 @@ export class ItemRenderer implements IContentRenderer {
     emoji.textContent = tool.emoji;
     const label = document.createElement('div');
     label.className = 'frame-loader__label';
-    label.textContent = `${tool.name} wird geladen …`;
     const bar = document.createElement('div');
     bar.className = 'frame-loader__bar';
     const hint = document.createElement('div');
     hint.className = 'frame-loader__hint';
-    hint.textContent = 'Das dauert ungewöhnlich lange. Manche Seiten lassen sich nicht einbetten.';
+    const hintText = document.createElement('span');
+    hint.appendChild(hintText);
     const open = document.createElement('a');
     open.className = 'btn btn--ghost btn--sm';
-    open.href = tool.url;
     open.target = '_blank';
     open.rel = 'noopener';
-    open.innerHTML = `${iconSvg('external', 14)}<span>Im neuen Tab öffnen</span>`;
+    const openLabel = document.createElement('span');
+    open.append(openLabel);
+    open.insertAdjacentHTML('afterbegin', iconSvg('external', 14));
     hint.appendChild(open);
     loader.append(emoji, label, bar, hint);
 
     const iframe = document.createElement('iframe');
-    iframe.title = tool.name;
     iframe.setAttribute('sandbox', SANDBOX);
     iframe.allow = 'clipboard-write; fullscreen; autoplay';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
@@ -113,6 +126,15 @@ export class ItemRenderer implements IContentRenderer {
       this.element.classList.remove('is-slow');
     });
     this.iframe = iframe;
+    this.disposeEffects.push(
+      effect(() => {
+        label.textContent = t('workspace.loading', { name: tool.name });
+        hintText.textContent = t('workspace.loadingSlow');
+        openLabel.textContent = t('workspace.action.openNewTab');
+        open.href = this.tool?.url ?? tool.url;
+        iframe.title = tool.name;
+      }),
+    );
     this.element.append(iframe, loader);
   }
 
@@ -140,6 +162,8 @@ export class ItemRenderer implements IContentRenderer {
 
   dispose(): void {
     clearTimeout(this.slowTimer);
+    this.disposeEffects.forEach((d) => d());
+    this.disposeEffects = [];
     frameRegistry.delete(this.key);
     render(null, this.element);
     this.iframe?.remove();
@@ -164,12 +188,10 @@ export class HeaderActions implements IHeaderActionsRenderer {
   }
 
   init(props: IGroupHeaderProps): void {
-    const make = (icon: Parameters<typeof iconSvg>[0], label: string, onClick: () => void) => {
+    const make = (icon: Parameters<typeof iconSvg>[0], onClick: () => void) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'dv-action';
-      btn.title = label;
-      btn.setAttribute('aria-label', label);
       btn.innerHTML = iconSvg(icon, 15);
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -186,24 +208,29 @@ export class HeaderActions implements IHeaderActionsRenderer {
       return p ? frameRegistry.get(`${this.ctx.workspaceId}:${p.id}`) : undefined;
     };
 
-    const reload = make('reload', 'Neu laden', () => frame()?.reload());
-    const external = make('external', 'Im neuen Tab öffnen', () => {
+    const reload = make('reload', () => frame()?.reload());
+    const external = make('external', () => {
       const url = frame()?.url;
       if (url) window.open(url, '_blank', 'noopener');
     });
-    const float = make('float', 'Als Fenster lösen', () => {
+    const float = make('float', () => {
       const p = active();
       if (!p) return;
       if (props.api.location.type === 'floating') this.ctx.dockBack(p);
       else props.containerApi.addFloatingGroup(p, { width: 520, height: 380 });
     });
-    const maximize = make('maximize', 'Maximieren', () => {
+    const maximize = make('maximize', () => {
       const p = active();
       if (!p) return;
       if (props.api.isMaximized()) props.api.exitMaximized();
       else props.api.maximize();
     });
 
+    const setLabel = (btn: HTMLButtonElement, text: string) => {
+      btn.title = text;
+      btn.setAttribute('aria-label', text);
+    };
+    // Beschriftungen folgen der Sprache; update() setzt sie je nach Zustand neu
     const update = () => {
       const hasFrame = !!frame();
       reload.hidden = !hasFrame;
@@ -211,13 +238,13 @@ export class HeaderActions implements IHeaderActionsRenderer {
       float.hidden = this.ctx.mobile;
       const floating = props.api.location.type === 'floating';
       float.innerHTML = iconSvg(floating ? 'dock' : 'float', 15);
-      float.title = floating ? 'Wieder andocken' : 'Als Fenster lösen';
-      float.setAttribute('aria-label', float.title);
+      setLabel(reload, t('workspace.action.reload'));
+      setLabel(external, t('workspace.action.openNewTab'));
+      setLabel(float, floating ? t('workspace.action.dockAgain') : t('workspace.action.detach'));
       const max = props.api.isMaximized();
       maximize.hidden = floating || this.ctx.mobile;
       maximize.innerHTML = iconSvg(max ? 'minimize' : 'maximize', 15);
-      maximize.title = max ? 'Wiederherstellen' : 'Maximieren';
-      maximize.setAttribute('aria-label', maximize.title);
+      setLabel(maximize, max ? t('workspace.action.restore') : t('workspace.action.maximize'));
     };
 
     this.disposers.push(
@@ -226,6 +253,7 @@ export class HeaderActions implements IHeaderActionsRenderer {
       props.containerApi.onDidMaximizedGroupChange(() => queueMicrotask(update)),
     );
     queueMicrotask(update);
+    this.disposers.push({ dispose: effect(() => update()) });
   }
 
   dispose(): void {

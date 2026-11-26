@@ -1,5 +1,6 @@
 import type { Tool } from '../data/tools';
 import { Icon } from './icons';
+import { t } from '../i18n';
 
 /** Öffnet ein Tool als eigenes, schlankes Browserfenster neben dem Launcher. */
 export function openAsWindow(tool: Pick<Tool, 'url' | 'id'>): void {
@@ -13,8 +14,8 @@ export function openAsWindow(tool: Pick<Tool, 'url' | 'id'>): void {
 export function ExternalCard({ tool }: { tool: Tool }) {
   const reason =
     tool.health === 'dead'
-      ? 'Die Seite antwortet derzeit nicht (zuletzt als offline gemeldet).'
-      : `${hostOf(tool.url)} erlaubt keine Einbettung in andere Seiten. Öffne das Tool deshalb als eigenes Fenster oder im neuen Tab.`;
+      ? t('shell.external.dead')
+      : t('shell.external.noEmbed', { host: hostOf(tool.url) });
   return (
     <div class="external">
       <div class="external__emoji" aria-hidden="true">
@@ -26,11 +27,11 @@ export function ExternalCard({ tool }: { tool: Tool }) {
       <div class="external__actions">
         <button type="button" class="btn btn--primary" onClick={() => openAsWindow(tool)}>
           <Icon name="float" />
-          <span>Als Fenster öffnen</span>
+          <span>{t('shell.external.openWindow')}</span>
         </button>
         <a class="btn btn--ghost" href={tool.url} target="_blank" rel="noopener">
           <Icon name="external" />
-          <span>Neuer Tab</span>
+          <span>{t('shell.external.newTab')}</span>
         </a>
       </div>
     </div>
@@ -43,14 +44,14 @@ export function MissingCard({ id, onClose }: { id: string; onClose: () => void }
       <div class="external__emoji" aria-hidden="true">
         🧩
       </div>
-      <h3>Tool nicht mehr verfügbar</h3>
+      <h3>{t('shell.external.missingTitle')}</h3>
       <p class="external__reason">
-        „{id}“ steht nicht mehr in der Tool-Liste. Vermutlich wurde es umbenannt oder entfernt.
+        {t('shell.external.missingText', { id })}
       </p>
       <div class="external__actions">
         <button type="button" class="btn btn--ghost" onClick={onClose}>
           <Icon name="x" />
-          <span>Panel schließen</span>
+          <span>{t('shell.external.closePanel')}</span>
         </button>
       </div>
     </div>
@@ -61,6 +62,6 @@ function hostOf(url: string): string {
   try {
     return new URL(url).hostname;
   } catch {
-    return 'Die Seite';
+    return t('shell.external.hostFallback');
   }
 }

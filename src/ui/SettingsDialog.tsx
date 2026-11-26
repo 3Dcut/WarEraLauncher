@@ -6,6 +6,7 @@ import { getCountries, type CountryInfo } from '../warera/api';
 import { countryName } from '../warera/dates';
 import { Dialog, Switch, Segmented } from './primitives';
 import { Icon } from './icons';
+import { t, LANGS, langChoice, setLang, compareText, type LangPref } from '../i18n';
 
 const THEME_SWATCH: Record<string, [string, string, string]> = {
   grau: ['#0b1020', '#182238', '#f0b429'],
@@ -39,38 +40,51 @@ export function SettingsDialog() {
       const parsed = JSON.parse(await file.text()) as { app?: string; data?: Record<string, unknown> };
       if (parsed.app !== 'warera-launcher' || !parsed.data) throw new Error('Format');
       restoreAll(parsed.data);
-      toast('Einstellungen importiert. Die Seite lädt neu.', 'success');
+      toast(t('settings.imported'), 'success');
       setTimeout(() => location.reload(), 900);
     } catch {
-      toast('Die Datei ist kein Export des WarEra Launchers.', 'warn');
+      toast(t('settings.importInvalid'), 'warn');
     }
   };
 
   const countryList = Object.entries(countries)
     .map(([id, c]) => ({ id, name: countryName(c.code, c.name) }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    .sort((a, b) => compareText(a.name, b.name));
 
   return (
-    <Dialog open={settingsOpen.value} onClose={() => (settingsOpen.value = false)} title="Einstellungen" icon="settings" class="settings">
+    <Dialog open={settingsOpen.value} onClose={() => (settingsOpen.value = false)} title={t('settings.title')} icon="settings" class="settings">
       <section class="settings__section">
-        <h3>Darstellung</h3>
-        <div class="theme-grid" role="radiogroup" aria-label="Theme">
-          {THEMES.map((t) => {
-            const [ground, surface, accent] = THEME_SWATCH[t.id];
+        <h3>{t('settings.appearance')}</h3>
+        <div class="field">
+          <div class="field__label">
+            <span>{t('settings.language')}</span>
+          </div>
+          <Segmented<LangPref>
+            name={t('settings.language')}
+            value={langChoice.value}
+            onChange={(pref) => setLang(pref)}
+            options={[{ value: 'auto', label: t('settings.languageAuto') }, ...LANGS.map((l) => ({ value: l.id as LangPref, label: l.name }))]}
+          />
+          <small class="muted">{t('settings.languageHint')}</small>
+        </div>
+
+        <div class="theme-grid" role="radiogroup" aria-label={t('settings.theme')}>
+          {THEMES.map((th) => {
+            const [ground, surface, accent] = THEME_SWATCH[th.id];
             return (
               <button
                 type="button"
                 role="radio"
-                aria-checked={s.theme === t.id}
-                class={`theme-card ${s.theme === t.id ? 'is-active' : ''}`}
-                onClick={(e) => setTheme(t.id, e.currentTarget as HTMLElement)}
+                aria-checked={s.theme === th.id}
+                class={`theme-card ${s.theme === th.id ? 'is-active' : ''}`}
+                onClick={(e) => setTheme(th.id, e.currentTarget as HTMLElement)}
               >
                 <span class="theme-card__swatch" style={{ background: ground }} aria-hidden="true">
                   <span style={{ background: surface }} />
                   <span style={{ background: accent }} />
                 </span>
-                <span class="theme-card__name">{t.name}</span>
-                <span class="theme-card__hint">{t.hint}</span>
+                <span class="theme-card__name">{th.name}</span>
+                <span class="theme-card__hint">{th.hint}</span>
               </button>
             );
           })}
@@ -78,10 +92,10 @@ export function SettingsDialog() {
 
         <div class="field">
           <div class="field__label">
-            <label for="accent-hue">Akzentfarbe</label>
+            <label for="accent-hue">{t('settings.accent')}</label>
             {s.accentHue != null && (
               <button type="button" class="link-btn" onClick={() => updateSettings({ accentHue: null })}>
-                Farbe des Themes
+                {t('settings.accentReset')}
               </button>
             )}
           </div>
@@ -98,60 +112,60 @@ export function SettingsDialog() {
         </div>
 
         <div class="field field--row">
-          <span class="field__label">Dichte</span>
+          <span class="field__label">{t('settings.density')}</span>
           <Segmented<Density>
-            name="Dichte"
+            name={t('settings.density')}
             value={s.density}
             onChange={(density) => updateSettings({ density })}
             options={[
-              { value: 'comfortable', label: 'Luftig' },
-              { value: 'compact', label: 'Kompakt' },
+              { value: 'comfortable', label: t('settings.density.comfortable') },
+              { value: 'compact', label: t('settings.density.compact') },
             ]}
           />
         </div>
 
         <div class="field field--row">
-          <span class="field__label">Animationen</span>
+          <span class="field__label">{t('settings.motion')}</span>
           <Segmented<MotionPref>
-            name="Animationen"
+            name={t('settings.motion')}
             value={s.motion}
             onChange={(motion) => updateSettings({ motion })}
             options={[
-              { value: 'auto', label: 'Automatisch' },
-              { value: 'reduced', label: 'Reduziert' },
-              { value: 'off', label: 'Aus' },
+              { value: 'auto', label: t('settings.motion.auto') },
+              { value: 'reduced', label: t('settings.motion.reduced') },
+              { value: 'off', label: t('settings.motion.off') },
             ]}
           />
         </div>
 
         <div class="field">
           <div class="field__label">
-            <label for="glass">Glas-Effekt</label>
-            <span class="muted">{s.glass === 0 ? 'deckend' : `${Math.round(s.glass * 100)} %`}</span>
+            <label for="glass">{t('settings.glass')}</label>
+            <span class="muted">{s.glass === 0 ? t('settings.glassOpaque') : `${Math.round(s.glass * 100)} %`}</span>
           </div>
           <input id="glass" type="range" min={0} max={1} step={0.05} value={s.glass} onInput={(e) => updateSettings({ glass: Number((e.target as HTMLInputElement).value) })} />
         </div>
       </section>
 
       <section class="settings__section">
-        <h3>WarEra</h3>
+        <h3>{t('settings.warera')}</h3>
         <div class="field field--row">
           <span class="field__label">
-            Charakter
-            <small>{s.characterName ?? 'nicht festgelegt'}</small>
+            {t('settings.character')}
+            <small>{s.characterName ?? t('settings.characterUnset')}</small>
           </span>
           {s.characterId && (
             <button type="button" class="btn btn--ghost btn--sm" onClick={() => updateSettings({ characterId: null, characterName: null })}>
-              Zurücksetzen
+              {t('settings.characterReset')}
             </button>
           )}
         </div>
         <div class="field">
           <label class="field__label" for="country">
-            Mein Land (für „Front“)
+            {t('settings.country')}
           </label>
           <select id="country" class="input" value={s.countryId ?? ''} onChange={(e) => updateSettings({ countryId: (e.target as HTMLSelectElement).value || null })}>
-            <option value="">– kein Land –</option>
+            <option value="">{t('settings.countryNone')}</option>
             {countryList.map((c) => (
               <option value={c.id}>{c.name}</option>
             ))}
@@ -160,17 +174,17 @@ export function SettingsDialog() {
       </section>
 
       <section class="settings__section">
-        <h3>Hinweise</h3>
+        <h3>{t('settings.notifications')}</h3>
         <Switch
           id="notify-live"
           checked={s.notifyLive}
-          label="Desktop-Hinweis, wenn ein Sender live geht"
-          hint="Nur solange der Launcher geöffnet ist. Im Launcher selbst erscheint immer ein Hinweis."
+          label={t('settings.notifyLive')}
+          hint={t('settings.notifyLiveHint')}
           onChange={async (v) => {
             if (v && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
               const result = await Notification.requestPermission();
               if (result !== 'granted') {
-                toast('Der Browser hat Benachrichtigungen abgelehnt.', 'warn');
+                toast(t('settings.notifyDenied'), 'warn');
                 return;
               }
             }
@@ -180,14 +194,14 @@ export function SettingsDialog() {
       </section>
 
       <section class="settings__section">
-        <h3>Daten</h3>
-        <p class="muted">Layouts, Favoriten und Einstellungen liegen nur in diesem Browser. Mit einem Export nimmst du sie auf einen anderen Rechner mit.</p>
+        <h3>{t('settings.data')}</h3>
+        <p class="muted">{t('settings.dataHint')}</p>
         <div class="btn-row">
           <button type="button" class="btn btn--ghost" onClick={exportData}>
-            <Icon name="download" /> Exportieren
+            <Icon name="download" /> {t('settings.export')}
           </button>
           <button type="button" class="btn btn--ghost" onClick={() => fileInput.current?.click()}>
-            <Icon name="upload" /> Importieren
+            <Icon name="upload" /> {t('settings.import')}
           </button>
           <input
             ref={fileInput}
@@ -205,10 +219,10 @@ export function SettingsDialog() {
             class="btn btn--ghost"
             onClick={() => {
               requestPersistence();
-              toast('Der Browser wurde gebeten, die Daten dauerhaft zu behalten.', 'success');
+              toast(t('settings.persistAsked'), 'success');
             }}
           >
-            <Icon name="shield" /> Dauerhaft speichern
+            <Icon name="shield" /> {t('settings.persist')}
           </button>
         </div>
         <div class="btn-row">
@@ -221,15 +235,15 @@ export function SettingsDialog() {
                 location.reload();
               }}
             >
-              <Icon name="trash" /> Wirklich alles zurücksetzen
+              <Icon name="trash" /> {t('settings.resetAllConfirm')}
             </button>
           ) : (
             <button type="button" class="btn btn--ghost btn--danger-text" onClick={() => setConfirmReset(true)}>
-              <Icon name="trash" /> Alles zurücksetzen
+              <Icon name="trash" /> {t('settings.resetAll')}
             </button>
           )}
           <a class="btn btn--ghost" href="./legacy.html">
-            <Icon name="external" /> Alte Oberfläche
+            <Icon name="external" /> {t('settings.legacy')}
           </a>
         </div>
       </section>

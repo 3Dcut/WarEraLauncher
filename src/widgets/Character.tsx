@@ -7,12 +7,13 @@ import { settings, updateSettings } from '../state';
 import { formatClock } from '../core/clock';
 import { useVisibleInterval } from '../ui/primitives';
 import { Icon } from '../ui/icons';
+import { t, tn, tx, formatNumber, type MessageKey } from '../i18n';
 
-const BARS: { key: string; label: string; tone: string }[] = [
-  { key: 'energy', label: 'Energie', tone: 'energy' },
-  { key: 'health', label: 'Gesundheit', tone: 'health' },
-  { key: 'hunger', label: 'Hunger', tone: 'hunger' },
-  { key: 'entrepreneurship', label: 'Unternehmergeist', tone: 'entre' },
+const BARS: { key: string; label: MessageKey; tone: string }[] = [
+  { key: 'energy', label: 'widgets.character.bar.energy', tone: 'energy' },
+  { key: 'health', label: 'widgets.character.bar.health', tone: 'health' },
+  { key: 'hunger', label: 'widgets.character.bar.hunger', tone: 'hunger' },
+  { key: 'entrepreneurship', label: 'widgets.character.bar.entrepreneurship', tone: 'entre' },
 ];
 
 /** Balken regenerieren zur vollen Stunde um hourlyBarRegen; daraus folgt der Zeitpunkt "voll". */
@@ -31,7 +32,7 @@ export function CharacterWidget({ visible }: { visible: Signal<boolean> }) {
 
 function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }) {
   const [user, setUser] = useState<UserLite | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
   const [countries, setCountries] = useState<Record<string, CountryInfo>>({});
 
   useVisibleInterval(
@@ -39,17 +40,17 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
       getUser(id)
         .then((u) => {
           setUser(u);
-          setError(null);
+          setError(false);
         })
-        .catch(() => setError('Profil konnte nicht geladen werden.'));
+        .catch(() => setError(true));
       if (!Object.keys(countries).length) getCountries().then(setCountries).catch(() => undefined);
     },
     120_000,
     visible.value,
   );
 
-  if (error && !user) return <div class="widget-empty">{error}</div>;
-  if (!user) return <div class="widget-empty">Profil wird geladen …</div>;
+  if (error && !user) return <div class="widget-empty">{t('widgets.character.loadError')}</div>;
+  if (!user) return <div class="widget-empty">{t('widgets.character.loading')}</div>;
 
   const regen = gameDates.value ? Date.parse(gameDates.value.nextRegenAt) : Date.now() + 3_600_000;
   const country = user.country ? countries[user.country] : undefined;
@@ -61,11 +62,11 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
         <div class="character__id">
           <strong>{user.username}</strong>
           <span class="muted">
-            Level {user.leveling?.level ?? '–'}
+            {t('widgets.character.level', { level: user.leveling?.level ?? '–' })}
             {country && ` · ${countryName(country.code, country.name)}`}
           </span>
         </div>
-        <button type="button" class="icon-btn" title="Anderen Charakter wählen" aria-label="Anderen Charakter wählen" onClick={() => updateSettings({ characterId: null, characterName: null })}>
+        <button type="button" class="icon-btn" title={t('widgets.character.change')} aria-label={t('widgets.character.change')} onClick={() => updateSettings({ characterId: null, characterName: null })}>
           <Icon name="edit" />
         </button>
       </header>
@@ -80,17 +81,17 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
           return (
             <div class={`bar bar--${b.tone}`}>
               <div class="bar__label">
-                <span>{b.label}</span>
+                <span>{t(b.label)}</span>
                 <span class="mono">
                   {fmt(current)} / {fmt(total)}
                 </span>
               </div>
-              <div class="bar__track" role="meter" aria-valuemin={0} aria-valuemax={total} aria-valuenow={current} aria-label={b.label}>
+              <div class="bar__track" role="meter" aria-valuemin={0} aria-valuemax={total} aria-valuenow={current} aria-label={t(b.label)}>
                 <div class="bar__fill" style={{ width: `${Math.min(100, (current / total) * 100)}%` }} />
               </div>
               <div class="bar__meta">
-                <span>+{fmt(skill.hourlyBarRegen ?? 0)} pro Stunde</span>
-                <span>{full === null ? 'voll' : Number.isNaN(full) ? '–' : `voll um ${formatClock(new Date(full))}`}</span>
+                <span>{t('widgets.character.perHour', { value: fmt(skill.hourlyBarRegen ?? 0) })}</span>
+                <span>{full === null ? t('widgets.character.full') : Number.isNaN(full) ? '–' : t('widgets.character.fullAt', { time: formatClock(new Date(full)) })}</span>
               </div>
             </div>
           );
@@ -100,9 +101,9 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
       {user.leveling && (
         <div class="character__foot">
           <span>
-            Tages-XP übrig: <strong class="mono">{user.leveling.dailyXpLeft ?? 0}</strong>
+            {tx('widgets.character.dailyXpLeft', { value: <strong class="mono">{user.leveling.dailyXpLeft ?? 0}</strong> })}
           </span>
-          {(user.leveling.availableSkillPoints ?? 0) > 0 && <span class="badge badge--accent">{user.leveling.availableSkillPoints} Skillpunkte frei</span>}
+          {(user.leveling.availableSkillPoints ?? 0) > 0 && <span class="badge badge--accent">{tn('widgets.character.skillPoints', user.leveling.availableSkillPoints ?? 0)}</span>}
         </div>
       )}
     </div>
@@ -110,7 +111,7 @@ function CharacterCard({ id, visible }: { id: string; visible: Signal<boolean> }
 }
 
 function fmt(v: number): string {
-  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  return Number.isInteger(v) ? String(v) : formatNumber(v, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 function CharacterSearch() {
@@ -133,18 +134,15 @@ function CharacterSearch() {
 
   return (
     <div class="character-search">
-      <p>
-        Gib deinen Spielernamen ein. Der Launcher liest danach dein öffentliches Profil und zeigt, wann Energie und Gesundheit wieder voll
-        sind.
-      </p>
+      <p>{t('widgets.character.searchIntro')}</p>
       <form class="inline-form" onSubmit={run}>
-        <input id="character-query" class="input" placeholder="Spielername" value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} autocomplete="off" />
+        <input id="character-query" class="input" placeholder={t('widgets.character.playerName')} value={query} onInput={(e) => setQuery((e.target as HTMLInputElement).value)} autocomplete="off" />
         <button class="btn btn--primary" type="submit" disabled={busy}>
           <Icon name="search" />
-          <span>{busy ? 'Suche …' : 'Suchen'}</span>
+          <span>{busy ? t('widgets.character.searching') : t('widgets.character.search')}</span>
         </button>
       </form>
-      {results && results.length === 0 && <p class="muted">Kein Spieler gefunden. Groß- und Kleinschreibung spielen keine Rolle, aber der Name muss stimmen.</p>}
+      {results && results.length === 0 && <p class="muted">{t('widgets.character.notFound')}</p>}
       {results && results.length > 0 && (
         <ul class="pick-list">
           {results.map((u) => (
@@ -152,7 +150,7 @@ function CharacterSearch() {
               <button type="button" onClick={() => updateSettings({ characterId: u._id, characterName: u.username })}>
                 {u.avatarUrl ? <img class="avatar avatar--sm" src={u.avatarUrl} alt="" loading="lazy" referrerpolicy="no-referrer" /> : <span class="avatar avatar--sm avatar--empty" />}
                 <span>{u.username}</span>
-                <span class="muted">Level {u.leveling?.level ?? '–'}</span>
+                <span class="muted">{t('widgets.character.level', { level: u.leveling?.level ?? '–' })}</span>
               </button>
             </li>
           ))}

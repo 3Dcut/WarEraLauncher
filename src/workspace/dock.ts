@@ -1,6 +1,7 @@
 import { createDockview, type DockviewApi, type DockviewTheme, type DockviewGroupPanel, type IDockviewPanel, type Position, type SerializedDockview, type Direction } from 'dockview';
-import { signal } from '@preact/signals';
+import { signal, effect } from '@preact/signals';
 import { load, save } from '../core/storage';
+import { t, lang } from '../i18n';
 import { findLaunchable, type Launchable } from '../data/tools';
 import { settings, isMobile, pushRecent, toast, motionEnabled } from '../state';
 import { ItemRenderer, HeaderActions, WatermarkRenderer, frameRegistry } from './panels';
@@ -24,6 +25,10 @@ function themeFor(): DockviewTheme {
     dndOverlayBorder: '2px solid var(--accent)',
     tabAnimation: motionEnabled() ? 'smooth' : 'default',
   };
+}
+
+function panelTitle(item: Launchable): string {
+  return `${item.emoji} ${item.name}`;
 }
 
 const DIRECTION: Record<Position, Direction> = {
@@ -83,6 +88,7 @@ export class WorkspaceDock {
       try {
         this.api.fromJSON(saved);
         if (this.mobile) this.flattenForMobile();
+        this.refreshTitles();
         return;
       } catch (err) {
         console.warn('Gespeichertes Layout defekt, lade Vorlage', err);
@@ -100,6 +106,15 @@ export class WorkspaceDock {
     const ws = workspaces.value.find((w) => w.id === this.workspaceId);
     const tree = (ws?.preset && presetById(ws.preset)?.layout) || legacyTree;
     if (tree) this.applyTree(tree);
+  }
+
+  /** Setzt die Tab-Titel aller offenen Panels auf den aktuellen Namen (Sprachwechsel, gespeicherte Layouts). */
+  refreshTitles(): void {
+    for (const p of this.api.panels) {
+      const ref = (p.params as { ref?: string } | undefined)?.ref ?? p.id;
+      const item = findLaunchable(ref);
+      if (item && p.title !== panelTitle(item)) p.api.setTitle(panelTitle(item));
+    }
   }
 
   private scheduleSave(): void {
@@ -142,7 +157,7 @@ export class WorkspaceDock {
     return this.api.addPanel({
       id,
       component: 'item',
-      title: `${item.emoji} ${item.name}`,
+      title: panelTitle(item),
       params: { ref: id },
       ...(position ? { position } : {}),
     });
@@ -229,20 +244,20 @@ export class WorkspaceDock {
 
   private contextMenu(panel: IDockviewPanel, group: DockviewGroupPanel) {
     const items = [
-      { label: 'Schließen', action: () => panel.api.close() },
-      { label: 'Andere schließen', action: () => group.panels.filter((p) => p !== panel).forEach((p) => p.api.close()) },
-      { label: 'Alle im Bereich schließen', action: () => this.api.clear() },
+      { label: t('workspace.action.close'), action: () => panel.api.close() },
+      { label: t('workspace.action.closeOthers'), action: () => group.panels.filter((p) => p !== panel).forEach((p) => p.api.close()) },
+      { label: t('workspace.action.closeAll'), action: () => this.api.clear() },
       'separator' as const,
     ];
     const frame = frameRegistry.get(`${this.workspaceId}:${panel.id}`);
     if (frame) {
-      items.push({ label: 'Neu laden', action: () => frame.reload() });
-      items.push({ label: 'Im neuen Tab öffnen', action: () => void window.open(frame.url ?? '', '_blank', 'noopener') });
+      items.push({ label: t('workspace.action.reload'), action: () => frame.reload() });
+      items.push({ label: t('workspace.action.openNewTab'), action: () => void window.open(frame.url ?? '', '_blank', 'noopener') });
     }
     if (!this.mobile) {
-      items.push({ label: group.api.isMaximized() ? 'Wiederherstellen' : 'Maximieren', action: () => (group.api.isMaximized() ? group.api.exitMaximized() : group.api.maximize()) });
-      if (group.api.location.type === 'floating') items.push({ label: 'Wieder andocken', action: () => this.dockBack(panel) });
-      else items.push({ label: 'Als Fenster lösen', action: () => this.api.addFloatingGroup(panel, { width: 520, height: 380 }) });
+      items.push({ label: group.api.isMaximized() ? t('workspace.action.restore') : t('workspace.action.maximize'), action: () => (group.api.isMaximized() ? group.api.exitMaximized() : group.api.maximize()) });
+      if (group.api.location.type === 'floating') items.push({ label: t('workspace.action.dockAgain'), action: () => this.dockBack(panel) });
+      else items.push({ label: t('workspace.action.detach'), action: () => this.api.addFloatingGroup(panel, { width: 520, height: 380 }) });
     }
     return items;
   }
@@ -297,7 +312,7 @@ export function serializeTree(tree: LayoutNode): SerializedDockview {
   const leaf = (node: { tabs: string[] }, size: number) => {
     for (const id of node.tabs) {
       const item = findLaunchable(id);
-      panels[id] = { id, contentComponent: 'item', title: item ? `${item.emoji} ${item.name}` : id, params: { ref: id } };
+      panels[id] = { id, contentComponent: 'item', title: item ? panelTitle(item) : id, params: { ref: id } };
     }
     return { type: 'leaf' as const, size, data: { views: node.tabs, activeView: node.tabs[0], id: `g${++groupSeq}` } };
   };
@@ -406,11 +421,17 @@ export function rebuildAllDocks(): void {
   showWorkspace(activeWorkspaceId.value);
 }
 
+// Sprachwechsel: Tab-Titel aller offenen Panels in allen Arbeitsbereichen aktualisieren
+effect(() => {
+  void lang.value;
+  docks.forEach((d) => d.refreshTitles());
+});
+
 export function refreshDockThemes(): void {
   docks.forEach((d) => d.updateTheme());
 }
 
 export function applyTreeToActive(tree: LayoutNode): void {
   activeDock()?.applyTree(tree);
-  toast('Layout übernommen', 'success');
+  toast(t('workspace.layoutApplied'), 'success');
 }

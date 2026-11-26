@@ -4,6 +4,7 @@
 
 import { parseTimeKey, minuteToTimeKey, type ClockParts } from '../core/clock';
 import type { StationId } from './stations';
+import { t } from '../i18n';
 
 // ---------------------------------------------------------------- Status
 
@@ -123,9 +124,28 @@ export function scheduledEntry(schedule: RadioSchedule | null | undefined, minut
 
 // ---------------------------------------------------------------- Automatik
 
+export type AutoReasonCode =
+  | 'azuraLive'
+  | 'bothForce'
+  | 'mainForce'
+  | 'nightForce'
+  | 'azuraOnline'
+  | 'bothOnline'
+  | 'nightOnline'
+  | 'mainOnline'
+  | 'schedule'
+  | 'none';
+
+/** Begründung als Code; übersetzt wird erst bei der Anzeige. */
+export interface AutoReason {
+  code: AutoReasonCode;
+  start?: string;
+  end?: string;
+}
+
 export interface AutoDecision {
   station: StationId | null;
-  reason: string;
+  reason: AutoReason;
 }
 
 /**
@@ -141,20 +161,20 @@ export function pickStation(
   const { main, nacht, azura } = status;
   const tie = (): StationId => lastStation ?? 'war-era-de';
 
-  if (azura.live) return { station: 'warera-azura', reason: 'Azura: Live-DJ verbunden' };
-  if (main.force && nacht.force) return { station: tie(), reason: 'Beide Sender auf FORCE' };
-  if (main.force) return { station: 'war-era-de', reason: 'Hauptradio: FORCE' };
-  if (nacht.force) return { station: 'warera-nachtwache', reason: 'Nachtwache: FORCE' };
-  if (azura.online) return { station: 'warera-azura', reason: 'Azura: online' };
-  if (main.online && nacht.online) return { station: tie(), reason: 'Beide Sender online' };
-  if (nacht.online) return { station: 'warera-nachtwache', reason: 'Nachtwache: online' };
-  if (main.online) return { station: 'war-era-de', reason: 'Hauptradio: online' };
+  if (azura.live) return { station: 'warera-azura', reason: { code: 'azuraLive' } };
+  if (main.force && nacht.force) return { station: tie(), reason: { code: 'bothForce' } };
+  if (main.force) return { station: 'war-era-de', reason: { code: 'mainForce' } };
+  if (nacht.force) return { station: 'warera-nachtwache', reason: { code: 'nightForce' } };
+  if (azura.online) return { station: 'warera-azura', reason: { code: 'azuraOnline' } };
+  if (main.online && nacht.online) return { station: tie(), reason: { code: 'bothOnline' } };
+  if (nacht.online) return { station: 'warera-nachtwache', reason: { code: 'nightOnline' } };
+  if (main.online) return { station: 'war-era-de', reason: { code: 'mainOnline' } };
 
   const entry = scheduledEntry(schedule, minuteOfDay);
   if (entry && isKnownStation(entry.station)) {
-    return { station: entry.station, reason: `Zeitplan ${entry.start}–${entry.end}` };
+    return { station: entry.station, reason: { code: 'schedule', start: entry.start, end: entry.end } };
   }
-  return { station: null, reason: 'Kein Sender aktiv, kein Zeitplan' };
+  return { station: null, reason: { code: 'none' } };
 }
 
 function isKnownStation(value: string): value is StationId {
@@ -202,13 +222,13 @@ export function jingleFor(schedule: AudioSchedule | null, station: StationId | n
   if (!j || !station || station === 'warera-azura') return null;
   if (station === 'war-era-de') {
     const online = !!status && (status.main.online || status.main.force);
-    if (!online) return j.none ? { file: j.none, name: 'Jingle (Offline)' } : null;
+    if (!online) return j.none ? { file: j.none, name: t('radio.clip.jingleOffline') } : null;
     if (minute === 0 || minute === 30) return j.main_alt ? { file: j.main_alt, name: 'Nur das Beste auf die Ohren' } : null;
-    return j.main ? { file: j.main, name: 'Jingle (Hauptradio)' } : null;
+    return j.main ? { file: j.main, name: t('radio.clip.jingleMain') } : null;
   }
   const online = !!status && (status.nacht.online || status.nacht.force);
-  if (!online) return j.none ? { file: j.none, name: 'Jingle (Offline)' } : null;
-  return j.nachtwache ? { file: j.nachtwache, name: 'Jingle (Nachtwache)' } : null;
+  if (!online) return j.none ? { file: j.none, name: t('radio.clip.jingleOffline') } : null;
+  return j.nachtwache ? { file: j.nachtwache, name: t('radio.clip.jingleNight') } : null;
 }
 
 /**
@@ -227,7 +247,7 @@ export function dueClip(
   for (const insert of today) {
     const id = `${clock.dateKey}_${insert.time}_${insert.name ?? ''}`;
     if (sameMinute(insert.time, clock.timeKey) && !played.has(id)) {
-      return { id, file: insert.file, name: insert.name ?? 'Einspieler', jingle: false };
+      return { id, file: insert.file, name: insert.name ?? t('radio.clip.default'), jingle: false };
     }
   }
   const every = jingleInterval(station);
@@ -261,7 +281,7 @@ export function upcomingClips(
   for (const insert of insertsForDay(schedule, clock.dateKey)) {
     const minute = parseTimeKey(insert.time);
     if (Number.isNaN(minute) || minute <= clock.minuteOfDay) continue;
-    list.push({ time: minuteToTimeKey(minute), name: insert.name ?? 'Einspieler', jingle: false, minute });
+    list.push({ time: minuteToTimeKey(minute), name: insert.name ?? t('radio.clip.default'), jingle: false, minute });
     occupied.add(minute);
   }
   const every = jingleInterval(station);

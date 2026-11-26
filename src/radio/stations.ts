@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+
 export type StationId = 'war-era-de' | 'warera-nachtwache' | 'warera-azura';
 
 export interface Station {
@@ -17,7 +19,10 @@ export const AZURA_BASE = 'https://azuracast-production-9a4a.up.railway.app';
 export const STATIONS: Station[] = [
   {
     id: 'war-era-de',
-    name: 'Hauptradio',
+    // Name folgt der Sprache; Azura Live ist ein Eigenname
+    get name() {
+      return t('radio.station.main');
+    },
     emoji: '🎵',
     kind: 'laut',
     stream: 'https://stream.laut.fm/war-era-de',
@@ -26,7 +31,9 @@ export const STATIONS: Station[] = [
   },
   {
     id: 'warera-nachtwache',
-    name: 'Nachtwache',
+    get name() {
+      return t('radio.station.night');
+    },
     emoji: '🌙',
     kind: 'laut',
     stream: 'https://stream.laut.fm/warera-nachtwache',

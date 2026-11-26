@@ -18,16 +18,22 @@
 - [x] Mobil: ein Fenster mit Tabs, Werkzeuge als Schublade
 - [x] Schriften lokal (keine Google-Fonts-Anfragen), PWA-Manifest
 
-## v2.1 – Kisten-Battle und Radio-Kurzlinks
+## v2.1 – Sprachen
+- [x] Wörterbuch je Bereich (src/i18n/messages), Deutsch, Englisch, Schwedisch; Wahl in Einstellungen, Palette und per ?lang=
+- [x] Tool-Beschreibungen, Kategorien und Vorlagen mehrsprachig, Tool-URLs mit {lang}
+- [x] Kisten-Seite (/cases/) übersetzt; alte Oberfläche (legacy.html) bleibt deutsch
+- [ ] Schwedische Texte von Muttersprachlern gegenlesen lassen
+
+## v2.2 – Kisten-Battle und Radio-Kurzlinks
 - [x] Kisten-Battle unter /battle: Spieler per Name, Profil-Link oder ID, Live-Erkennung aus openCase-Transaktionen
 - [x] Gebündelte Abfragen (bis 8/s, Drosselung bei 429), Stand beim Start, Warteschlange bei Mehrfachöffnungen, Fortsetzen nach Neuladen
 - [x] Animationen (Kiste wackelt, Strahlen, Konfetti, Banner bei Legendär/Mythisch, Siegerkrone), Töne per Web Audio, Demo-Modus
 - [x] Kurzlinks warera.de/r, /n, /a starten Hauptradio, Nachtwache, Azura; Startknopf, wenn Autoplay gesperrt ist
+- [ ] Kisten-Battle übersetzen (Seite ist vorerst deutsch)
 
 ## Ideen für später
 - [ ] Kisten-Battle mit Cardera verbinden: Gems setzen und auf den Sieger wetten (Ereignisse und Tipp-Platzhalter sind vorbereitet)
 - [ ] Kisten-Battle als Turnier (mehrere Paarungen, Rangliste)
-- [ ] Englische Oberfläche (Texte liegen gesammelt in den Komponenten, Umstellung auf ein Wörterbuch nötig)
 - [ ] AzuraCast-Status per SSE statt Polling
 - [ ] Preisverlauf serverseitig (Cloudflare Worker, warera.de läuft bereits über Cloudflare)
 - [ ] Schlafmodus für lange verdeckte Tools (Speicher sparen)

@@ -1,50 +1,169 @@
 {
-  "defaults": ["start", "wirtschaft", "kampf", "statistik"],
+  "defaults": [
+    "start",
+    "wirtschaft",
+    "kampf",
+    "statistik"
+  ],
   "presets": [
     {
       "id": "start",
-      "name": "Lage",
+      "name": {
+        "de": "Lage",
+        "en": "Overview",
+        "sv": "Översikt"
+      },
       "icon": "🏠",
-      "desc": "Zeiten, Charakter, Front, Markt und Radio auf einen Blick",
+      "desc": {
+        "de": "Zeiten, Charakter, Front, Markt und Radio auf einen Blick",
+        "en": "Time, character, front, market and radio at a glance",
+        "sv": "Tider, karaktär, front, marknad och radio på en gång"
+      },
       "layout": {
         "row": [
-          { "column": [{ "tabs": ["widget:timers"] }, { "tabs": ["widget:character"] }] },
-          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["widget:radio"] }] },
-          { "tabs": ["widget:market"] }
+          {
+            "column": [
+              {
+                "tabs": [
+                  "widget:timers"
+                ]
+              },
+              {
+                "tabs": [
+                  "widget:character"
+                ]
+              }
+            ]
+          },
+          {
+            "column": [
+              {
+                "tabs": [
+                  "widget:battles"
+                ]
+              },
+              {
+                "tabs": [
+                  "widget:radio"
+                ]
+              }
+            ]
+          },
+          {
+            "tabs": [
+              "widget:market"
+            ]
+          }
         ]
       }
     },
     {
       "id": "wirtschaft",
-      "name": "Wirtschaft",
+      "name": {
+        "de": "Wirtschaft",
+        "en": "Economy",
+        "sv": "Ekonomi"
+      },
       "icon": "💰",
-      "desc": "Rechner links, Markt und Löhne rechts",
+      "desc": {
+        "de": "Rechner links, Markt und Löhne rechts",
+        "en": "Calculators on the left, market and wages on the right",
+        "sv": "Räknare till vänster, marknad och löner till höger"
+      },
       "layout": {
         "row": [
-          { "tabs": ["company-calc", "income-calc", "dismantle-calc"] },
-          { "column": [{ "tabs": ["widget:market", "market-monitor"] }, { "tabs": ["wages", "production-bonus"] }] }
+          {
+            "tabs": [
+              "company-calc",
+              "income-calc",
+              "dismantle-calc"
+            ]
+          },
+          {
+            "column": [
+              {
+                "tabs": [
+                  "widget:market",
+                  "market-monitor"
+                ]
+              },
+              {
+                "tabs": [
+                  "wages",
+                  "production-bonus"
+                ]
+              }
+            ]
+          }
         ]
       }
     },
     {
       "id": "kampf",
-      "name": "Kampf",
+      "name": {
+        "de": "Kampf",
+        "en": "Combat",
+        "sv": "Strid"
+      },
       "icon": "⚔️",
-      "desc": "Simulator, laufende Schlachten und Karte",
+      "desc": {
+        "de": "Simulator, laufende Schlachten und Karte",
+        "en": "Simulator, ongoing battles and map",
+        "sv": "Simulator, pågående strider och karta"
+      },
       "layout": {
         "row": [
-          { "tabs": ["battle-sim"] },
-          { "column": [{ "tabs": ["widget:battles"] }, { "tabs": ["phantomant", "map"] }] }
+          {
+            "tabs": [
+              "battle-sim"
+            ]
+          },
+          {
+            "column": [
+              {
+                "tabs": [
+                  "widget:battles"
+                ]
+              },
+              {
+                "tabs": [
+                  "phantomant",
+                  "map"
+                ]
+              }
+            ]
+          }
         ]
       }
     },
     {
       "id": "statistik",
-      "name": "Statistik",
+      "name": {
+        "de": "Statistik",
+        "en": "Statistics",
+        "sv": "Statistik"
+      },
       "icon": "📊",
-      "desc": "Statistikseiten nebeneinander",
+      "desc": {
+        "de": "Statistikseiten nebeneinander",
+        "en": "Statistics pages side by side",
+        "sv": "Statistiksidor bredvid varandra"
+      },
       "layout": {
-        "row": [{ "tabs": ["warerastats", "countrystats"] }, { "tabs": ["national-companies", "market-monitor"] }]
+        "row": [
+          {
+            "tabs": [
+              "warerastats",
+              "countrystats"
+            ]
+          },
+          {
+            "tabs": [
+              "national-companies",
+              "market-monitor"
+            ]
+          }
+        ]
       }
     }
   ]

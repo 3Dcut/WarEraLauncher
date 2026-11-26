@@ -22,5 +22,31 @@
 </head>
 <body>
     <iframe id="wahl-iframe" src="https://wahl.warera.de/" allowfullscreen></iframe>
+    <script>
+        // Sprache wie im Launcher: ?lang=, sonst localStorage "wl2:lang", bei "auto" die Browsersprache
+        (function () {
+            var ok = function (v) { v = String(v || '').toLowerCase().slice(0, 2); return v === 'de' || v === 'en' || v === 'sv' ? v : null; };
+            function pick() {
+                try { var q = ok(new URLSearchParams(location.search).get('lang')); if (q) return q; } catch (e) {}
+                try {
+                    var pref = JSON.parse(localStorage.getItem('wl2:lang') || 'null');
+                    if (pref !== 'auto' && ok(pref)) return ok(pref);
+                } catch (e) {}
+                var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+                for (var i = 0; i < list.length; i++) {
+                    var p = String(list[i] || '').toLowerCase().split('-')[0];
+                    if (ok(p)) return p;
+                    if (p === 'nb' || p === 'nn' || p === 'no' || p === 'da') return 'sv';
+                }
+                return 'en';
+            }
+            var fixed = false;
+            try { fixed = !!new URLSearchParams(location.search).get('lang'); } catch (e) {}
+            document.documentElement.lang = pick();
+            window.addEventListener('storage', function (e) {
+                if (!fixed && (!e.key || e.key === 'wl2:lang')) document.documentElement.lang = pick();
+            });
+        })();
+    </script>
 </body>
 </html>
