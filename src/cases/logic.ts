@@ -76,16 +76,24 @@ export interface Pull {
   /** ID des gezogenen Items (bleibt beim Zerlegen gleich, beim Verkauf bekommt der Käufer eine neue). */
   itemId: string;
   at: string;
+  /**
+   * Zeitpunkt, an dem der Spieler das Item bekam (lastAcquisitionAt, Millisekunden seit 1970). Ein Verkauf trägt
+   * ihn unverändert und lässt sich damit genau der Ziehung zuordnen. Fehlt bei alten gespeicherten Sitzungen.
+   */
+  acq?: number;
   caseCode: CaseCode;
   itemCode: string;
   rarity: Rarity | null;
   skills: Record<string, number>;
-  /** Marktpreis der Kiste, als die Öffnung erkannt wurde. */
+  /**
+   * Marktpreis der Kiste, als die Öffnung live erkannt wurde. Nachgeladene Ziehungen tragen null und werden
+   * mit dem Tagesmittel ihres Tages bewertet (siehe priceOn).
+   */
   cost: number | null;
 }
 
 export function toPull(
-  tx: RawTransaction & { item?: (RawTransaction['item'] & { _id?: string; createdAt?: string }) | null },
+  tx: RawTransaction & { item?: (RawTransaction['item'] & { _id?: string; createdAt?: string; lastAcquisitionAt?: string }) | null },
   userId: string,
   rarityOf: (code: string) => Rarity | null,
 ): Omit<Pull, 'cost'> | null {
@@ -94,10 +102,12 @@ export function toPull(
   if (!isCaseCode(tx.itemCode)) return null;
   const item = tx.item;
   if (!item?.code) return null;
+  const acq = Date.parse(item.lastAcquisitionAt ?? '');
   return {
     id: tx._id,
     itemId: item._id ?? tx._id,
     at: tx.createdAt,
+    ...(Number.isFinite(acq) ? { acq } : {}),
     caseCode: tx.itemCode,
     itemCode: item.code,
     rarity: rarityOf(item.code),
@@ -107,6 +117,65 @@ export function toPull(
 
 export function byTime<T extends { at: string; id: string }>(a: T, b: T): number {
   return a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
+ * Führt zwei nach `cmp` sortierte Listen zu einer zusammen, ohne die große Liste neu zu sortieren. Beim Nachladen
+ * liegen die neuen Ziehungen fast immer ganz vor oder ganz hinter den vorhandenen; dann genügt das Aneinanderhängen.
+ * Gleiche Elemente behalten die Reihenfolge `a` vor `b`.
+ */
+export function mergeSorted<T>(a: readonly T[], b: readonly T[], cmp: (x: T, y: T) => number): T[] {
+  if (!b.length) return a.slice();
+  if (!a.length) return b.slice();
+  if (cmp(a[a.length - 1], b[0]) <= 0) return [...a, ...b];
+  if (cmp(b[b.length - 1], a[0]) < 0) return [...b, ...a];
+  const out: T[] = new Array(a.length + b.length);
+  let i = 0;
+  let j = 0;
+  let k = 0;
+  while (i < a.length && j < b.length) out[k++] = cmp(a[i], b[j]) <= 0 ? a[i++] : b[j++];
+  while (i < a.length) out[k++] = a[i++];
+  while (j < b.length) out[k++] = b[j++];
+  return out;
+}
+
+// ------------------------------------------------------------------ Zeiträume
+
+/** Ab wann gezählt wird: ab jetzt, rückwirkend ab einer festen Spanne, ab einem Datum oder alles, was es gibt. */
+export type Since = 'now' | '1h' | '24h' | '7d' | '30d' | 'all' | 'date';
+
+/** Auswahl als Schaltflächen; ein Datum wird über ein eigenes Feld gewählt. */
+export const SINCE_OPTIONS: Exclude<Since, 'date'>[] = ['now', '1h', '24h', '7d', '30d', 'all'];
+
+const HOUR = 3600_000;
+const SPAN_MS: Partial<Record<Since, number>> = { '1h': HOUR, '24h': 24 * HOUR, '7d': 7 * 24 * HOUR, '30d': 30 * 24 * HOUR };
+
+/** Rückwirkende Zeiträume werden nachgeladen; „jetzt“ beobachtet nur, was danach geschieht. */
+export const isRetro = (range: Since): boolean => range !== 'now';
+
+/**
+ * Untere Zeitgrenze (ISO) für einen rückwirkenden Zeitraum, null für „alles“ (und für „jetzt“, das keine hat).
+ * Ein Datum (JJJJ-MM-TT) gilt ab Mitternacht Ortszeit; die Zukunft wird auf jetzt begrenzt.
+ */
+export function sinceFor(range: Since, now: number, date?: string | null): string | null {
+  const span = SPAN_MS[range];
+  if (span !== undefined) return new Date(now - span).toISOString();
+  if (range === 'date') {
+    const at = dayStart(date);
+    return at === null ? null : new Date(Math.min(at, now)).toISOString();
+  }
+  return null;
+}
+
+/** Mitternacht (Ortszeit) eines Datums im Format JJJJ-MM-TT, null bei ungültiger Eingabe. */
+export function dayStart(text: string | null | undefined): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((text ?? '').trim());
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const at = new Date(y, mo - 1, d);
+  // 31.02. würde sonst still auf den 3.3. rutschen
+  if (at.getFullYear() !== y || at.getMonth() !== mo - 1 || at.getDate() !== d) return null;
+  return at.getTime();
 }
 
 // ------------------------------------------------------------------ Was später mit dem Item geschah
@@ -132,37 +201,9 @@ export interface MarketTx extends RawTransaction {
   item?: (RawTransaction['item'] & { _id?: string; lastAcquisitionAt?: string; createdAt?: string }) | null;
 }
 
-const sameSkills = (a: Record<string, number> | undefined, b: Record<string, number> | undefined): boolean => {
-  const ka = Object.keys(a ?? {});
-  const kb = Object.keys(b ?? {});
-  return ka.length === kb.length && ka.every((k) => a![k] === b?.[k]);
-};
-
-/**
- * Ordnet Zerlegungen und Verkäufe den gezogenen Items zu. Zerlegte Items behalten ihre ID; verkaufte
- * bekommen beim Käufer eine neue, tragen aber Code, Werte und den Zeitpunkt, zu dem der Verkäufer sie
- * bekam (lastAcquisitionAt, wenige Millisekunden vor der Öffnung).
- */
-export function matchOutcomes(pulls: Pull[], userId: string, dismantles: DismantleTx[], sales: MarketTx[]): Record<string, Outcome> {
-  const out: Record<string, Outcome> = {};
-  const byItem = new Map(pulls.map((p) => [p.itemId, p]));
-  for (const d of dismantles) {
-    if (d.transactionType !== 'dismantleItem' || d.buyerId !== userId || !d.item?._id || !d.createdAt) continue;
-    const p = byItem.get(d.item._id);
-    if (p) out[p.id] = { kind: 'scrapped', at: d.createdAt, amount: d.quantity ?? 0 };
-  }
-  const open = pulls.filter((p) => !out[p.id]);
-  for (const s of sales) {
-    if (s.transactionType !== 'itemMarket' || s.sellerId !== userId || !s.item?.code || !s.createdAt) continue;
-    const acquired = Date.parse(s.item.lastAcquisitionAt ?? '');
-    if (!Number.isFinite(acquired)) continue;
-    const match = open.find(
-      (p) => !out[p.id] && p.itemCode === s.item!.code && sameSkills(p.skills, s.item!.skills) && Math.abs(Date.parse(p.at) - acquired) < 2000,
-    );
-    if (match) out[match.id] = { kind: 'sold', at: s.createdAt, amount: typeof s.money === 'number' ? s.money : 0 };
-  }
-  return out;
-}
+// Die Zuordnung steht in outcomes.ts (OutcomeMatcher, auch für Ströme in beliebiger Reihenfolge);
+// matchOutcomes ordnet eine fertige Menge auf einen Schlag zu.
+export { matchOutcomes, OutcomeMatcher, itemSignature } from './outcomes';
 
 // ------------------------------------------------------------------ Empfehlung
 
@@ -312,13 +353,70 @@ export function luckScore(pulls: { rarity: Rarity | null }[]): number {
   return pulls.reduce((sum, p) => sum + scrapBase(p.rarity), 0);
 }
 
+/** Mittelwert, Varianz und drittes zentrales Moment der Schrott-Einheiten einer einzelnen Ziehung. */
+export function drawMoments(caseCode: CaseCode): { mean: number; variance: number; third: number } {
+  let mean = 0;
+  let square = 0;
+  for (const r of RARITIES) {
+    const p = CASE_ODDS[caseCode][r];
+    const units = scrapBase(r);
+    mean += p * units;
+    square += p * units * units;
+  }
+  let third = 0;
+  for (const r of RARITIES) third += CASE_ODDS[caseCode][r] * (scrapBase(r) - mean) ** 3;
+  return { mean, variance: square - mean * mean, third };
+}
+
+/** Verteilungsfunktion der Standardnormalverteilung (Zelen und Severo, Fehler unter 1e-7). */
+export function normalCdf(x: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const poly = t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  const upper = Math.exp((-x * x) / 2) * 0.3989422804014327 * poly;
+  return x >= 0 ? 1 - upper : upper;
+}
+
+/**
+ * Ab dieser Zahl Kisten rechnet luckPercentile mit der Normalnäherung statt zu simulieren: die Summe vieler
+ * unabhängiger Ziehungen ist dann nahezu normalverteilt, und die Simulation würde bei 40.000 Kisten jedes
+ * Mal über hundert Millisekunden brauchen.
+ */
+export const LUCK_SIMULATION_MAX = 8000;
+
+/**
+ * Glück über die Normalnäherung der Summe, Φ((Ist − Erwartung) / Streuung), mit der Schiefe-Korrektur erster
+ * Ordnung (Edgeworth). Die Summe ist rechtsschief, weil seltene Items viel Schrott bringen; ohne Korrektur
+ * läge der Median bei 48 statt 50 %.
+ */
+export function luckNormal(counts: Record<CaseCode, number>, score: number): number | null {
+  const n = counts.case1 + counts.case2;
+  if (!n) return null;
+  let mean = 0;
+  let variance = 0;
+  let third = 0;
+  for (const c of CASE_CODES) {
+    const m = drawMoments(c);
+    mean += counts[c] * m.mean;
+    variance += counts[c] * m.variance;
+    third += counts[c] * m.third;
+  }
+  if (!(variance > 0)) return score < mean ? 0 : score > mean ? 1 : 0.5;
+  const sd = Math.sqrt(variance);
+  const z = (score - mean) / sd;
+  const skew = third / sd ** 3;
+  const density = Math.exp((-z * z) / 2) * 0.3989422804014327;
+  return Math.min(1, Math.max(0, normalCdf(z) - (skew / 6) * (z * z - 1) * density));
+}
+
 /**
  * Anteil gleich großer Sitzungen (gleiche Zahl roter und grüner Kisten), die weniger Schrott-Einheiten
  * gebracht hätten: 0,5 ist Durchschnitt, 0,95 heißt besser als 95 %. Gleichstände zählen zur Hälfte.
+ * Bis LUCK_SIMULATION_MAX Kisten wird simuliert, darüber genügt die Normalnäherung.
  */
 export function luckPercentile(counts: Record<CaseCode, number>, score: number, sims?: number, seed = 7): number | null {
   const n = counts.case1 + counts.case2;
   if (!n) return null;
+  if (sims === undefined && n > LUCK_SIMULATION_MAX) return luckNormal(counts, score);
   const runs = sims ?? Math.max(300, Math.min(4000, Math.floor(3_000_000 / n)));
   const tables = CASE_CODES.map((c) => {
     const cum: [number, number][] = [];
@@ -415,6 +513,42 @@ export function chanceAtLeast(caseCode: CaseCode, minRarity: Rarity): number {
 }
 
 // ------------------------------------------------------------------ Kurse
+
+/** Tagesmittel einer Ware, zum schnellen Nachschlagen aufbereitet (Tage aufsteigend als JJJJ-MM-TT). */
+export interface PriceIndex {
+  days: string[];
+  prices: number[];
+}
+
+/** Baut den Index aus itemTrading.getItemTrading; Tage ohne Handel (kein Mittel) fehlen einfach. */
+export function priceIndex(values: { valueAt?: string; avgValue?: number }[] | undefined | null): PriceIndex {
+  const rows = (values ?? [])
+    .filter((v): v is { valueAt: string; avgValue: number } => typeof v.valueAt === 'string' && typeof v.avgValue === 'number' && v.avgValue > 0)
+    .map((v) => ({ day: v.valueAt.slice(0, 10), price: v.avgValue }))
+    .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+  return { days: rows.map((r) => r.day), prices: rows.map((r) => r.price) };
+}
+
+/**
+ * Tagesmittel am Tag von `iso` (UTC-Tag wie in der API). Tage ohne Handel nehmen den letzten Tag davor; liegt der Zeitpunkt
+ * vor dem Verlauf (die API liefert 30 Tage), gilt der älteste Tag. Null, wenn es gar keinen Verlauf gibt.
+ */
+export function priceOn(index: PriceIndex, iso: string): number | null {
+  const n = index.days.length;
+  if (!n) return null;
+  const day = iso.slice(0, 10);
+  let lo = 0;
+  let hi = n - 1;
+  let at = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (index.days[mid] <= day) {
+      at = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  return index.prices[at < 0 ? 0 : at];
+}
 
 /** Mittel der letzten vollständigen Tage aus itemTrading.getItemTrading (älteste zuerst, letzter Tag läuft noch). */
 export function recentAverage(values: { avgValue?: number; totalQuantity?: number }[], days = 7): { avg: number | null; volume: number | null } {

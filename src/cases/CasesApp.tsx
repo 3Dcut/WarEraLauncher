@@ -9,7 +9,22 @@ import { checkKey } from '../battle/api';
 import { itemInfo, type Rarity } from '../battle/logic';
 import { itemName, rarityLabel, skillsText, money, signedMoney, valueBasis, caseLabel } from '../battle/text';
 import { RARITY_COLOR } from '../battle/colors';
-import { session, status, keyRejected, startSession, stopSession, continueSession, clearSession, setKey, refreshOutcomes, type Since } from './engine';
+import {
+  session,
+  status,
+  loading,
+  keyRejected,
+  startSession,
+  stopSession,
+  continueSession,
+  clearSession,
+  setKey,
+  refreshOutcomes,
+  stopLoading,
+  continueLoading,
+  LOAD_LIMIT,
+  type Since,
+} from './engine';
 import {
   prefs,
   updatePrefs,
@@ -28,7 +43,7 @@ import {
   type CaseFilter,
   type Row,
 } from './stats';
-import { CASE_ODDS, type CaseCode } from './logic';
+import { CASE_ODDS, SINCE_OPTIONS, dayStart, isRetro, type CaseCode } from './logic';
 
 const pct = (v: number, digits = 1) => formatNumber(v * 100, { maximumFractionDigits: digits, minimumFractionDigits: digits }) + ' %';
 const unknownColor = '#6b768a';
@@ -92,8 +107,16 @@ function LiveChip() {
 
 let autoDemo = false;
 
+/** Heutiges Datum (Ortszeit) als JJJJ-MM-TT, Obergrenze des Datumsfelds. */
+function today(): string {
+  const d = new Date();
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+}
+
 function Setup({ demo }: { demo: boolean }) {
   const [since, setSince] = useState<Since>('now');
+  const [date, setDate] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const key = apiKey.value;
@@ -105,13 +128,14 @@ function Setup({ demo }: { demo: boolean }) {
     if (!p) return setError(t('cases.err.noPlayer'));
     if (!asDemo) {
       if (!key) return setError(t('cases.err.noKey'));
+      if (since === 'date' && dayStart(date) === null) return setError(t('cases.err.noDate'));
       setBusy(true);
       const check = await checkKey(key);
       setBusy(false);
       if (check === 'invalid') return setError(t('cases.err.keyRejected'));
     }
     setBusy(true);
-    await startSession({ userId: p.id, name: p.name, since: asDemo ? 'now' : since, key: key || null, demo: asDemo });
+    await startSession({ userId: p.id, name: p.name, since: asDemo ? 'now' : since, date, key: key || null, demo: asDemo });
     setBusy(false);
   }
 
@@ -129,14 +153,34 @@ function Setup({ demo }: { demo: boolean }) {
         <PlayerPicker />
         <div class="a-setup__row">
           <span class="muted">{t('cases.setup.since')}</span>
-          <div class="segmented" role="radiogroup" aria-label={t('cases.setup.since')}>
-            {(['now', '1h', '24h'] as Since[]).map((v) => (
+          <div class="segmented a-since" role="radiogroup" aria-label={t('cases.setup.since')}>
+            {SINCE_OPTIONS.map((v) => (
               <button type="button" role="radio" aria-checked={since === v} class={since === v ? 'is-active' : ''} onClick={() => setSince(v)}>
                 {t(`cases.since.${v}`)}
               </button>
             ))}
           </div>
+          <label class="a-date">
+            <span class="muted">{t('cases.setup.date')}</span>
+            <input
+              class={`input mono ${since === 'date' ? 'is-active' : ''}`}
+              type="date"
+              max={today()}
+              value={date}
+              aria-label={t('cases.setup.date')}
+              onInput={(e) => {
+                const v = (e.currentTarget as HTMLInputElement).value;
+                setDate(v);
+                setSince(v ? 'date' : 'now');
+              }}
+            />
+          </label>
         </div>
+        {since !== 'now' && (
+          <p class="a-note muted a-setup__hint">
+            {t('cases.setup.hint')} {since === '30d' || since === 'all' || since === 'date' ? t('cases.setup.hintLong') : ''}
+          </p>
+        )}
         {(!key || keyRejected.value) && (
           <div class="a-key">
             <input
@@ -176,16 +220,31 @@ function Setup({ demo }: { demo: boolean }) {
 function Dashboard() {
   const s = session.value!;
   const n = totals.value.n;
+  const load = loading.value;
+  const retro = !!s.range && isRetro(s.range);
+  const emptyText =
+    load.phase === 'loading' && s.live
+      ? t('cases.empty.loading')
+      : retro && load.phase === 'done'
+        ? t('cases.empty.none')
+        : s.live
+          ? t('cases.empty.live')
+          : t('cases.empty.paused');
   return (
     <main class="a-main">
+      <LoadBanner />
       <Controls />
       <Kpis />
       {n === 0 ? (
         <section class="a-card a-empty">
-          <p>{s.live ? t('cases.empty.live') : t('cases.empty.paused')}</p>
-          <p class="muted">
-            {t('cases.empty.since', { time: formatDate(new Date(s.since ? Date.parse(s.since) : s.startedAt), { hour: '2-digit', minute: '2-digit' }) })}
-          </p>
+          <p>{emptyText}</p>
+          {(s.since || !retro) && (
+            <p class="muted">
+              {t('cases.empty.since', {
+                time: formatDate(new Date(s.since ? Date.parse(s.since) : s.startedAt), retro && s.range !== '1h' ? WHEN_LONG : { hour: '2-digit', minute: '2-digit' }),
+              })}
+            </p>
+          )}
         </section>
       ) : (
         <>
@@ -202,6 +261,76 @@ function Dashboard() {
         </>
       )}
     </main>
+  );
+}
+
+const WHEN_LONG: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+const when = (iso: string | null) => (iso ? formatDate(new Date(Date.parse(iso)), WHEN_LONG) : '');
+
+/** Fortschritt des Nachladens: was schon da ist, wie weit zurück es reicht, und was der Nutzer tun kann. */
+function LoadBanner() {
+  const s = session.value!;
+  const ld = loading.value;
+  if (s.demo || ld.phase === 'idle') return null;
+  if (ld.phase === 'done') {
+    if (!ld.pulls && !ld.truncated) return null;
+    return (
+      <p class="a-note muted a-loaded" role="status">
+        {ld.pulls ? tn('cases.load.done', ld.pulls, { date: when(ld.oldest ?? s.since) }) : ''}
+        {ld.truncated ? ` ${t('cases.load.truncated', { limit: formatNumber(LOAD_LIMIT) })}` : ''}
+      </p>
+    );
+  }
+  if (ld.phase === 'error') {
+    return (
+      <section class="a-card a-load is-error" role="alert">
+        <div class="a-load__row">
+          <span class="a-error">{t('cases.load.error', { message: ld.message ?? '' })}</span>
+          <button type="button" class="btn btn--sm" onClick={() => continueLoading()}>
+            {t('cases.load.retry')}
+          </button>
+        </div>
+      </section>
+    );
+  }
+  if (ld.phase === 'stopped' || !s.live) {
+    return (
+      <section class="a-card a-load" role="status">
+        <div class="a-load__row">
+          <span class="a-load__text">
+            {ld.phase === 'stopped' ? tn('cases.load.stopped', ld.pulls, { date: when(ld.oldest) }) : t('cases.load.paused', { date: when(ld.oldest) })}
+          </span>
+          {ld.phase === 'stopped' && (
+            <button type="button" class="btn btn--sm" onClick={() => continueLoading()}>
+              {t('cases.load.continue')}
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+  const pct = ld.fraction === null ? null : Math.min(100, Math.floor(ld.fraction * 100));
+  return (
+    <section class="a-card a-load" role="status" aria-live="polite">
+      <div class="a-load__row">
+        <span class="a-load__text">{ld.oldest ? tn('cases.load.running', ld.pulls, { date: when(ld.oldest) }) : t('cases.load.starting')}</span>
+        {pct !== null && <strong class="mono">{t('cases.load.percent', { pct: formatNumber(pct) })}</strong>}
+        <InfoTip text={t('cases.load.info')} label={t('cases.load.starting')} />
+        <button type="button" class="btn btn--sm btn--ghost a-load__stop" onClick={() => stopLoading()}>
+          {t('cases.load.stop')}
+        </button>
+      </div>
+      <div
+        class={`a-progress ${pct === null ? 'is-indeterminate' : ''}`}
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct ?? undefined}
+        aria-label={t('cases.load.starting')}
+      >
+        <i style={pct === null ? undefined : { width: `${pct}%` }} />
+      </div>
+    </section>
   );
 }
 
@@ -295,34 +424,42 @@ function Kpis() {
   const x = totals.value;
   const l = luck.value;
   const net = x.net;
+  const real = x.sold + x.scrapped;
   return (
-    <section class="a-kpis">
-      <Kpi
-        label={t('cases.kpi.cases')}
-        value={formatNumber(x.n)}
-        sub={`${caseLabel('case2')} ${formatNumber(x.count.case2)} · ${caseLabel('case1')} ${formatNumber(x.count.case1)}`}
-      />
-      <Kpi
-        label={t('cases.kpi.cost')}
-        value={money(x.cost)}
-        sub={x.costMissing ? tn('cases.kpi.costMissing', x.costMissing) : t('cases.kpi.costSub')}
-        info={t('cases.kpi.costInfo')}
-      />
-      <Kpi label={t('cases.kpi.expected')} value={money(x.expected)} sub={signedMoney(x.expected - x.cost)} info={t('cases.kpi.expectedInfo')} />
-      <Kpi
-        label={t('cases.kpi.value')}
-        value={money(x.value)}
-        sub={t('cases.kpi.valueSub', { scrap: money(x.scrapAll), sale: money(x.saleAll) })}
-        info={t('cases.kpi.valueInfo')}
-      />
-      <Kpi label={t('cases.kpi.net')} value={signedMoney(net)} tone={x.n ? (net >= 0 ? 'plus' : 'minus') : undefined} sub={x.cost ? pct(net / x.cost) : '–'} />
-      <Kpi
-        label={t('cases.kpi.luck')}
-        value={l.percentile === null ? '–' : luckText(l.percentile)}
-        sub={l.percentile === null ? '' : luckWord(l.percentile)}
-        info={t('cases.kpi.luckInfo')}
-      />
-    </section>
+    <>
+      <section class="a-kpis">
+        <Kpi
+          label={t('cases.kpi.cases')}
+          value={formatNumber(x.n)}
+          sub={`${caseLabel('case2')} ${formatNumber(x.count.case2)} · ${caseLabel('case1')} ${formatNumber(x.count.case1)}`}
+        />
+        <Kpi
+          label={t('cases.kpi.cost')}
+          value={money(x.cost)}
+          sub={x.costMissing ? tn('cases.kpi.costMissing', x.costMissing) : t('cases.kpi.costSub')}
+          info={t('cases.kpi.costInfo')}
+        />
+        <Kpi label={t('cases.kpi.expected')} value={money(x.expected)} sub={signedMoney(x.expected - x.cost)} info={t('cases.kpi.expectedInfo')} />
+        <Kpi
+          label={t('cases.kpi.value')}
+          value={money(x.value)}
+          sub={t('cases.kpi.valueSub', { scrap: money(x.scrapAll), sale: money(x.saleAll) })}
+          info={t('cases.kpi.valueInfo')}
+        />
+        <Kpi label={t('cases.kpi.net')} value={signedMoney(net)} tone={x.n ? (net >= 0 ? 'plus' : 'minus') : undefined} sub={x.cost ? pct(net / x.cost) : '–'} />
+        <Kpi
+          label={t('cases.kpi.luck')}
+          value={l.percentile === null ? '–' : luckText(l.percentile)}
+          sub={l.percentile === null ? '' : luckWord(l.percentile)}
+          info={t('cases.kpi.luckInfo')}
+        />
+      </section>
+      {real > 0 && (
+        <p class="a-note muted a-real">
+          {tn('cases.kpi.real', x.n, { real: formatNumber(real), scrapped: formatNumber(x.scrapped), sold: formatNumber(x.sold) })}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -482,10 +619,14 @@ function MarketCard() {
   );
 }
 
+/** Zeilen der Verkaufsliste: anfangs 12, dann in Schritten; bei zehntausenden Ziehungen wäre alles auf einmal zu viel. */
+const SELL_FIRST = 12;
+const SELL_STEP = 100;
+
 function SellList() {
   const list = toSell.value;
-  const [all, setAll] = useState(false);
-  const shown = all ? list : list.slice(0, 12);
+  const [limit, setLimit] = useState(SELL_FIRST);
+  const shown = list.slice(0, limit);
   const open = list.filter((r) => !r.outcome).length;
   return (
     <section class="a-card">
@@ -502,10 +643,19 @@ function SellList() {
           ))}
         </ul>
       )}
-      {list.length > 12 && (
-        <button type="button" class="link-btn" onClick={() => setAll(!all)}>
-          {all ? t('cases.sell.less') : t('cases.sell.more', { count: formatNumber(list.length - 12) })}
-        </button>
+      {list.length > SELL_FIRST && (
+        <div class="a-more">
+          {limit < list.length && (
+            <button type="button" class="link-btn" onClick={() => setLimit(limit + SELL_STEP)}>
+              {t('cases.sell.more', { count: formatNumber(Math.min(SELL_STEP, list.length - limit)) })}
+            </button>
+          )}
+          {limit > SELL_FIRST && (
+            <button type="button" class="link-btn" onClick={() => setLimit(SELL_FIRST)}>
+              {t('cases.sell.less')}
+            </button>
+          )}
+        </div>
       )}
     </section>
   );
@@ -575,8 +725,12 @@ function ScrapList() {
   );
 }
 
+/** Mehr Zellen als das zeichnet das Band nicht: zehntausende Elemente würden die Seite lähmen. */
+const CELL_LIMIT = 1500;
+
 function Pulls() {
-  const list = rows.value;
+  const all = rows.value;
+  const list = all.length > CELL_LIMIT ? all.slice(-CELL_LIMIT) : all;
   return (
     <section class="a-card">
       <h2 class="a-h2">{t('cases.pulls.title')}</h2>
@@ -604,6 +758,7 @@ function Pulls() {
           .filter((r) => (Object.keys(CASE_ODDS) as CaseCode[]).some((c) => CASE_ODDS[c][r] > 0))
           .map((r) => ({ label: rarityLabel(r), color: RARITY_COLOR[r] }))}
       />
+      {all.length > CELL_LIMIT && <p class="a-note muted">{t('cases.pulls.capped', { shown: formatNumber(CELL_LIMIT), total: formatNumber(all.length) })}</p>}
     </section>
   );
 }

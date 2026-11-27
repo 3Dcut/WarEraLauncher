@@ -2,8 +2,9 @@
 // Glück und Marktlage. Alles als computed, damit die Oberfläche nur abbildet.
 
 import { signal, computed } from '@preact/signals';
-import { estimateValue, rarityRank, type Rarity, type Valuation } from '../battle/logic';
+import { estimateValue, rarityRank, type Rarity, type Sale, type Valuation } from '../battle/logic';
 import { rarityOf, statRangesOf } from '../battle/api';
+import type { TradingDay } from '../assist/api';
 import { averages, market, sales, session } from './engine';
 import {
   advise,
@@ -11,11 +12,14 @@ import {
   CASE_CODES,
   chanceAtLeast,
   DEFAULT_MARGIN,
+  itemSignature,
   longestDrought,
   luckPercentile,
-  luckScore,
+  priceIndex,
+  priceOn,
   rarityStats,
   recentAverage,
+  scrapBase,
   sinceLast,
   valueCase,
   valueCode,
@@ -25,6 +29,7 @@ import {
   type CodeValue,
   type Margin,
   type Outcome,
+  type PriceIndex,
   type Pull,
 } from './logic';
 
@@ -161,25 +166,89 @@ export interface Row {
   value: number;
 }
 
-function valuationOf(p: Pull): Valuation | null {
-  const list = sales.value[p.itemCode];
-  if (list?.length) return estimateValue(p.skills, list, statRangesOf(p.itemCode));
-  const avg = averages.value[p.itemCode];
+// ------------------------------------------------------------------ Tagespreise
+
+interface DayPrices {
+  case1: PriceIndex;
+  case2: PriceIndex;
+  scraps: PriceIndex;
+}
+
+let lastHistory: Record<string, TradingDay[]> | null = null;
+let lastDays: DayPrices = { case1: priceIndex([]), case2: priceIndex([]), scraps: priceIndex([]) };
+
+/**
+ * Tagesmittel der letzten 30 Tage für Kisten und Schrott. Die Identität bleibt gleich, solange sich der Verlauf nicht
+ * ändert; der Zeilen-Cache unten verlässt sich darauf.
+ */
+export const dayPrices = computed<DayPrices>(() => {
+  const history = market.value.history;
+  if (history !== lastHistory) {
+    lastHistory = history;
+    lastDays = { case1: priceIndex(history.case1), case2: priceIndex(history.case2), scraps: priceIndex(history.scraps) };
+  }
+  return lastDays;
+});
+
+// ------------------------------------------------------------------ Zeilen
+
+/** Schätzungen je Itemcode und Werte; gelten, solange die Verkaufsliste des Codes dieselbe bleibt. */
+const valuationCache = new WeakMap<Sale[], Map<string, Valuation | null>>();
+
+function valuationOf(p: Pull, soldBy: Record<string, Sale[]>, avgBy: Record<string, number>): Valuation | null {
+  const list = soldBy[p.itemCode];
+  if (list?.length) {
+    let known = valuationCache.get(list);
+    if (!known) valuationCache.set(list, (known = new Map()));
+    const k = itemSignature(p.itemCode, p.skills);
+    let v = known.get(k);
+    if (v === undefined) known.set(k, (v = estimateValue(p.skills, list, statRangesOf(p.itemCode))));
+    return v;
+  }
+  const avg = avgBy[p.itemCode];
   return avg ? { price: avg, basis: 'average', samples: 0 } : null;
 }
 
+interface RowCache {
+  deps: unknown[];
+  rows: Map<string, Row>;
+}
+let rowCache: RowCache | null = null;
+
+/**
+ * Eine Zeile je Ziehung. Bei zehntausenden Ziehungen wäre es zu teuer, bei jeder neuen Seite alles neu zu rechnen;
+ * deshalb bleiben Zeilen bestehen, solange weder ihre Ziehung und ihr Ergebnis noch Preise, Verkäufe oder Spannen
+ * sich geändert haben.
+ */
 export const allRows = computed<Row[]>(() => {
   const s = session.value;
-  if (!s) return [];
+  if (!s) {
+    rowCache = null;
+    return [];
+  }
   const price = scrapPrice.value;
   const margin = prefs.value.margin;
   const custom = prefs.value.customPrice;
+  const soldBy = sales.value;
+  const avgBy = averages.value;
+  const days = dayPrices.value;
+  const current = market.value.prices;
+  const deps = [price, margin, custom, soldBy, avgBy, days, current];
+  if (!rowCache || rowCache.deps.length !== deps.length || rowCache.deps.some((d, i) => d !== deps[i])) rowCache = { deps, rows: new Map() };
+  const cache = rowCache.rows;
   return s.pulls.map((pull) => {
-    const valuation = valuationOf(pull);
-    const advice = advise(pull.rarity ?? rarityOf(pull.itemCode), valuation?.price ?? null, price, margin);
     const outcome = s.outcomes[pull.id] ?? null;
-    const value = outcome ? (outcome.kind === 'sold' ? outcome.amount : outcome.amount * price) : advice.value;
-    return { pull, valuation, advice, outcome, cost: custom[pull.caseCode] ?? pull.cost, value };
+    const hit = cache.get(pull.id);
+    if (hit && hit.pull === pull && hit.outcome === outcome) return hit;
+    const valuation = valuationOf(pull, soldBy, avgBy);
+    const advice = advise(pull.rarity ?? rarityOf(pull.itemCode), valuation?.price ?? null, price, margin);
+    // Verkäufe zählen mit dem echten Erlös, Zerlegungen mit dem Schrottpreis ihres Tages; Offenes mit der Schätzung von jetzt
+    const value = outcome ? (outcome.kind === 'sold' ? outcome.amount : outcome.amount * (priceOn(days.scraps, outcome.at) ?? price)) : advice.value;
+    // Live erkannte Ziehungen tragen den Preis der Minute; nachgeladene bekommen das Tagesmittel ihres Tages
+    const cost = custom[pull.caseCode] ?? pull.cost ?? priceOn(days[pull.caseCode], pull.at) ?? current[pull.caseCode] ?? null;
+    const row: Row = { pull, valuation, advice, outcome, cost, value };
+    cache.set(pull.id, row);
+    return row;
   });
 });
 
@@ -256,7 +325,8 @@ let luckCache: { key: string; value: number | null } = { key: '', value: null };
 export const luck = computed(() => {
   const list = rows.value;
   const count = totals.value.count;
-  const score = luckScore(list.map((r) => r.pull));
+  let score = 0;
+  for (const r of list) score += scrapBase(r.pull.rarity);
   const key = `${count.case1}|${count.case2}|${score}`;
   if (luckCache.key !== key) luckCache = { key, value: luckPercentile(count, score) };
   return { percentile: luckCache.value, score };

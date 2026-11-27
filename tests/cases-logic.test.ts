@@ -23,6 +23,16 @@ import {
   longestDrought,
   chanceAtLeast,
   recentAverage,
+  mergeSorted,
+  byTime,
+  sinceFor,
+  dayStart,
+  priceIndex,
+  priceOn,
+  drawMoments,
+  normalCdf,
+  luckNormal,
+  LUCK_SIMULATION_MAX,
   type Pull,
 } from '../src/cases/logic';
 import { RARITIES, type Rarity, type Sale } from '../src/battle/logic';
@@ -109,6 +119,12 @@ describe('toPull', () => {
   it('übernimmt rote und grüne Kisten mit Item-ID', () => {
     const p = toPull(tx({ item: { _id: 'item1', code: 'boots5', skills: { dodge: 33 } } }), ME, rarityOf);
     expect(p).toMatchObject({ id: 't1', itemId: 'item1', caseCode: 'case1', itemCode: 'boots5', rarity: 'legendary', skills: { dodge: 33 } });
+  });
+
+  it('merkt sich die Erwerbszeit des Items, mit der sich ein späterer Verkauf wiederfindet', () => {
+    const p = toPull(tx({ item: { _id: 'item1', code: 'boots5', skills: { dodge: 33 }, lastAcquisitionAt: '2026-11-27T00:30:41.966Z' } }), ME, rarityOf);
+    expect(p?.acq).toBe(Date.parse('2026-11-27T00:30:41.966Z'));
+    expect(toPull(tx(), ME, rarityOf)).not.toHaveProperty('acq');
   });
 
   it('übergeht Holzkisten, Werkzeugkästen und fremde Spieler', () => {
@@ -277,5 +293,145 @@ describe('Texte', () => {
       ])
         expect(dict[k], `${l}: ${k}`).toBeTruthy();
     }
+  });
+});
+
+describe('mergeSorted', () => {
+  const n = (a: number, b: number) => a - b;
+
+  it('hängt Älteres vor und Neueres hinten an, ohne zu sortieren', () => {
+    expect(mergeSorted([5, 6, 7], [1, 2], n)).toEqual([1, 2, 5, 6, 7]);
+    expect(mergeSorted([1, 2], [5, 6, 7], n)).toEqual([1, 2, 5, 6, 7]);
+    expect(mergeSorted([], [1], n)).toEqual([1]);
+    expect(mergeSorted([1], [], n)).toEqual([1]);
+  });
+
+  it('mischt überlappende Listen und behält bei Gleichstand die erste vorn', () => {
+    expect(mergeSorted([1, 4, 8], [2, 3, 9], n)).toEqual([1, 2, 3, 4, 8, 9]);
+    const a = [{ k: 1, from: 'a' }, { k: 2, from: 'a' }];
+    const b = [{ k: 2, from: 'b' }, { k: 3, from: 'b' }];
+    expect(mergeSorted(a, b, (x, y) => x.k - y.k).map((v) => v.from)).toEqual(['a', 'a', 'b', 'b']);
+  });
+
+  it('verändert die Eingaben nicht und passt zur Reihenfolge der Ziehungen', () => {
+    const a = [pull('rare'), pull('epic')];
+    const b = [pull('rare', { at: '2026-11-26T00:00:00.000Z' })];
+    const copy = [...a];
+    const merged = mergeSorted(a, b, byTime);
+    expect(a).toEqual(copy);
+    expect(merged.map((p) => p.id)).toEqual([b[0].id, a[0].id, a[1].id]);
+  });
+});
+
+describe('Zeiträume', () => {
+  const now = Date.UTC(2026, 10, 27, 12, 0, 0);
+
+  it('rechnen feste Spannen zurück und kennen für „jetzt“ und „alles“ keine Grenze', () => {
+    expect(sinceFor('1h', now)).toBe('2026-11-27T11:00:00.000Z');
+    expect(sinceFor('24h', now)).toBe('2026-11-26T12:00:00.000Z');
+    expect(sinceFor('7d', now)).toBe('2026-11-20T12:00:00.000Z');
+    expect(sinceFor('30d', now)).toBe('2026-10-28T12:00:00.000Z');
+    expect(sinceFor('all', now)).toBeNull();
+    expect(sinceFor('now', now)).toBeNull();
+  });
+
+  it('beginnen ein Datum um Mitternacht Ortszeit und begrenzen die Zukunft auf jetzt', () => {
+    expect(sinceFor('date', now, '2026-11-20')).toBe(new Date(2026, 10, 20).toISOString());
+    expect(sinceFor('date', now, '2099-01-01')).toBe(new Date(now).toISOString());
+    expect(sinceFor('date', now, '')).toBeNull();
+    expect(sinceFor('date', now, 'gestern')).toBeNull();
+  });
+
+  it('prüft Datumseingaben streng', () => {
+    expect(dayStart('2026-02-28')).toBe(new Date(2026, 1, 28).getTime());
+    expect(dayStart('2026-02-31')).toBeNull();
+    expect(dayStart('2026-13-01')).toBeNull();
+    expect(dayStart('27.11.2026')).toBeNull();
+    expect(dayStart(null)).toBeNull();
+  });
+});
+
+describe('Tagespreise', () => {
+  const days = (rows: [string, number | undefined][]) => priceIndex(rows.map(([d, avgValue]) => ({ valueAt: `${d}T00:00:00.000Z`, avgValue })));
+  const idx = days([
+    ['2026-11-24', 3.9],
+    ['2026-11-25', 3.95],
+    ['2026-11-27', 4.1],
+  ]);
+
+  it('nimmt das Tagesmittel des Tages der Öffnung', () => {
+    expect(priceOn(idx, '2026-11-25T08:15:00.000Z')).toBe(3.95);
+    expect(priceOn(idx, '2026-11-27T23:59:59.999Z')).toBe(4.1);
+  });
+
+  it('nimmt für Tage ohne Handel den letzten Tag davor', () => {
+    expect(priceOn(idx, '2026-11-26T10:00:00.000Z')).toBe(3.95);
+    expect(priceOn(idx, '2026-12-05T00:00:00.000Z')).toBe(4.1);
+  });
+
+  it('nimmt für Zeiten vor dem Verlauf den ältesten Tag und kennt ohne Verlauf nichts', () => {
+    expect(priceOn(idx, '2026-10-01T00:00:00.000Z')).toBe(3.9);
+    expect(priceOn(priceIndex([]), '2026-11-25T00:00:00.000Z')).toBeNull();
+    expect(priceOn(priceIndex(undefined), '2026-11-25T00:00:00.000Z')).toBeNull();
+  });
+
+  it('lässt Tage ohne Mittel aus und sortiert unsortierte Eingaben', () => {
+    const odd = days([
+      ['2026-11-26', 5],
+      ['2026-11-24', 4],
+      ['2026-11-25', undefined],
+    ]);
+    expect(odd.days).toEqual(['2026-11-24', '2026-11-26']);
+    expect(priceOn(odd, '2026-11-25T12:00:00.000Z')).toBe(4);
+  });
+});
+
+describe('Glück bei sehr vielen Kisten', () => {
+  it('kennt Mittelwert und Varianz einer Ziehung', () => {
+    for (const c of CASE_CODES) {
+      const m = drawMoments(c);
+      expect(m.mean).toBeCloseTo(expectedScrap(c), 10);
+      expect(m.variance).toBeGreaterThan(0);
+      expect(m.third).toBeGreaterThan(0); // rechtsschief: seltene Items bringen sehr viel Schrott
+    }
+  });
+
+  it('rechnet die Normalverteilung auf sieben Stellen genau', () => {
+    expect(normalCdf(0)).toBeCloseTo(0.5, 7);
+    expect(normalCdf(1.959964)).toBeCloseTo(0.975, 6);
+    expect(normalCdf(-1.959964)).toBeCloseTo(0.025, 6);
+    expect(normalCdf(-8)).toBeLessThan(1e-12);
+    expect(normalCdf(8)).toBeGreaterThan(1 - 1e-12);
+  });
+
+  it('liegt mit der Erwartung als Ergebnis nahe der Mitte und ordnet Ausreißer richtig ein', () => {
+    const counts = { case1: 30_000, case2: 0 };
+    const mean = counts.case1 * drawMoments('case1').mean;
+    const sd = Math.sqrt(counts.case1 * drawMoments('case1').variance);
+    expect(luckNormal(counts, mean)!).toBeGreaterThan(0.48);
+    expect(luckNormal(counts, mean)!).toBeLessThan(0.52);
+    expect(luckNormal(counts, mean + 3 * sd)!).toBeGreaterThan(0.99);
+    expect(luckNormal(counts, mean - 3 * sd)!).toBeLessThan(0.01);
+    expect(luckNormal({ case1: 0, case2: 0 }, 0)).toBeNull();
+  });
+
+  it('stimmt oberhalb der Simulationsgrenze mit der Simulation überein', () => {
+    const counts = { case1: LUCK_SIMULATION_MAX + 1500, case2: 400 };
+    const mean = counts.case1 * drawMoments('case1').mean + counts.case2 * drawMoments('case2').mean;
+    const sd = Math.sqrt(counts.case1 * drawMoments('case1').variance + counts.case2 * drawMoments('case2').variance);
+    for (const z of [-1.5, -0.5, 0, 0.5, 1.5]) {
+      const score = Math.round(mean + z * sd);
+      const simulated = luckPercentile(counts, score, 1500)!;
+      expect(Math.abs(luckNormal(counts, score)! - simulated), `z=${z}`).toBeLessThan(0.05);
+    }
+  });
+
+  it('nimmt oberhalb der Grenze die Näherung, darunter und mit ausdrücklicher Zahl die Simulation', () => {
+    const big = { case1: LUCK_SIMULATION_MAX + 1, case2: 0 };
+    const score = Math.round(big.case1 * drawMoments('case1').mean);
+    expect(luckPercentile(big, score)).toBe(luckNormal(big, score));
+    expect(luckPercentile(big, score, 300)).not.toBe(luckNormal(big, score));
+    const small = { case1: 500, case2: 0 };
+    expect(luckPercentile(small, 7000)).toBe(luckPercentile(small, 7000, Math.max(300, Math.min(4000, Math.floor(3_000_000 / 500)))));
   });
 });

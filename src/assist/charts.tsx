@@ -4,6 +4,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { pickIndices, sampleIndices } from './series';
 
 /** Breite des Containers in Pixeln, damit Schrift und Linien nicht mitskalieren. */
 function useWidth(fallback = 640) {
@@ -57,9 +58,10 @@ export interface LineSeries {
 }
 
 export function LineChart({
-  series,
-  band,
+  series: fullSeries,
+  band: fullBand,
   height = 180,
+  maxPoints = 600,
   format,
   axisFormat,
   xLabel,
@@ -68,16 +70,25 @@ export function LineChart({
   /** Untere und obere Grenze je Punkt, als Fläche hinter den Linien. */
   band?: { lo: number[]; hi: number[]; label: string };
   height?: number;
+  /** Mehr Punkte als das werden ausgedünnt gezeichnet; die Beschriftung nennt weiter den echten Index. */
+  maxPoints?: number;
   format: (v: number) => string;
   /** Kürzere Beschriftung der Achse, sonst wie format. */
   axisFormat?: (v: number) => string;
+  /** Beschriftung zum Punkt mit diesem Index in den ungekürzten Reihen. */
   xLabel: (i: number) => string;
 }) {
   const ref = useRef<SVGSVGElement>(null);
   const [wrap, width] = useWidth();
   const [hover, setHover] = useState<number | null>(null);
   const pad = { l: 52, r: 10, t: 8, b: 10 };
-  const n = Math.max(0, ...series.map((s) => s.values.length));
+  // Bei sehr langen Verläufen nur so viele Punkte zeichnen, wie die Breite hergibt
+  let total = 0;
+  for (const s of fullSeries) total = Math.max(total, s.values.length);
+  const idx = useMemo(() => sampleIndices(total, maxPoints), [total, maxPoints]);
+  const series = useMemo(() => fullSeries.map((s) => ({ ...s, values: pickIndices(s.values, idx) })), [fullSeries, idx]);
+  const band = useMemo(() => (fullBand ? { label: fullBand.label, lo: pickIndices(fullBand.lo, idx), hi: pickIndices(fullBand.hi, idx) } : undefined), [fullBand, idx]);
+  const n = idx.length;
   const all = [...series.flatMap((s) => s.values), ...(band ? [...band.lo, ...band.hi] : []), 0];
   const lo = Math.min(...all);
   const hi = Math.max(...all);
@@ -142,7 +153,7 @@ export function LineChart({
       </svg>
       {hover !== null && (
         <div class="c-tip c-tip--top" style={{ left: `${Math.min(78, Math.max(4, tipLeft))}%`, top: '6px' }}>
-          <span class="c-tip__head">{xLabel(hover)}</span>
+          <span class="c-tip__head">{xLabel(idx[hover] ?? hover)}</span>
           {series.map((s) => (
             <span class="c-tip__row">
               <i class={`c-key c-key--${s.tone}`} />

@@ -99,22 +99,47 @@ Code: `src/battle/` (Logik in `logic.ts` mit Tests in `tests/battle-logic.test.t
 ## Kisten-Assistent (`/case`)
 
 Beobachtet live, welche roten (`case2`) und grünen (`case1`) Kisten der Spieler öffnet, und wertet die Sitzung aus. Der Spieler
-kommt aus „Mein Charakter“ im Launcher (`wl2:settings`), wer ihn hier wechselt, wechselt ihn dort mit. Gezählt wird ab jetzt,
-ab der letzten Stunde oder den letzten 24 Stunden; eine Sitzung übersteht Neuladen und lässt sich anhalten und fortsetzen.
+kommt aus „Mein Charakter“ im Launcher (`wl2:settings`), wer ihn hier wechselt, wechselt ihn dort mit. Gezählt wird ab jetzt
+oder rückwirkend: letzte Stunde, 24 Stunden, 7 Tage, 30 Tage, ab einem Datum oder ab Beginn der Aufzeichnung. Eine Sitzung
+übersteht Neuladen und lässt sich anhalten und fortsetzen.
 
 - **Kennzahlen**: Kisten, Kosten (Marktpreis beim Öffnen), Erwartung, Wert nach Empfehlung (darunter „alles Schrott“ und
   „alles Verkauf“), Ergebnis und Glück. Dazu ein Verlauf mit Erwartung und üblichem Bereich (±1σ), Seltenheiten gegen
-  Erwartung mit Wahrscheinlichkeit, Durststrecken und ein Band mit einer Zelle je Ziehung.
+  Erwartung mit Wahrscheinlichkeit, Durststrecken und ein Band mit einer Zelle je Ziehung. Eine Zeile darunter nennt, wie
+  viele Ziehungen ein echtes Ergebnis haben (zerlegt oder verkauft) und wie viele noch mit der Schätzung von jetzt zählen.
+- **Rückwirkend nachladen**: Die Sitzung erscheint nach der ersten Seite und füllt sich im Hintergrund von neu nach alt; eine
+  Leiste zeigt Kisten, Stand und Fortschritt, „Laden beenden“ behält das Geladene, „Weiter laden“ macht dort weiter. Je Schritt
+  geht eine gebündelte Anfrage hinaus (`loader.ts`): eine Seite Öffnungen, Zerlegungen und Verkäufe zusammen, die nur einmal
+  gegen das Limit von 500 Anfragen je Minute zählt; die Seite selbst nimmt höchstens 360 je Minute (`assist/limiter.ts`) und
+  wartet bei 429 mit wachsenden Pausen. Neue Ziehungen und Ergebnisse sammeln sich in einem Puffer und gehen höchstens alle
+  0,1 bis 0,9 s in die Sitzung, je größer sie ist. Gemessen mit 3Dsus (Stand 2026-11-27, Chromium gegen die Live-API, erstes
+  Dashboard jeweils nach unter zwei Sekunden): die letzte Stunde mit 3.632 Kisten in 16 s, 24 Stunden mit 14.391 Kisten in 45 s
+  (längste Blockade des Hauptthreads 119 ms) und 7 Tage mit 155.156 Kisten in 8,5 Minuten bei 1.896 Anfragen ohne eine 429;
+  danach belegte die Seite 90 MB JS-Speicher, der Hauptthread war zu 7 % blockiert, die längste Blockade dauerte 223 ms.
+  Sitzungen bis 3.000 Kisten speichert der Browser vollständig; größere liegen nur mit Zeitraum und Grenzen im Speicher und
+  werden nach dem Neuladen neu geladen (fünf MB Speicher reichen sonst nicht). Obergrenze: 250.000 Kisten je Sitzung.
 - **Verschrotten oder verkaufen**: Jedes Item wird wie im Kisten-Battle aus den letzten 100 Verkäufen desselben Codes
   geschätzt. Auf die Verkaufsliste kommt es nur, wenn die Schätzung den Schrottwert um beide einstellbaren Margen übertrifft
   (Prozent und fester Betrag, Standard 15 % und 1), weil Zerlegen weniger Arbeit macht; „ab …“ nennt den Preis, unter dem
-  Zerlegen besser ist. Zerlegungen (`dismantleItem`, gleiche Item-ID) und Verkäufe (`itemMarket`, gleicher Code, gleiche Werte,
-  `lastAcquisitionAt` zur Öffnung passend) werden erkannt und mit dem tatsächlichen Ergebnis gezählt.
+  Zerlegen besser ist.
+- **Echte Ergebnisse**: Zerlegungen (`dismantleItem`, gleiche Item-ID) und Verkäufe (`itemMarket`, gleicher Code, gleiche Werte,
+  gleiche `lastAcquisitionAt`) werden erkannt und zählen mit dem tatsächlichen Ergebnis, auch wenn sie vor ihrer Ziehung
+  ankommen (`outcomes.ts`). Bei 3Dsus passten 40.812 von 40.836 Zerlegungen und alle 587 Verkäufe von Items aus dem Fenster
+  auf die Millisekunde; ein Verkauf kann Tage nach der Öffnung liegen (dort bis zu 178 Stunden), deshalb liest das Nachladen
+  die Verkäufe über den ganzen Zeitraum, und offene Ziehungen bleiben danach dauerhaft im Blick. Die Schätzung aus den letzten
+  100 Verkäufen lag bei diesen 587 Verkäufen in der Summe 1,3 % über dem echten Erlös (je Item im Median 3,6 % daneben,
+  90 % der Items innerhalb von 15 %); über alle 41.629 Ziehungen wich „Wert nach Empfehlung“ nur um 0,1 % vom echten Ergebnis
+  ab. Echte Preise zählen vor allem bei längeren Zeiträumen mit Preisdrift.
+- **Kosten und Schrott nach Datum**: Live erkannte Ziehungen tragen den Kistenpreis der Minute, nachgeladene das Tagesmittel
+  ihres Tages aus `itemTrading.getItemTrading` (30 Tage, davor gilt der älteste Tag), weil sich Preise bewegen: die rote
+  Kiste stieg in 30 Tagen von etwa 24 auf 30. Zerlegungen zählen mit dem Schrottpreis ihres Tages.
 - **Markt jetzt**: Geld- und Briefkurs beider Kisten und des Schrotts, Erwartungswert je Kiste nach Empfehlung. „Kaufen lohnt“,
   wenn der Erwartungswert über dem Brief liegt, „Lieber verkaufen“, wenn schon der Geldkurs mehr bringt. Schrott wird mit dem
   Mittel der letzten sieben Tage verglichen (`itemTrading.getItemTrading`).
 - **Glück** wird in Schrott-Einheiten gemessen (unabhängig von Preisen) und mit simulierten Sitzungen gleicher Größe und
-  gleicher Mischung verglichen.
+  gleicher Mischung verglichen; ab 8.000 Kisten genügt die Normalnäherung der Summe mit Schiefekorrektur (gegen die
+  Simulation auf etwa einen halben Prozentpunkt geprüft). Die Simulation brauchte bei 41.600 Kisten rund 200 ms und bei
+  155.000 Kisten über 700 ms je Auswertung, und die Auswertung läuft bei jedem Veröffentlichen neuer Seiten.
 
 Zahlen (Stand 2026-11-27):
 
@@ -126,7 +151,9 @@ Zahlen (Stand 2026-11-27):
 
 Je Seltenheit sind 30 % Waffen (`gameConfig.loot.weaponChancePercent`), der Rest verteilt sich gleich auf Helm, Brust, Hose,
 Stiefel und Handschuhe. Link-Parameter: `?demo=1` startet eine Demo mit diesen Quoten, `?lang=de|en|sv` wie im Launcher.
-Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Ablauf in `engine.ts`, Ableitungen in `stats.ts`.
+Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Zuordnung in `outcomes.ts`, Nachladen in `loader.ts`,
+Ablauf in `engine.ts` (Integrationstest gegen eine Fake-API in `tests/cases-engine.test.ts`), Ableitungen mit Zeilen-Cache in
+`stats.ts`. Für Lasttests eignet sich ein Spieler mit sehr vielen Kisten, etwa 3Dsus.
 
 ## Marktcheck (`/items`)
 
