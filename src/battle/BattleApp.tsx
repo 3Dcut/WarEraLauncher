@@ -17,7 +17,7 @@ import {
   type Slot,
 } from './engine';
 import { findPlayer, checkKey, type Player, type Lookup } from './api';
-import { CASE_TYPES, itemInfo, rarityRank, type Balance, type Opening, type Rarity, type Side } from './logic';
+import { CASE_TYPES, itemInfo, rarityRank, type Balance, type Opening, type Side } from './logic';
 import { rarityLabel, itemName, skillsText, caseLabel, sideLabel, money, signedMoney, valueBasis } from './text';
 import { savePrefs, type BattlePrefs } from './prefs';
 import { apiKey, setApiKey } from '../core/apiKey';
@@ -25,15 +25,9 @@ import { InfoTip } from '../ui/InfoTip';
 import { setSoundEnabled, unlockAudio } from './sound';
 import { burstAt, rain } from './fx';
 import { t, tn, formatNumber } from '../i18n';
+import { RARITY_COLOR } from './colors';
 
-export const RARITY_COLOR: Record<Rarity, string> = {
-  common: '#a7b0c0',
-  uncommon: '#4ade80',
-  rare: '#60a5fa',
-  epic: '#c084fc',
-  legendary: '#fbbf24',
-  mythic: '#f43f5e',
-};
+export { RARITY_COLOR };
 
 const embedded = (() => {
   try {

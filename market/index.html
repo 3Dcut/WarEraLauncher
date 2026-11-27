@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de" data-theme="grau">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Marktcheck – WarEra Launcher</title>
+    <meta name="description" content="Marktcheck für WarEra: prüft deine offenen Kauf- und Verkaufsorders gegen Orderbuch und Tagesumsatz und wertet deine Ausrüstungsverkäufe aus." />
+    <link rel="canonical" href="https://warera.de/market/" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WarEra Launcher" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:url" content="https://warera.de/market/" />
+    <meta property="og:title" content="Marktcheck – was liegt zu lange am Markt?" />
+    <meta property="og:description" content="Deine offenen Orders in WarEra: Position im Orderbuch, Alter, Reichweite, Überschwemmung, dazu Auswertung deiner Ausrüstungsverkäufe." />
+    <meta property="og:image" content="https://warera.de/og-image.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://api2.warera.io" crossorigin />
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem('wl2:settings') || 'null');
+        if (s && s.theme) document.documentElement.dataset.theme = s.theme;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <p style="padding: 24px; font-family: sans-serif">Marktcheck wird geladen …</p>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font-family: sans-serif">Der Marktcheck braucht JavaScript.</p>
+    </noscript>
+    <script type="module" src="/src/market/main.tsx"></script>
+  </body>
+</html>

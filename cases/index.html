@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de" data-theme="grau">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Kisten-Assistent – WarEra Launcher</title>
+    <meta name="description" content="Kisten-Assistent für WarEra: beobachtet live die roten und grünen Kisten, die du öffnest, rechnet Kosten, Erwartungswert, Schrott- und Verkaufswert und sagt, was du verschrotten und was du verkaufen solltest." />
+    <link rel="canonical" href="https://warera.de/cases/" />
+    <meta name="theme-color" content="#0b1020" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="WarEra Launcher" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:url" content="https://warera.de/cases/" />
+    <meta property="og:title" content="Kisten-Assistent – lohnt sich das Öffnen?" />
+    <meta property="og:description" content="Live-Auswertung deiner Kistenöffnungen: Kosten, Erwartungswert, Glück, Schrott oder Verkauf." />
+    <meta property="og:image" content="https://warera.de/og-image.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://api2.warera.io" crossorigin />
+    <script>
+      try {
+        var s = JSON.parse(localStorage.getItem('wl2:settings') || 'null');
+        if (s && s.theme) document.documentElement.dataset.theme = s.theme;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <p style="padding: 24px; font-family: sans-serif">Kisten-Assistent wird geladen …</p>
+    </div>
+    <noscript>
+      <p style="padding: 24px; font-family: sans-serif">Der Kisten-Assistent braucht JavaScript.</p>
+    </noscript>
+    <script type="module" src="/src/cases/main.tsx"></script>
+  </body>
+</html>

@@ -42,12 +42,16 @@ ${['', '?lang=de', '?lang=en', '?lang=sv']
   </url>`,
   )
   .join('\n')}
-  <url>
-    <loc>https://warera.de/battle/</loc>
+${['battle', 'cases', 'market']
+  .map(
+    (page) => `  <url>
+    <loc>https://warera.de/${page}/</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
-  </url>
+  </url>`,
+  )
+  .join('\n')}
 </urlset>
 `,
 );

@@ -75,6 +75,7 @@
           {
             "tabs": [
               "company-calc",
+              "case-assistant",
               "dismantle-calc"
             ]
           },
@@ -88,6 +89,7 @@
               },
               {
                 "tabs": [
+                  "market-check",
                   "national-companies"
                 ]
               }

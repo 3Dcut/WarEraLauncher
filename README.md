@@ -20,6 +20,8 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Kurzlinks fürs Radio**: [warera.de/r](https://warera.de/r) startet das Hauptradio, `/n` die Nachtwache, `/a` den Azura-Livestream.
   Sperrt der Browser den Ton bis zur ersten Nutzeraktion, erscheint ein großer Startknopf.
 - **Kisten-Battle** unter [warera.de/battle](https://warera.de/battle) (auch als Tool im Launcher), siehe unten.
+- **Kisten-Assistent** unter [warera.de/cases](https://warera.de/cases) und **Marktcheck** unter [warera.de/market](https://warera.de/market)
+  (beide auch als Tools im Launcher), siehe unten. Sie übernehmen den Spieler aus „Mein Charakter“.
 - **WarEra-API-Schlüssel** einmal in den Einstellungen hinterlegen; eigene Tools nutzen ihn, fremde nach Freigabe.
 - **Befehlspalette** mit <kbd>Strg</kbd>+<kbd>K</kbd>, Favoriten, zuletzt benutzte Tools, Tastenkürzel (<kbd>?</kbd> zeigt alle).
 - **Sprachen**: Deutsch, Englisch und Schwedisch, umschaltbar in den Einstellungen, in der Befehlspalette oder per Adresse
@@ -56,6 +58,9 @@ src/
   ui/                 Kopfleiste, Seitenleiste, Palette, Einstellungen, Mini-Player
   styles/             Tokens (OKLCH), Grundlagen, Oberfläche, Dockview-Theme, Widgets
   battle/             Kisten-Battle (eigene Seite unter /battle/)
+  assist/             Gemeinsames der Werkzeugseiten: API-Zugriffe, Spielerwahl, SVG-Grafiken, Stil
+  cases/              Kisten-Assistent (eigene Seite unter /cases/)
+  market/             Marktcheck (eigene Seite unter /market/)
 tests/                Vitest
 public/r, /n, /a      Kurzlinks fürs Radio (leiten auf ?radio=… weiter)
 scripts/              copy-static.mjs (Daten/Audio nach dist), check-tools.mjs (Erreichbarkeit/Einbettung)
@@ -90,13 +95,60 @@ FT3 und der Abfragetakt sind feste Regeln, keine Einstellungen.
 Code: `src/battle/` (Logik in `logic.ts` mit Tests in `tests/battle-logic.test.ts`, Ablauf in `engine.ts`, Oberfläche in
 `BattleApp.tsx`), Texte in `src/i18n/messages/battle.ts`, Einstieg `battle/index.html` als zweiter Vite-Einstieg.
 
+## Kisten-Assistent (`/cases`)
+
+Beobachtet live, welche roten (`case2`) und grünen (`case1`) Kisten der Spieler öffnet, und wertet die Sitzung aus. Der Spieler
+kommt aus „Mein Charakter“ im Launcher (`wl2:settings`), wer ihn hier wechselt, wechselt ihn dort mit. Gezählt wird ab jetzt,
+ab der letzten Stunde oder den letzten 24 Stunden; eine Sitzung übersteht Neuladen und lässt sich anhalten und fortsetzen.
+
+- **Kennzahlen**: Kisten, Kosten (Marktpreis beim Öffnen), Erwartung, Wert nach Empfehlung (darunter „alles Schrott“ und
+  „alles Verkauf“), Ergebnis und Glück. Dazu ein Verlauf mit Erwartung und üblichem Bereich (±1σ), Seltenheiten gegen
+  Erwartung mit Wahrscheinlichkeit, Durststrecken und ein Band mit einer Zelle je Ziehung.
+- **Verschrotten oder verkaufen**: Jedes Item wird wie im Kisten-Battle aus den letzten 100 Verkäufen desselben Codes
+  geschätzt. Auf die Verkaufsliste kommt es nur, wenn die Schätzung den Schrottwert um beide einstellbaren Margen übertrifft
+  (Prozent und fester Betrag, Standard 15 % und 1), weil Zerlegen weniger Arbeit macht; „ab …“ nennt den Preis, unter dem
+  Zerlegen besser ist. Zerlegungen (`dismantleItem`, gleiche Item-ID) und Verkäufe (`itemMarket`, gleicher Code, gleiche Werte,
+  `lastAcquisitionAt` zur Öffnung passend) werden erkannt und mit dem tatsächlichen Ergebnis gezählt.
+- **Markt jetzt**: Geld- und Briefkurs beider Kisten und des Schrotts, Erwartungswert je Kiste nach Empfehlung. „Kaufen lohnt“,
+  wenn der Erwartungswert über dem Brief liegt, „Lieber verkaufen“, wenn schon der Geldkurs mehr bringt. Schrott wird mit dem
+  Mittel der letzten sieben Tage verglichen (`itemTrading.getItemTrading`).
+- **Glück** wird in Schrott-Einheiten gemessen (unabhängig von Preisen) und mit simulierten Sitzungen gleicher Größe und
+  gleicher Mischung verglichen.
+
+Zahlen (Stand 2026-11-27):
+
+| | Gewöhnlich | Ungewöhnlich | Selten | Episch | Legendär | Mythisch | Quelle |
+|---|---|---|---|---|---|---|---|
+| Rot (`case2`) | – | 50 % | 32 % | 15 % | 2,5 % | 0,5 % | Artikel „Opening Cases: Is It Actually Worth It?“, 4.000 Öffnungen aus der API: 49,8 / 32,4 / 15,2 / 2,1 / 0,55 % |
+| Grün (`case1`) | 62 % | 30 % | 7,1 % | 0,85 % | 0,04 % | 0,01 % | [Artikel von Buffy_10](https://warera.io/en/articles/war-era-math-cases-to-scraps-is-it-actually-profitable-27ac2c), 4.000 Öffnungen: 61,6 / 29,7 / 7,8 / 0,8 / 0,1 / 0 % |
+| Schrott (voll) | 6 | 18 | 54 | 162 | 486 | 1.458 | 1.500 `dismantleItem`-Transaktionen; abgenutzt `⌊Basis · (1 + 2 · Zustand/Max) / 3⌋` |
+
+Je Seltenheit sind 30 % Waffen (`gameConfig.loot.weaponChancePercent`), der Rest verteilt sich gleich auf Helm, Brust, Hose,
+Stiefel und Handschuhe. Link-Parameter: `?demo=1` startet eine Demo mit diesen Quoten, `?lang=de|en|sv` wie im Launcher.
+Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Ablauf in `engine.ts`, Ableitungen in `stats.ts`.
+
+## Marktcheck (`/market`)
+
+Prüft die offenen Orders des Spielers auf Waren, Kisten und Schrott (`tradingOrder.getPublicOrdersByOwner`) gegen die Orderbücher
+(`tradingOrder.getTopOrdersPerItemCode`) und den Tagesumsatz der letzten sieben Tage. Je Order: bester fremder Preis und wie
+viele Orders davor stehen, Abstand zum 7-Tage-Mittel, Reichweite (Tage, bis Menge davor plus eigene Menge abverkauft wäre), Alter
+und bisherige Füllungen (Handel mit gleichem `offerCreatedAt`). Hinweise: zu teuer, verschenkt Geld, steht lange, überschwemmt,
+überboten, zu hoch geboten, jeweils mit Preisvorschlag.
+
+Mit API-Schlüssel kommen die eigenen Ausrüstungsverkäufe der letzten 14 Tage dazu: Verkaufsdauer (Angebot bis Verkauf),
+Preislage gegenüber dem Durchschnitt des Items beim Verkauf (ältere Transaktionen ohne `marketAvgPrice` gegen den aktuellen
+Durchschnitt), ein Streudiagramm Dauer gegen Preislage und eine Übersicht je Item. Offene Ausrüstungsangebote und das Inventar
+sperrt WarEra für API-Schlüssel (`itemOffer.getItemOffers`, `inventory.getInventory`: „API tokens cannot access this endpoint“);
+stattdessen schätzt „Preis prüfen“ ein Item mit beliebigen Werten aus den letzten 100 Verkäufen und ordnet einen eigenen Preis ein.
+Code: Logik in `src/market/logic.ts` (Tests in `tests/market-logic.test.ts`), Daten in `engine.ts`.
+
 ## WarEra-API-Schlüssel
 
 Der persönliche Schlüssel (im Spiel unter Profil → Einstellungen → API-Tokens) wird einmal in den Einstellungen des Launchers
 eingetragen und nur lokal gespeichert (`warera:apiKey`, absichtlich nicht unter `wl2:`, damit er beim Export der Einstellungen
 nicht in der Datei landet; „Alles zurücksetzen“ löscht ihn mit). Er wird geprüft und an Tools weitergegeben:
 
-- **Eigene Seiten unter warera.de** (Kisten-Battle) lesen ihn direkt. Fehlt er dort, erscheint ein Feld, das ihn ebenfalls
+- **Eigene Seiten unter warera.de** (Kisten-Battle, Kisten-Assistent, Marktcheck) lesen ihn direkt. Fehlt er dort, erscheint ein Feld, das ihn ebenfalls
   für den Launcher speichert.
 - **Eingebettete fremde Tools** fragen per `postMessage` an. Beim ersten Mal fragt der Launcher nach, ob diese Herkunft den
   Schlüssel bekommen darf; die Entscheidung lässt sich in den Einstellungen wieder vergessen.

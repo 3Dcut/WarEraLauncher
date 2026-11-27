@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-interface Call {
+export interface Call {
   path: string;
   input: unknown;
 }
@@ -24,7 +24,7 @@ interface Call {
 type BatchEntry<T> = { result?: { data?: T }; error?: { message?: string; data?: { httpStatus?: number } } };
 
 /** Führt mehrere Prozeduren in einer Anfrage aus; einzelne Fehler kommen als ApiError zurück. */
-async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Promise<(T | ApiError)[]> {
+export async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Promise<(T | ApiError)[]> {
   const paths = calls.map((c) => c.path).join(',');
   const input: Record<string, unknown> = {};
   calls.forEach((c, i) => (input[i] = c.input));
@@ -55,7 +55,7 @@ async function batch<T>(calls: Call[], key: string | null, timeoutMs = 8000): Pr
   );
 }
 
-function unwrap<T>(value: T | ApiError): T {
+export function unwrap<T>(value: T | ApiError): T {
   if (value instanceof ApiError) throw value;
   return value;
 }
