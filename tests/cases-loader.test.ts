@@ -193,6 +193,38 @@ describe('HistoryLoader: Zeitscheiben', () => {
     expect(olderLoaded).toBeLessThan(olderTotal * 0.8);
   });
 
+  it('liest jeden Strom ab seiner eigenen Grenze und schneidet Ergebnisse nicht an der ältesten Öffnung ab', async () => {
+    // Öffnungen der letzten 2 Tage, Zerlegungen und Verkäufe über 10 Tage
+    const data = {
+      openCase: history('openCase', 2000, 21, { spanMs: 2 * 86_400_000 }),
+      dismantleItem: history('dismantleItem', 6000, 22),
+      itemMarket: history('itemMarket', 600, 23),
+    };
+    const openFrom = T_NOW - 86_400_000; // Öffnungen nur des letzten Tages
+    const outcomesFrom = T_NOW - 5 * 86_400_000; // Ergebnisse der letzten fünf Tage
+    const loader = new HistoryLoader({
+      userId: ME,
+      since: null,
+      lower: { open: iso(openFrom), scrap: iso(outcomesFrom), sale: iso(outcomesFrom) },
+      floorOutcomes: false,
+      fetch: fakeApi(data).fetch,
+      startedAt: T_NOW,
+    });
+    expect(loader.progress()).toBe(0);
+    const { got } = await drain(loader);
+    const since = (list: Tx[], ms: number) => list.filter((t) => Date.parse(t.createdAt) >= ms);
+    expect(ids(got.open)).toEqual(ids(since(data.openCase, openFrom)));
+    // Ergebnisse bis zu ihrer Grenze, obwohl die älteste gelesene Öffnung viel jünger ist
+    expect(ids(got.scrap)).toEqual(ids(since(data.dismantleItem, outcomesFrom)));
+    expect(ids(got.sale)).toEqual(ids(since(data.itemMarket, outcomesFrom)));
+    expect(loader.progress()).toBe(1);
+  });
+
+  it('meldet ohne Grenze für einen Strom keinen Fortschritt', () => {
+    const loader = new HistoryLoader({ userId: ME, since: iso(T_NOW - 86_400_000), lower: { sale: null }, fetch: async () => [], startedAt: T_NOW });
+    expect(loader.progress()).toBeNull();
+  });
+
   it('kürzt bei der Obergrenze für Öffnungen und meldet es', async () => {
     const data = { openCase: history('openCase', 20_000, 10) };
     const loader = new HistoryLoader({ userId: ME, since: null, streams: ['open'], fetch: fakeApi(data).fetch, maxOpen: 3000, startedAt: T_NOW, planFrom: T_NOW - 11 * 86_400_000 });

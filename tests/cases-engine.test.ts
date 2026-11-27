@@ -19,6 +19,7 @@ const ME = 'u-test';
 const state = {
   txs: [] as FakeTx[],
   requests: 0,
+  items: 0,
   perRequest: [] as number[],
   failNext: 0,
   rejectForged: false,
@@ -80,6 +81,7 @@ function fakeFetch(url: string): Promise<{ status: number; json: () => Promise<u
     }
     const limit = Number(q.limit ?? 50);
     const items = list.slice(from, from + limit);
+    state.items += items.length;
     let nextCursor: string | null = null;
     if (from + limit < list.length && items.length) {
       nextCursor = encode(items[items.length - 1]);
@@ -179,6 +181,7 @@ beforeEach(() => {
   store.clear();
   state.txs = [];
   state.requests = 0;
+  state.items = 0;
   state.perRequest = [];
   state.failNext = 0;
   state.rejectForged = false;
@@ -439,4 +442,183 @@ describe('Engine: Live-Abfrage', () => {
     expect(engine.getStore().n).toBe(n + 3);
     engine.stopSession();
   }, 40_000);
+});
+
+/** Ein Ersatz für IndexedDB: hält den Zwischenstand im Speicher und zählt die Zugriffe. */
+function fakeBackend() {
+  const b = {
+    bytes: null as Uint8Array | null,
+    puts: 0,
+    gets: 0,
+    removes: 0,
+    async get() {
+      b.gets++;
+      return b.bytes;
+    },
+    async put(bytes: Uint8Array) {
+      b.puts++;
+      b.bytes = bytes;
+    },
+    async remove() {
+      b.removes++;
+      b.bytes = null;
+    },
+  };
+  return b;
+}
+
+/** Simuliert ein Neuladen der Seite: neues Modul mit leerem Speicher, Browserspeicher und Zwischenstand bleiben. */
+async function reload(backend: ReturnType<typeof fakeBackend> | null): Promise<void> {
+  engine.setSnapshotBackend(null);
+  engine.stopSession();
+  vi.resetModules();
+  engine = (await import('../src/cases/engine')) as Engine;
+  engine.setSnapshotBackend(backend);
+}
+
+describe('Engine: Zwischenspeicher', () => {
+  async function loadedAndSaved(n: number, backend: ReturnType<typeof fakeBackend>): Promise<string> {
+    state.txs = makeHistory(n);
+    engine.setSnapshotBackend(backend);
+    await engine.startSession({ userId: ME, name: 'Test', since: '24h', key: 'k' });
+    await until(loaded(n), 30_000);
+    await engine.saveSnapshot();
+    expect(backend.puts).toBe(1);
+    // die Sitzung war live, als die Seite geschlossen wurde
+    return JSON.stringify({ ...JSON.parse(store.get('wca:session')!), live: true });
+  }
+
+  it('legt den Stand verdichtet ab und stellt ihn nach dem Neuladen wieder her, ohne alles erneut zu lesen', async () => {
+    const n = 6000;
+    const be = fakeBackend();
+    const saved = await loadedAndSaved(n, be);
+    // zwei Byte je Kiste statt der 32 im Speicher; die Obergrenze hier ist großzügig
+    expect(be.bytes!.length).toBeLessThan(n * 6);
+    const before = kinds();
+    const itemsFull = state.items;
+    expect(itemsFull).toBeGreaterThan(n * 1.8);
+
+    await reload(be);
+    store.set('wca:session', saved);
+    state.requests = 0;
+    state.items = 0;
+    expect(engine.resumeSession('k')).toBe(true);
+    expect(engine.getStore().n).toBe(0);
+    // der Stand kommt zurück, noch bevor die Lücke gelesen ist
+    await until(() => engine.getStore().n > 0, 5000);
+    await until(loaded(n), 30_000);
+    expect(engine.getStore().n).toBe(n);
+    expect(kinds()).toEqual(before);
+    expect(engine.loading.value.phase).toBe('done');
+    // nur die Lücke wurde gelesen: ein Bruchteil der Einträge und der Anfragen
+    expect(state.items).toBeLessThan(n / 4);
+    expect(state.items).toBeLessThan(itemsFull / 8);
+    const st = engine.getStore();
+    for (let k = 1; k < st.published; k++) expect(st.at[st.order[k]]).toBeGreaterThanOrEqual(st.at[st.order[k - 1]]);
+    engine.stopSession();
+  }, 60_000);
+
+  it('holt nach dem Neuladen neue Öffnungen und Ergebnisse nach, ohne etwas zu doppeln', async () => {
+    const n = 4000;
+    const be = fakeBackend();
+    const saved = await loadedAndSaved(n, be);
+    const before = kinds();
+    // während die Seite zu war: drei neue Öffnungen, die Zerlegung einer offenen Ziehung (i=20) und der Verkauf einer anderen (i=40)
+    const open40 = state.txs.find((t) => t._id === hex(0x600000 - 40))!;
+    const later = Date.now() + 120_000;
+    state.txs = [
+      ...state.txs,
+      ...newerOpens(3),
+      { _id: hex(0x5fff00), transactionType: 'dismantleItem', itemCode: 'scraps', buyerId: ME, sellerId: ME, quantity: 18, createdAt: new Date(later).toISOString(), item: { _id: hex(0x700000 - 20), code: 'chest2' } },
+      { _id: hex(0x4fff00), transactionType: 'itemMarket', itemCode: 'chest2', buyerId: 'someone', sellerId: ME, money: 9.5, quantity: 1, createdAt: new Date(later + 1000).toISOString(), item: { ...(open40.item as object), _id: 'bought-40' } },
+    ];
+    await reload(be);
+    store.set('wca:session', saved);
+    expect(engine.resumeSession('k')).toBe(true);
+    await until(() => engine.loading.value.phase === 'done' && engine.getStore().published === n + 3, 30_000);
+    expect(engine.getStore().n).toBe(n + 3);
+    const after = kinds();
+    expect(after).toEqual({ scrapped: before.scrapped + 1, sold: before.sold + 1, open: before.open - 2 + 3 });
+    engine.stopSession();
+  }, 60_000);
+
+  it('liest ohne Zwischenstand, bei beschädigtem und bei fremdem Stand den Zeitraum frisch', async () => {
+    const n = 3000;
+    const be = fakeBackend();
+    const saved = await loadedAndSaved(n, be);
+    const good = be.bytes!;
+    const before = kinds();
+
+    for (const [label, bytes, session] of [
+      ['ohne', null, saved],
+      ['beschädigt', Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), saved],
+      ['abgeschnitten', good.subarray(0, Math.floor(good.length / 2)), saved],
+      ['fremde Sitzung', good, JSON.stringify({ ...JSON.parse(saved), startedAt: JSON.parse(saved).startedAt + 1 })],
+    ] as const) {
+      be.bytes = bytes;
+      const removes = be.removes;
+      await reload(be);
+      store.set('wca:session', session);
+      state.items = 0;
+      expect(engine.resumeSession('k'), label).toBe(true);
+      await until(loaded(n), 30_000);
+      expect(engine.getStore().n, label).toBe(n);
+      expect(kinds(), label).toEqual(before);
+      expect(state.items, label).toBeGreaterThan(n * 1.8);
+      // ein unbrauchbarer Stand wird verworfen
+      if (bytes) expect(be.removes, label).toBeGreaterThan(removes);
+    }
+    engine.stopSession();
+  }, 90_000);
+
+  it('legt nichts ab, solange der Zeitraum noch lädt', async () => {
+    const be = fakeBackend();
+    state.txs = makeHistory(8000);
+    engine.setSnapshotBackend(be);
+    await engine.startSession({ userId: ME, name: 'Test', since: '24h', key: 'k' });
+    expect(engine.loading.value.phase).toBe('loading');
+    await engine.saveSnapshot();
+    expect(be.puts).toBe(0);
+    await until(loaded(8000), 30_000);
+    await engine.saveSnapshot();
+    expect(be.puts).toBe(1);
+    engine.stopSession();
+  }, 60_000);
+
+  it('verwirft den Stand mit der Sitzung und ersetzt ihn bei einer neuen', async () => {
+    const be = fakeBackend();
+    await loadedAndSaved(450, be);
+    expect(be.bytes).not.toBeNull();
+    engine.clearSession();
+    expect(be.bytes).toBeNull();
+
+    await loadedAndSaved(450, fakeBackend()).catch(() => undefined);
+    const be2 = fakeBackend();
+    be2.bytes = Uint8Array.from([9, 9, 9]);
+    engine.setSnapshotBackend(be2);
+    await engine.startSession({ userId: ME, name: 'Test', since: '24h', key: 'k' });
+    expect(be2.removes).toBeGreaterThan(0);
+    expect(be2.bytes).toBeNull();
+    engine.stopSession();
+  }, 60_000);
+
+  it('zeigt ohne Schlüssel den letzten Stand, ohne etwas anzufragen', async () => {
+    const n = 2000;
+    const be = fakeBackend();
+    const saved = await loadedAndSaved(n, be);
+    const before = kinds();
+    await reload(be);
+    store.set('wca:session', saved);
+    state.items = 0;
+    expect(engine.resumeSession(null)).toBe(true);
+    await until(() => engine.getStore().n > 0, 5000);
+    expect(engine.getStore().n).toBeGreaterThan(n - 100);
+    expect(engine.getStore().n).toBeLessThanOrEqual(n);
+    expect(engine.session.value!.live).toBe(false);
+    expect(engine.loading.value.phase).toBe('done');
+    // keine Transaktionen angefragt (die Marktpreise kommen aus öffentlichen Quellen)
+    expect(state.items).toBe(0);
+    expect(kinds().scrapped).toBeGreaterThan(before.scrapped - 100);
+    engine.stopSession();
+  }, 60_000);
 });

@@ -62,7 +62,7 @@
 - [x] Eine Million Kisten: Spaltenspeicher (32 Byte je Ziehung), Zuordnung über Hash-Tabellen, Aggregation in einem Durchlauf, Verlauf in 1.200 Fächern mit Hülle und Zellband auf Canvas, alles ohne Ausdünnen. 958.542 echte Kisten von 3Dsus in 5,3 min geladen, 1,04 Millionen virtuelle in 5 min bei 350 MB im Renderer
 - [x] Zerlegung (eindeutige Item-ID) hat Vorrang vor einem Verkauf gleichwertiger Ziehungen, das Ergebnis hängt nicht von der Ankunftsreihenfolge ab
 - [ ] Zwei gebündelte Anfragen gleichzeitig: das Limit von 360 je Minute ist beim Nachladen nur zu rund 70 % ausgelastet, bei einer Million Kisten ließen sich so etwa anderthalb Minuten sparen
-- [ ] Nachgeladene Sitzungen in IndexedDB zwischenspeichern, damit ein Neuladen nicht alles neu holt
+- [x] Nachgeladene Sitzungen verdichtet in IndexedDB zwischenspeichern (2,5 MB für 958.542 echte Kisten), damit ein Neuladen nicht alles neu holt: Stand nach 0,8 s zurück, nur die Lücke wird nachgeladen
 - [ ] Schwedische Texte des Nachladens gegenlesen lassen
 - [ ] Info-Blasen (`InfoTip`) ragen auf dem Handy bis zu 24 px über den rechten Seitenrand und erzeugen waagerechtes Scrollen (schon vor dem Nachladen vorhanden)
 

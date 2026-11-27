@@ -70,6 +70,37 @@ export class Intake {
     this.bySale = new IdHash(1024, false, (slot) => store.kind[slot] === KIND_OPEN);
   }
 
+  /** Ruft `fn` für jede Ziehung ohne Ergebnis auf, mit Slot und den drei Wörtern ihrer Item-ID. */
+  forEachOpen(fn: (slot: number, a: number, b: number, c: number) => void): void {
+    const kind = this.store.kind;
+    this.byItem.forEach((a, b, c, slot) => {
+      if (kind[slot] === KIND_OPEN) fn(slot, a, b, c);
+    });
+  }
+
+  /** Ruft `fn` für jede schon verarbeitete Verkaufstransaktion auf (drei Wörter ihrer ID). */
+  forEachSeenSale(fn: (a: number, b: number, c: number) => void): void {
+    this.saleSeen.forEach((a, b, c) => fn(a, b, c));
+  }
+
+  /**
+   * Stellt die Tabellen nach dem Einlesen eines Zwischenspeichers her: offene Ziehungen mit Item-ID (`openIds` als Folge aus
+   * Slot und drei Wörtern) und die schon verarbeiteten Verkäufe (`seenSales`, je drei Wörter). Der Speicher enthält dann
+   * schon alle Ziehungen und ihre Ergebnisse.
+   */
+  restoreTables(openIds: Int32Array, seenSales: Int32Array): void {
+    const store = this.store;
+    for (let k = 0; k + 3 < openIds.length; k += 4) {
+      const slot = openIds[k];
+      if (slot < 0 || slot >= store.n || store.kind[slot] !== KIND_OPEN) continue;
+      this.byItem.insert(openIds[k + 1], openIds[k + 2], openIds[k + 3], slot);
+      const acq = store.acqOf(slot);
+      if (acq !== undefined) this.bySale.insert(store.combo[slot], acq | 0, Math.floor(acq / TWO32) | 0, slot);
+      this.open++;
+    }
+    for (let k = 0; k + 2 < seenSales.length; k += 3) this.saleSeen.insert(seenSales[k], seenSales[k + 1], seenSales[k + 2], 0);
+  }
+
   /** Ausstehende Ergebnisse, deren Ziehung noch fehlt (für Tests und Anzeige). */
   get pending(): { scraps: number; sales: number } {
     return { scraps: this.scrapPending.size, sales: this.salePending.size };

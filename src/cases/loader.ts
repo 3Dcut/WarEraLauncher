@@ -51,6 +51,16 @@ export interface LoaderOptions {
   userId: string;
   /** Untere Zeitgrenze (ISO); null: bis zum Anfang der Aufzeichnung. */
   since: string | null;
+  /**
+   * Eigene untere Grenze je Strom (ISO, null: bis zum Anfang); Ströme ohne Eintrag folgen `since`. So holt die Sitzung nach
+   * einer Wiederherstellung Öffnungen ab dem Stand des Zwischenspeichers nach und Ergebnisse ab dem letzten Abgleich.
+   */
+  lower?: Partial<Record<StreamKey, string | null>>;
+  /**
+   * Zerlegungen und Verkäufe an der ältesten gelesenen Öffnung abschneiden (Standard). Aus, wenn ältere Ziehungen schon im
+   * Speicher liegen und ihre Ergebnisse noch eintreffen können.
+   */
+  floorOutcomes?: boolean;
   /** Welche Ströme gelesen werden; Standard: alle drei. */
   streams?: StreamKey[];
   /** Obergrenze für angenommene Öffnungen; danach gilt der Verlauf als gekürzt. */
@@ -119,7 +129,8 @@ export class HistoryLoader {
   private readonly slices: Slice[] = [];
   private unconfirmed: Split[] = [];
   private readonly startedAt: number;
-  private readonly sinceMs: number | null;
+  /** Untere Grenze je Strom (ms), null: bis zum Anfang. */
+  private readonly lows: Record<StreamKey, number | null>;
   private nextId = 1;
   private rotate = 0;
   private callBudget: number;
@@ -131,8 +142,13 @@ export class HistoryLoader {
     const fresh = (k: StreamKey): StreamState => ({ enabled: on.has(k), done: !on.has(k), newest: null, oldest: null, count: 0 });
     this.state = { open: fresh('open'), scrap: fresh('scrap'), sale: fresh('sale') };
     this.startedAt = opts.startedAt ?? Date.now();
-    const since = opts.since === null ? NaN : Date.parse(opts.since);
-    this.sinceMs = Number.isFinite(since) ? since : null;
+    const parse = (iso: string | null | undefined): number | null => {
+      const ms = iso === null || iso === undefined ? NaN : Date.parse(iso);
+      return Number.isFinite(ms) ? ms : null;
+    };
+    const base = parse(opts.since);
+    const pick = (key: StreamKey): number | null => (opts.lower && key in opts.lower ? parse(opts.lower[key]) : base);
+    this.lows = { open: pick('open'), scrap: pick('scrap'), sale: pick('sale') };
     this.maxCalls = Math.max(1, opts.maxCalls ?? 24);
     this.callBudget = this.maxCalls;
     this.slicing = opts.slicing !== false;
@@ -141,7 +157,7 @@ export class HistoryLoader {
       this.slices.push({
         id: this.nextId++,
         stream: key,
-        lo: this.sinceMs ?? -Infinity,
+        lo: this.lows[key] ?? -Infinity,
         hi: Infinity,
         cursor: null,
         reached: this.startedAt,
@@ -281,6 +297,7 @@ export class HistoryLoader {
    * zu werden, was älter ist als die älteste Öffnung.
    */
   private applyFloor(): void {
+    if (this.opts.floorOutcomes === false) return;
     const open = this.state.open;
     if (!open.enabled || !open.done || !open.oldest) return;
     const floor = Date.parse(open.oldest);
@@ -387,7 +404,7 @@ export class HistoryLoader {
    */
   progress(): number | null {
     if (this.done) return 1;
-    if (this.sinceMs === null) return null;
+    if (STREAMS.some((k) => this.state[k].enabled && this.lows[k] === null)) return null;
     let least = 1;
     for (const key of STREAMS) {
       const st = this.state[key];

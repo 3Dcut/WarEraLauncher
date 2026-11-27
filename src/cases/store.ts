@@ -144,6 +144,11 @@ export class IdHash {
     this.size--;
   }
 
+  /** Ruft `fn` für jeden belegten Eintrag auf: Schlüssel, Wert und Bucket. */
+  forEach(fn: (a: number, b: number, c: number, value: number, bucket: number) => void): void {
+    for (let i = 0; i < this.cap; i++) if (this.state[i] === 1) fn(this.k0[i], this.k1[i], this.k2[i], this.val[i], i);
+  }
+
   /** Vergrößert die Tabelle und wirft Grabsteine hinaus. */
   private rehash(): void {
     const old = { cap: this.cap, k0: this.k0, k1: this.k1, k2: this.k2, state: this.state, val: this.val, amt: this.amt, day: this.day };
@@ -174,6 +179,21 @@ export class IdHash {
 export const MAX_STATS = 3;
 
 const pack = (x: number): number => (Number.isNaN(x) ? 0 : x + 1);
+
+/** Schlüssel einer Kombination als Zahl, wenn alle Werte ganze Zahlen unter 65535 sind; sonst null (dann gilt ein Text). */
+function plainKey(v: number[]): number | null {
+  const plain = v.every((x) => Number.isNaN(x) || (Number.isInteger(x) && x >= 0 && x < 65535));
+  return plain ? (pack(v[0]) * 65536 + pack(v[1])) * 65536 + pack(v[2]) : null;
+}
+
+/** Zustand eines Wörterbuchs für den Zwischenspeicher. */
+export interface DictState {
+  codes: string[];
+  stats: string[][];
+  comboCode: Uint16Array;
+  /** MAX_STATS Werte je Kombination (NaN: fehlt). */
+  comboVals: Float64Array;
+}
 
 /**
  * Wörterbuch der Itemcodes und der Kombinationen aus Code und Werten. Die Namen der Werte stehen je Code in der
@@ -216,9 +236,8 @@ export class ItemDict {
         if (typeof value === 'number' && Number.isFinite(value)) v[at] = value;
       }
     }
-    const plain = v.every((x) => Number.isNaN(x) || (Number.isInteger(x) && x >= 0 && x < 65535));
-    if (plain) {
-      const key = (pack(v[0]) * 65536 + pack(v[1])) * 65536 + pack(v[2]);
+    const key = plainKey(v);
+    if (key !== null) {
       let inner = this.comboMap.get(codeIdx);
       if (!inner) this.comboMap.set(codeIdx, (inner = new Map()));
       let id = inner.get(key);
@@ -244,6 +263,48 @@ export class ItemDict {
     this.comboCode[id] = codeIdx;
     for (let i = 0; i < MAX_STATS; i++) this.comboVals[id * MAX_STATS + i] = v[i];
     return id;
+  }
+
+  /** Der Zustand für den Zwischenspeicher (Kopien). */
+  exportState(): DictState {
+    return {
+      codes: [...this.codes],
+      stats: this.stats.map((names) => [...names]),
+      comboCode: this.comboCode.slice(0, this.comboCount),
+      comboVals: this.comboVals.slice(0, this.comboCount * MAX_STATS),
+    };
+  }
+
+  /** Stellt ein leeres Wörterbuch aus einem gespeicherten Zustand her; die Kombinationsnummern bleiben dieselben. */
+  importState(state: DictState): void {
+    if (this.codes.length || this.comboCount) throw new Error('Das Wörterbuch ist nicht leer');
+    const count = state.comboCode.length;
+    if (state.comboVals.length !== count * MAX_STATS || state.codes.length !== state.stats.length) throw new Error('Wörterbuch passt nicht zusammen');
+    state.codes.forEach((code, i) => {
+      this.codes.push(code);
+      this.stats.push([...state.stats[i]]);
+      this.codeIndex.set(code, i);
+    });
+    let cap = 512;
+    while (cap < count) cap *= 2;
+    this.comboCode = new Uint16Array(cap);
+    this.comboVals = new Float64Array(cap * MAX_STATS);
+    this.comboCode.set(state.comboCode);
+    this.comboVals.set(state.comboVals);
+    for (let id = 0; id < count; id++) {
+      const codeIdx = state.comboCode[id];
+      if (codeIdx >= state.codes.length) throw new Error('Wörterbuch verweist auf einen unbekannten Code');
+      const v = [state.comboVals[id * MAX_STATS], state.comboVals[id * MAX_STATS + 1], state.comboVals[id * MAX_STATS + 2]];
+      const key = plainKey(v);
+      if (key !== null) {
+        let inner = this.comboMap.get(codeIdx);
+        if (!inner) this.comboMap.set(codeIdx, (inner = new Map()));
+        inner.set(key, id);
+      } else {
+        this.comboOdd.set(`${codeIdx}|${v[0]}|${v[1]}|${v[2]}`, id);
+      }
+    }
+    this.comboCount = count;
   }
 
   /** Die Werte einer Kombination als Objekt (Name → Wert), wie sie die Schätzung braucht. */

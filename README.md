@@ -127,8 +127,8 @@ Neuladen und lässt sich anhalten und fortsetzen.
   Ankunftsreihenfolge und ohne quadratischen Aufwand. `aggregate.ts` rechnet Summen, Seltenheiten, Durststrecken, Verlauf und
   Zellband in einem Durchlauf über alle Ziehungen; nichts wird ausgedünnt. Der Verlauf fasst die Ziehungen in höchstens 1.200
   Fächer (Endwert, Erwartung, ±1σ-Bereich und als Hülle die Spanne zwischen niedrigstem und höchstem Stand im Fach), das
-  Zellband zeichnet auf einem Canvas. Der Browser speichert nur die Metadaten der Sitzung (rund 150 Byte); nach einem
-  Neuladen wird der Zeitraum frisch gelesen. Gemessen (Stand 2026-11-27):
+  Zellband zeichnet auf einem Canvas. Die Sitzung selbst (Spieler, Zeitraum, Start) steht mit rund 150 Byte in
+  `localStorage`, die Ziehungen legt der Zwischenspeicher ab (nächster Punkt). Gemessen (Stand 2026-11-27):
   - 3Dsus gegen die Live-API (Chromium): 24 Stunden mit 14.391 Kisten in 13 s und 52 Anfragen (vorher 45 s); 7 Tage mit
     152.607 Kisten in 62 s und 210 Anfragen (vorher 155.156 Kisten in 8,5 min und 1.896 Anfragen), längste Blockade des
     Hauptthreads 87 ms. Ab Beginn der Aufzeichnung (26.01.2026) kamen 958.542 Kisten in 5,3 min mit 1.060 Anfragen ohne eine
@@ -142,6 +142,22 @@ Neuladen und lässt sich anhalten und fortsetzen.
     Fernsteuerung belegte im Renderer-Prozess 350 MB (210 MB vor dem Laden, Spitze 476 MB beim Laden); in Node blieben nach
     dem Laden 64 MB Typed Arrays und 7 MB Heap. Die Aggregation über 1,04 Millionen Ziehungen dauert rund 60 ms, ein Wechsel
     des Kistenfilters bis zur neuen Anzeige 110 bis 255 ms.
+- **Neuladen ohne erneutes Laden**: Sobald alles geladen ist, und danach höchstens alle 30 s, beim Anhalten und beim Verlassen
+  der Seite, legt `snapshot.ts` den Spaltenspeicher verdichtet in IndexedDB ab. Die Spalten stehen in Zeitordnung als Abstände
+  und Varints, danach folgt deflate (`CompressionStream`); dazu kommen das Wörterbuch der Kombinationen, die Item-IDs der noch
+  offenen Ziehungen und die schon verarbeiteten Verkäufe. Eine Zusammenfassung zu Zählern je Tag und Kombination wäre kaum
+  kleiner, kostete aber die Reihenfolge, die Verlauf, Zellband und Durststrecken brauchen, und die Neubewertung offener
+  Ziehungen bei geänderten Marktpreisen; deshalb ist die Verdichtung verlustfrei. Nach einem Neuladen kommt der Stand sofort
+  zurück, und das Nachladen holt nur die Lücke: Öffnungen ab der neuesten abgelegten Millisekunde (sie bleibt beim Ablegen
+  draußen, damit nichts doppelt zählt) sowie Zerlegungen und Verkäufe ab dem letzten Abgleich (erneut gelesene Verkäufe zählen
+  nicht doppelt, weil die verarbeiteten mitgespeichert sind). Ein halb geladener Stand wird nicht abgelegt; fehlt der
+  Zwischenspeicher, ist er beschädigt oder gehört er zu einer anderen Sitzung, wird wie bisher geladen. Ohne API-Schlüssel zeigt
+  er wenigstens den letzten Stand. Gemessen (Stand 2026-11-27): 958.542 echte Kisten von 3Dsus brauchen 2,5 MB (2,7 Byte je
+  Kiste statt 32 im Speicher), 1,04 Millionen virtuelle rund 2,1 MB (2,0 bis 2,1 Byte). Packen dauert bei einer Million Ziehungen 0,15 s am
+  Stück (das Komprimieren läuft im Hintergrund), Einlesen 0,2 s. Im Browser stand der Stand nach dem Neuladen nach 0,8 s auf
+  dem Bildschirm (vorher 5 bis 7 Minuten Laden) und die Lücke war nach 1,6 s (live) bzw. 6,8 s (virtuell, mit dem dichten
+  Ende der 3Dsus-Daten) geschlossen; Zellband und Seltenheiten waren vor und nach dem Neuladen bildgleich, die Zahlen zu
+  Ergebnissen (zerlegt, verkauft) gleich.
 - **Verschrotten oder verkaufen**: Jedes Item wird wie im Kisten-Battle aus den letzten 100 Verkäufen desselben Codes
   geschätzt. Auf die Verkaufsliste kommt es nur, wenn die Schätzung den Schrottwert um beide einstellbaren Margen übertrifft
   (Prozent und fester Betrag, Standard 15 % und 1), weil Zerlegen weniger Arbeit macht; „ab …“ nennt den Preis, unter dem
@@ -179,7 +195,8 @@ Zahlen (Stand 2026-11-27):
 Je Seltenheit sind 30 % Waffen (`gameConfig.loot.weaponChancePercent`), der Rest verteilt sich gleich auf Helm, Brust, Hose,
 Stiefel und Handschuhe. Link-Parameter: `?demo=1` startet eine Demo mit diesen Quoten, `?lang=de|en|sv` wie im Launcher.
 Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Spaltenspeicher in `store.ts`, Zuordnung in
-`intake.ts`, Verlauf und Summen in `aggregate.ts`, Nachladen in `loader.ts`, Ablauf in `engine.ts` (Integrationstest gegen eine
+`intake.ts`, Verlauf und Summen in `aggregate.ts`, Zwischenspeicher in `snapshot.ts` und `snapshot-db.ts`, Nachladen in
+`loader.ts`, Ablauf in `engine.ts` (Integrationstest gegen eine
 Fake-API mit dem Cursorformat der echten in `tests/cases-engine.test.ts`), Ableitungen in `stats.ts`, Grafiken in
 `assist/charts.tsx`. Für Lasttests eignet sich ein Spieler mit sehr vielen Kisten, etwa 3Dsus (958.542 Kisten).
 

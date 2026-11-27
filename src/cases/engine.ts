@@ -3,8 +3,10 @@
 // (Empfehlungen, Summen, Glück) rechnet stats.ts.
 //
 // Die Ziehungen liegen in einem Spaltenspeicher (store.ts), nicht in der Sitzung: 32 Byte je Kiste statt über 580, damit eine
-// Million Kisten in rund 35 MB passt. Die Sitzung selbst besteht nur aus Metadaten und wird als solche gespeichert; nach einem
-// Neuladen liest das Nachladen den Zeitraum frisch, das geht dank paralleler Zeitscheiben (loader.ts) schnell genug.
+// Million Kisten in rund 35 MB passt. Die Sitzung selbst besteht nur aus Metadaten (localStorage). Die Ziehungen legt
+// snapshot.ts verdichtet in IndexedDB ab (rund 2 Byte je Kiste), sobald alles geladen ist und danach gedrosselt; nach einem
+// Neuladen kommt der Stand von dort zurück, und das Nachladen holt nur die Lücke. Fehlt der Zwischenspeicher oder passt er nicht
+// zur Sitzung, liest das Nachladen den Zeitraum frisch, was dank paralleler Zeitscheiben (loader.ts) schnell genug geht.
 //
 // Rückwirkende Zeiträume werden nicht abgewartet: Die Sitzung erscheint nach der ersten Seite, der Rest kommt im Hintergrund
 // dazu. Neue Ziehungen und Ergebnisse gehen gedrosselt in die Zeitordnung, damit die Oberfläche bei hunderttausenden Kisten
@@ -19,6 +21,8 @@ import { caseCodes, CASE_ODDS, codesOf, sinceFor, type CaseCode, type Since } fr
 import { HistoryLoader, type Pages } from './loader';
 import { Intake, type OpenTx } from './intake';
 import { PullStore } from './store';
+import { encodeSnapshot, decodeSnapshot } from './snapshot';
+import { indexedDbBackend, type SnapshotBackend } from './snapshot-db';
 import { t } from '../i18n';
 
 export type { Since } from './logic';
@@ -105,6 +109,113 @@ let needsPrice: number[] = [];
 let outcomeWatermark: string | null = null;
 let throttle = 0;
 
+// ------------------------------------------------------------------ Zwischenspeicher
+
+const SNAPSHOT_DELAY_MS = 30_000;
+let backendOverride: SnapshotBackend | null | undefined;
+let backendCache: SnapshotBackend | null = null;
+let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+let snapshotDue = 0;
+let snapshotDirty = false;
+let snapshotBusy = false;
+/** Der Zwischenstand stammt aus einem Laden, das die Obergrenze erreichte. */
+let truncatedBefore = false;
+
+/** Ersetzt den Speicher des Zwischenstands (für Tests); null schaltet ihn ab, undefined stellt den Browserspeicher wieder ein. */
+export function setSnapshotBackend(b: SnapshotBackend | null | undefined): void {
+  backendOverride = b;
+}
+
+function backend(): SnapshotBackend | null {
+  if (backendOverride !== undefined) return backendOverride;
+  return (backendCache ??= indexedDbBackend());
+}
+
+/** Plant das Ablegen frühestens in `delay` ms; ein schon geplanter früherer Zeitpunkt bleibt. */
+function planSnapshot(delay: number): void {
+  if (!backend()) return;
+  const due = Date.now() + delay;
+  if (snapshotTimer && snapshotDue <= due) return;
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotDue = due;
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+    void saveSnapshot();
+  }, delay);
+}
+
+function cancelSnapshot(): void {
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotTimer = null;
+  snapshotDirty = false;
+}
+
+/** Verwirft den abgelegten Stand (neue oder verworfene Sitzung). */
+function dropSnapshot(): void {
+  const be = backend();
+  if (be) void be.remove().catch(() => undefined);
+}
+
+/** Zeit (ms), vor der alle Zerlegungen und Verkäufe verarbeitet sind. */
+function watermarkMs(s: Session): number {
+  if (outcomeWatermark) return Date.parse(outcomeWatermark);
+  return s.since ? Date.parse(s.since) : s.startedAt - 60_000;
+}
+
+/**
+ * Legt den Stand der Sitzung verdichtet ab. Das geschieht nur bei vollständig geladenem Zeitraum (ein halber Stand ließe beim
+ * Wiederherstellen Lücken) und nur, wenn sich seit dem letzten Mal etwas geändert hat. Fehler bleiben ohne Folgen.
+ */
+export async function saveSnapshot(): Promise<void> {
+  const s = session.value;
+  const be = backend();
+  if (!s || s.demo || !be || snapshotBusy || !snapshotDirty) return;
+  if (loader && !loader.done) {
+    planSnapshot(SNAPSHOT_DELAY_MS);
+    return;
+  }
+  snapshotBusy = true;
+  const born = epoch;
+  try {
+    snapshotDirty = false;
+    const bytes = await encodeSnapshot(store, intake, {
+      userId: s.userId,
+      startedAt: s.startedAt,
+      since: s.since,
+      outcomesWatermark: watermarkMs(s),
+      truncated: truncatedBefore || !!loader?.truncated,
+    });
+    if (born !== epoch) return;
+    if (bytes) await be.put(bytes);
+  } catch {
+    snapshotDirty = true;
+  } finally {
+    snapshotBusy = false;
+  }
+}
+
+/** Liest den abgelegten Stand, wenn er zu dieser Sitzung gehört; sonst null (ein unbrauchbarer Stand wird verworfen). */
+async function restoreSnapshot(meta: Session): Promise<Awaited<ReturnType<typeof decodeSnapshot>> | null> {
+  const be = backend();
+  if (!be) return null;
+  let bytes: Uint8Array | null;
+  try {
+    bytes = await be.get();
+  } catch {
+    return null;
+  }
+  if (!bytes) return null;
+  try {
+    const snap = await decodeSnapshot(bytes);
+    const m = snap.meta;
+    if (m.userId === meta.userId && m.startedAt === meta.startedAt && m.since === meta.since) return snap;
+  } catch {
+    /* beschädigt oder aus einer anderen Fassung */
+  }
+  dropSnapshot();
+  return null;
+}
+
 /** Der Speicher der laufenden Sitzung (nach jedem Veröffentlichen gilt `storeVersion` als neu). */
 export const getStore = (): PullStore => store;
 
@@ -116,6 +227,8 @@ function resetRuntime(userId: string): void {
   loadGen++;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
+  cancelSnapshot();
+  truncatedBefore = false;
   store = new PullStore();
   intake = new Intake(store, userId);
   loader = null;
@@ -167,6 +280,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', () => {
     flush();
     persist(true);
+    void saveSnapshot();
+  });
+  // Beim Wechsel in den Hintergrund legt der Browser Seiten oft ohne weiteres Ereignis still: jetzt ablegen
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void saveSnapshot();
   });
 }
 
@@ -193,6 +311,8 @@ function flush(): void {
   store.publish();
   lastFlush = Date.now();
   storeVersion.value++;
+  snapshotDirty = true;
+  planSnapshot(SNAPSHOT_DELAY_MS);
 }
 
 // ------------------------------------------------------------------ Aufnahme
@@ -296,6 +416,8 @@ export async function startSession(opts: StartOptions): Promise<void> {
   }
   if (gen !== generation || mine !== epoch) return;
   loader = fresh;
+  // Eine neue Sitzung ersetzt den Zwischenstand der alten
+  dropSnapshot();
   session.value = { userId: opts.userId, name: opts.name, startedAt, since, range, seen, live: true, demo: !!opts.demo };
   for (const id of seen) headIds.add(id);
   status.value = { state: 'live', message: null, lastOkAt: Date.now() };
@@ -308,6 +430,7 @@ export async function startSession(opts: StartOptions): Promise<void> {
     flush();
     // Passt der ganze Zeitraum schon in die erste Anfrage (wenige oder gar keine Kisten), ist das Nachladen damit fertig
     publishLoad(fresh, fresh.done ? 'done' : 'loading');
+    if (fresh.done) planSnapshot(1500);
   } else {
     liveFloor = since;
   }
@@ -351,17 +474,59 @@ export function resumeSession(k: string | null): boolean {
     return true;
   }
   if (!k) {
+    // Ohne Schlüssel lässt sich nichts nachladen; der Zwischenspeicher zeigt wenigstens den letzten Stand
     if (meta.live) patch({ live: false });
+    void bootResumed(gen, meta, false);
     return true;
   }
-  // Der Zeitraum wird neu gelesen, die Live-Abfrage läuft nur, wenn die Sitzung live war
-  const startedAt = Date.now();
-  loader = makeLoader(meta.userId, lowerBound(meta), startedAt, null);
-  outcomeWatermark = new Date(startedAt - 60_000).toISOString();
   loading.value = { ...IDLE_LOAD, phase: 'loading' };
   if (meta.live) status.value = { state: 'live', message: null, lastOkAt: 0 };
-  startLoops(gen);
+  void bootResumed(gen, meta, true);
   return true;
+}
+
+/**
+ * Nach dem Neuladen: erst den Zwischenspeicher versuchen, dann Live-Abfrage und Nachladen starten. Gibt es ihn, kommt der Stand
+ * sofort zurück und das Nachladen holt nur die Lücke (Öffnungen ab dem Stand, Ergebnisse ab dem letzten Abgleich). Sonst wird
+ * der Zeitraum frisch gelesen. Die Live-Abfrage läuft nur, wenn die Sitzung live war.
+ */
+async function bootResumed(gen: number, meta: Session, canLoad: boolean): Promise<void> {
+  const born = epoch;
+  const snap = await restoreSnapshot(meta);
+  if (born !== epoch) return;
+  const startedAt = Date.now();
+  if (snap) {
+    const m = snap.meta;
+    store = snap.store;
+    intake = snap.intake;
+    truncatedBefore = m.truncated;
+    needsPrice = [];
+    outcomeWatermark = new Date(m.outcomesFrom).toISOString();
+    // Was vor `boundary` liegt, hat der Zwischenspeicher; die Live-Abfrage darf es nicht noch einmal aufnehmen
+    liveFloor = new Date(m.boundary).toISOString();
+    liveFloorInclusive = false;
+    if (canLoad) {
+      loader = new HistoryLoader({
+        userId: meta.userId,
+        since: meta.since,
+        lower: { open: new Date(m.boundary).toISOString(), scrap: outcomeWatermark, sale: outcomeWatermark },
+        floorOutcomes: false,
+        startedAt,
+        maxOpen: Math.max(1, LOAD_LIMIT - store.n),
+        fetch: (queries) => fetchTx(queries, key!),
+      });
+    }
+    flush();
+    snapshotDirty = false;
+    void ensureSales();
+    if (loader) publishLoad(loader);
+    else loading.value = { ...IDLE_LOAD, phase: 'done', fraction: 1, pulls: store.n, truncated: truncatedBefore, oldest: store.span() ? new Date(store.span()!.first).toISOString() : null };
+  } else if (canLoad) {
+    // Der Zeitraum wird neu gelesen
+    loader = makeLoader(meta.userId, lowerBound(meta), startedAt, null);
+    outcomeWatermark = new Date(startedAt - 60_000).toISOString();
+  }
+  if (canLoad && gen === generation) startLoops(gen);
 }
 
 /** Untergrenze für Abfragen dieser Sitzung; „alles“ hat keine, „jetzt“ ohne Vorlauf beginnt mit dem Start. */
@@ -377,6 +542,7 @@ export function stopSession(): void {
   patch({ live: false });
   persist(true);
   status.value = { ...status.value, state: 'idle' };
+  void saveSnapshot();
 }
 
 /** Setzt eine angehaltene Sitzung fort: Öffnungen dazwischen werden nachgeholt. */
@@ -394,6 +560,7 @@ export function continueSession(k: string | null): void {
 export function clearSession(): void {
   generation++;
   resetRuntime('');
+  dropSnapshot();
   session.value = null;
   persist(true);
   status.value = { state: 'idle', message: null, lastOkAt: 0 };
@@ -421,7 +588,10 @@ function startLoops(gen: number): void {
 // ------------------------------------------------------------------ Nachladen
 
 function publishLoad(l: HistoryLoader, phase: LoadState['phase'] = 'loading', message: string | null = null): void {
-  loading.value = { phase, fraction: l.progress(), oldest: l.oldestOpen, pulls: store.n, slices: l.active, truncated: l.truncated, message };
+  // Nach einer Wiederherstellung kennt der Loader nur die Lücke; der älteste Punkt steht im Speicher
+  const span = store.span();
+  const oldest = span ? new Date(span.first).toISOString() : l.oldestOpen;
+  loading.value = { phase, fraction: l.progress(), oldest, pulls: store.n, slices: l.active, truncated: l.truncated || truncatedBefore, message };
 }
 
 /** Beendet das Nachladen, behält aber alles bisher Geladene und die Live-Abfrage. */
@@ -466,7 +636,10 @@ async function backfillLoop(gen: number, gated: boolean): Promise<void> {
   }
   if (born !== epoch) return;
   flush();
-  if (l.done) publishLoad(l, 'done');
+  if (l.done) {
+    publishLoad(l, 'done');
+    planSnapshot(1500);
+  }
 }
 
 /** Eine Anfrage mit mehreren Scheiben; bei Fehlern mit wachsenden Pausen wiederholen. Der Loader behält dabei seinen Stand. */
