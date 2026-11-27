@@ -20,7 +20,7 @@ in frei anpassbaren Arbeitsbereichen. Läuft als statische Seite auf GitHub Page
 - **Kurzlinks fürs Radio**: [warera.de/r](https://warera.de/r) startet das Hauptradio, `/n` die Nachtwache, `/a` den Azura-Livestream.
   Sperrt der Browser den Ton bis zur ersten Nutzeraktion, erscheint ein großer Startknopf.
 - **Kisten-Battle** unter [warera.de/battle](https://warera.de/battle) (auch als Tool im Launcher), siehe unten.
-- **Kisten-Assistent** unter [warera.de/cases](https://warera.de/cases) und **Marktcheck** unter [warera.de/market](https://warera.de/market)
+- **Kisten-Assistent** unter [warera.de/case](https://warera.de/case) und **Marktcheck** unter [warera.de/items](https://warera.de/items)
   (beide auch als Tools im Launcher), siehe unten. Sie übernehmen den Spieler aus „Mein Charakter“.
 - **WarEra-API-Schlüssel** einmal in den Einstellungen hinterlegen; eigene Tools nutzen ihn, fremde nach Freigabe.
 - **Befehlspalette** mit <kbd>Strg</kbd>+<kbd>K</kbd>, Favoriten, zuletzt benutzte Tools, Tastenkürzel (<kbd>?</kbd> zeigt alle).
@@ -59,10 +59,11 @@ src/
   styles/             Tokens (OKLCH), Grundlagen, Oberfläche, Dockview-Theme, Widgets
   battle/             Kisten-Battle (eigene Seite unter /battle/)
   assist/             Gemeinsames der Werkzeugseiten: API-Zugriffe, Spielerwahl, SVG-Grafiken, Stil
-  cases/              Kisten-Assistent (eigene Seite unter /cases/)
-  market/             Marktcheck (eigene Seite unter /market/)
+  cases/              Kisten-Assistent (eigene Seite unter /case/, Einstieg case/index.html)
+  market/             Marktcheck (eigene Seite unter /items/, Einstieg items/index.html)
 tests/                Vitest
 public/r, /n, /a      Kurzlinks fürs Radio (leiten auf ?radio=… weiter)
+public/cases          leitet die alte Adresse der Case-EV-Seite auf /case/ um
 scripts/              copy-static.mjs (Daten/Audio nach dist), check-tools.mjs (Erreichbarkeit/Einbettung)
 ```
 
@@ -95,7 +96,7 @@ FT3 und der Abfragetakt sind feste Regeln, keine Einstellungen.
 Code: `src/battle/` (Logik in `logic.ts` mit Tests in `tests/battle-logic.test.ts`, Ablauf in `engine.ts`, Oberfläche in
 `BattleApp.tsx`), Texte in `src/i18n/messages/battle.ts`, Einstieg `battle/index.html` als zweiter Vite-Einstieg.
 
-## Kisten-Assistent (`/cases`)
+## Kisten-Assistent (`/case`)
 
 Beobachtet live, welche roten (`case2`) und grünen (`case1`) Kisten der Spieler öffnet, und wertet die Sitzung aus. Der Spieler
 kommt aus „Mein Charakter“ im Launcher (`wl2:settings`), wer ihn hier wechselt, wechselt ihn dort mit. Gezählt wird ab jetzt,
@@ -127,7 +128,7 @@ Je Seltenheit sind 30 % Waffen (`gameConfig.loot.weaponChancePercent`), der Rest
 Stiefel und Handschuhe. Link-Parameter: `?demo=1` startet eine Demo mit diesen Quoten, `?lang=de|en|sv` wie im Launcher.
 Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Ablauf in `engine.ts`, Ableitungen in `stats.ts`.
 
-## Marktcheck (`/market`)
+## Marktcheck (`/items`)
 
 Prüft die offenen Orders des Spielers auf Waren, Kisten und Schrott (`tradingOrder.getPublicOrdersByOwner`) gegen die Orderbücher
 (`tradingOrder.getTopOrdersPerItemCode`) und den Tagesumsatz der letzten sieben Tage. Je Order: bester fremder Preis und wie

@@ -42,7 +42,7 @@ ${['', '?lang=de', '?lang=en', '?lang=sv']
   </url>`,
   )
   .join('\n')}
-${['battle', 'cases', 'market']
+${['battle', 'case', 'items']
   .map(
     (page) => `  <url>
     <loc>https://warera.de/${page}/</loc>

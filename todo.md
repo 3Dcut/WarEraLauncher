@@ -44,10 +44,10 @@
 - [x] Kisten-Battle auf Deutsch, Englisch und Schwedisch (Wörterbuch src/i18n/messages/battle.ts; Schwedisch gegenlesen lassen)
 
 ## v2.4 – Kisten-Assistent und Marktcheck
-- [x] Kisten-Assistent unter /cases: Live-Tracking roter und grüner Kisten des aktiven Spielers, Kosten, Erwartung, Schrott- und Verkaufswert, Glück, Verlauf, Seltenheiten, Durststrecken
+- [x] Kisten-Assistent unter /case: Live-Tracking roter und grüner Kisten des aktiven Spielers, Kosten, Erwartung, Schrott- und Verkaufswert, Glück, Verlauf, Seltenheiten, Durststrecken
 - [x] Empfehlung verschrotten oder verkaufen mit Marge in Prozent und absolut; Zerlegungen und Verkäufe werden erkannt
 - [x] Kisten- und Schrottmarkt: Geld/Brief, Erwartungswert je Kiste, Kauf- bzw. Verkaufsempfehlung, Schrott gegen 7-Tage-Mittel
-- [x] Marktcheck unter /market: offene Orders gegen Orderbuch, Umsatz und Füllungen; Ausrüstungsverkäufe nach Dauer und Preislage; Preis-Check
+- [x] Marktcheck unter /items: offene Orders gegen Orderbuch, Umsatz und Füllungen; Ausrüstungsverkäufe nach Dauer und Preislage; Preis-Check
 - [ ] Offene Ausrüstungsangebote anzeigen, sobald WarEra itemOffer.getItemOffers für API-Schlüssel freigibt
 - [ ] Marktsteuern berücksichtigen, falls sie sich aus den Transaktionen ablesen lassen
 - [ ] Schwedische Texte gegenlesen lassen (Kisten-Assistent, Marktcheck)

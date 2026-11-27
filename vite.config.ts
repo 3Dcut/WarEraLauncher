@@ -52,12 +52,12 @@ export default defineConfig({
   build: {
     target: 'es2022',
     rollupOptions: {
-      // Weitere Einstiege: Kisten-Battle (/battle/), Kisten-Assistent (/cases/) und Marktcheck (/market/) als eigene Seiten
+      // Weitere Einstiege: Kisten-Battle (/battle/), Kisten-Assistent (/case/) und Marktcheck (/items/) als eigene Seiten
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         battle: resolve(import.meta.dirname, 'battle/index.html'),
-        cases: resolve(import.meta.dirname, 'cases/index.html'),
-        market: resolve(import.meta.dirname, 'market/index.html'),
+        case: resolve(import.meta.dirname, 'case/index.html'),
+        items: resolve(import.meta.dirname, 'items/index.html'),
       },
     },
     sourcemap: true,
