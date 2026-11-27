@@ -1,20 +1,24 @@
-// Ablauf des Kisten-Assistenten: Sitzung starten (Stand merken oder rückwirkend laden), Öffnungen
-// des Spielers laufend abfragen, Zerlegungen und Verkäufe den Ziehungen zuordnen, Kisten-, Schrott-
-// und Itemmärkte beobachten. Alles Abgeleitete (Empfehlungen, Summen, Glück) rechnet stats.ts.
+// Ablauf des Kisten-Assistenten: Sitzung starten (Stand merken oder rückwirkend laden), Öffnungen des Spielers laufend
+// abfragen, Zerlegungen und Verkäufe den Ziehungen zuordnen, Kisten-, Schrott- und Itemmärkte beobachten. Alles Abgeleitete
+// (Empfehlungen, Summen, Glück) rechnet stats.ts.
 //
-// Rückwirkende Zeiträume werden nicht abgewartet: Die Sitzung erscheint nach der ersten Seite, der Rest
-// kommt im Hintergrund (loader.ts) Seite für Seite von neu nach alt dazu. Neue Ziehungen und Ergebnisse
-// sammeln sich in einem Puffer und gehen gedrosselt in die Sitzung, damit die Oberfläche bei zehntausenden
-// Kisten nicht bei jeder Seite neu rechnet.
+// Die Ziehungen liegen in einem Spaltenspeicher (store.ts), nicht in der Sitzung: 32 Byte je Kiste statt über 580, damit eine
+// Million Kisten in rund 35 MB passt. Die Sitzung selbst besteht nur aus Metadaten und wird als solche gespeichert; nach einem
+// Neuladen liest das Nachladen den Zeitraum frisch, das geht dank paralleler Zeitscheiben (loader.ts) schnell genug.
+//
+// Rückwirkende Zeiträume werden nicht abgewartet: Die Sitzung erscheint nach der ersten Seite, der Rest kommt im Hintergrund
+// dazu. Neue Ziehungen und Ergebnisse gehen gedrosselt in die Zeitordnung, damit die Oberfläche bei hunderttausenden Kisten
+// nicht bei jeder Seite neu rechnet.
 
 import { signal, batch as batchSignals } from '@preact/signals';
-import { ApiError, fetchTx, fetchTxUntil, fetchBooks, fetchHistory, fetchPrices, type Book, type TradingDay } from '../assist/api';
+import { ApiError, fetchTx, fetchTxUntil, fetchBooks, fetchHistory, fetchPrices, fetchAccountStart, type Book, type TradingDay } from '../assist/api';
 import { RateBudget } from '../assist/limiter';
 import { fetchSales, fetchAverages, loadItemConfig, rarityOf, statRangesOf } from '../battle/api';
-import { RARITIES, type Rarity, type RawTransaction, type Sale } from '../battle/logic';
-import { byTime, caseCodes, CASE_ODDS, codesOf, mergeSorted, sinceFor, toPull, type CaseCode, type Outcome, type Pull, type Since } from './logic';
+import { RARITIES, type Rarity, type Sale } from '../battle/logic';
+import { caseCodes, CASE_ODDS, codesOf, sinceFor, type CaseCode, type Since } from './logic';
 import { HistoryLoader, type Pages } from './loader';
-import { OutcomeMatcher, type Found } from './outcomes';
+import { Intake, type OpenTx } from './intake';
+import { PullStore } from './store';
 import { t } from '../i18n';
 
 export type { Since } from './logic';
@@ -27,17 +31,10 @@ export interface Session {
   since: string | null;
   /** Zeitraum, mit dem die Sitzung gestartet wurde (für die Anzeige). */
   range?: Since;
-  /** Öffnungen, die beim Start schon da waren. */
+  /** Öffnungen, die beim Start schon da waren (nur bei „jetzt“). */
   seen: string[];
-  pulls: Pull[];
-  outcomes: Record<string, Outcome>;
   live: boolean;
   demo: boolean;
-  /**
-   * Nur in der gespeicherten Fassung: Ziehungen fehlen oder sind unvollständig (zu viele für den Browserspeicher,
-   * oder das Nachladen war noch nicht fertig). Beim Fortsetzen wird der Zeitraum neu geladen.
-   */
-  partial?: boolean;
 }
 
 export interface Market {
@@ -53,22 +50,22 @@ export interface LoadState {
   phase: 'idle' | 'loading' | 'stopped' | 'done' | 'error';
   /** Anteil des Zeitraums (0 bis 1); null ohne Untergrenze. */
   fraction: number | null;
-  /** Älteste bisher gelesene Öffnung (ISO). */
+  /** Älteste bisher gelesene Öffnung (ISO); mit parallelen Zeitscheiben der älteste Punkt irgendeiner Scheibe. */
   oldest: string | null;
   /** Bisher gefundene Kisten (rot und grün). */
   pulls: number;
-  /** Die Obergrenze für Öffnungen wurde erreicht, Älteres fehlt. */
+  /** Zeitscheiben, die gerade parallel gelesen werden. */
+  slices: number;
+  /** Die Obergrenze für Öffnungen wurde erreicht, Älteres fehlt teilweise. */
   truncated: boolean;
   message: string | null;
 }
 
 const SESSION_KEY = 'wca:session';
-/** Größere Sitzungen passen nicht in den Browserspeicher (etwa fünf MB); sie werden beim Fortsetzen neu geladen. */
-const PERSIST_MAX_PULLS = 3000;
-/** Obergrenze gelesener Öffnungen je Sitzung (Speicher des Browsers). */
-export const LOAD_LIMIT = 250_000;
+/** Obergrenze gelesener Öffnungen je Sitzung: rund 70 MB Speicher bei zwei Millionen. */
+export const LOAD_LIMIT = 2_000_000;
 
-const IDLE_LOAD: LoadState = { phase: 'idle', fraction: null, oldest: null, pulls: 0, truncated: false, message: null };
+const IDLE_LOAD: LoadState = { phase: 'idle', fraction: null, oldest: null, pulls: 0, slices: 0, truncated: false, message: null };
 
 export const session = signal<Session | null>(null);
 export const loading = signal<LoadState>(IDLE_LOAD);
@@ -83,6 +80,8 @@ export const status = signal<{ state: 'idle' | 'arming' | 'live' | 'stale' | 'th
   lastOkAt: 0,
 });
 export const keyRejected = signal(false);
+/** Zählt bei jedem Veröffentlichen hoch (und bei jeder neuen Sitzung); wer den Speicher liest, hängt sich daran. */
+export const storeVersion = signal(0);
 
 /** Zählt bei jedem Anhalten, Fortsetzen und Neustart hoch; laufende Schleifen merken daran, dass sie enden sollen. */
 let generation = 0;
@@ -92,48 +91,49 @@ let epoch = 0;
 let loadGen = 0;
 let key: string | null = null;
 
+let store = new PullStore();
+let intake = new Intake(store, '');
 let loader: HistoryLoader | null = null;
-let matcher = new OutcomeMatcher('');
-/** IDs aller Öffnungen, die die Sitzung kennt (Ziehungen und Nicht-Kisten). */
-let knownIds = new Set<string>();
-/** Itemcodes der bisherigen Ziehungen (für die Verkaufsabfragen). */
-let codeSet = new Set<string>();
-let pullCount = 0;
+/** Öffnungen, die beim Start schon da waren (nur bei „jetzt“), und die von der Live-Abfrage aufgenommenen. */
+let headIds = new Set<string>();
+let recent = new Set<string>();
+/** Grenze der Live-Abfrage (ISO): was nicht neuer ist, gehört dem Nachladen oder war schon da. */
+let liveFloor: string | null = null;
+let liveFloorInclusive = false;
+/** Live erkannte Ziehungen ohne Kistenpreis (der Markt war noch nicht geladen). */
+let needsPrice: number[] = [];
 let outcomeWatermark: string | null = null;
 let throttle = 0;
 
+/** Der Speicher der laufenden Sitzung (nach jedem Veröffentlichen gilt `storeVersion` als neu). */
+export const getStore = (): PullStore => store;
+
 /** Höchstens 360 Anfragen je Minute für das Nachladen; der Rest des Limits von 500 bleibt für Live-Abfrage und Märkte. */
 const budget = new RateBudget(360);
-
-interface Buffer {
-  pulls: Pull[];
-  outcomes: Record<string, Outcome>;
-  outcomeCount: number;
-  seen: string[];
-}
-const emptyBuffer = (): Buffer => ({ pulls: [], outcomes: {}, outcomeCount: 0, seen: [] });
-let buffer = emptyBuffer();
 
 function resetRuntime(userId: string): void {
   epoch++;
   loadGen++;
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
-  matcher = new OutcomeMatcher(userId);
-  knownIds = new Set();
-  codeSet = new Set();
-  buffer = emptyBuffer();
+  store = new PullStore();
+  intake = new Intake(store, userId);
   loader = null;
-  pullCount = 0;
+  headIds = new Set();
+  recent = new Set();
+  liveFloor = null;
+  liveFloorInclusive = false;
+  needsPrice = [];
   outcomeWatermark = null;
   loading.value = IDLE_LOAD;
+  storeVersion.value++;
 }
 
 // ------------------------------------------------------------------ Speichern
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Schreibt die Sitzung in den Browserspeicher; gedrosselt, weil bei großen Sitzungen jedes Schreiben spürbar kostet. */
+/** Schreibt die Sitzung (nur Metadaten) in den Browserspeicher. */
 function persist(now = false): void {
   if (now) {
     if (persistTimer) clearTimeout(persistTimer);
@@ -143,25 +143,15 @@ function persist(now = false): void {
     persistTimer = setTimeout(() => {
       persistTimer = null;
       writeSession();
-    }, 1000);
+    }, 500);
   }
 }
 
 function writeSession(): void {
   try {
     const s = session.value;
-    if (!s) {
-      localStorage.removeItem(SESSION_KEY);
-      return;
-    }
-    const unfinished = !!loader && !loader.done && !s.demo;
-    const stored: Session =
-      s.pulls.length > PERSIST_MAX_PULLS
-        ? { ...s, pulls: [], outcomes: {}, seen: [], partial: true }
-        : unfinished
-          ? { ...s, partial: true }
-          : { ...s, partial: undefined };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(stored));
+    if (!s) localStorage.removeItem(SESSION_KEY);
+    else localStorage.setItem(SESSION_KEY, JSON.stringify({ ...s, v: 2 }));
   } catch {
     /* Speicher voll oder gesperrt */
   }
@@ -180,91 +170,53 @@ if (typeof window !== 'undefined') {
   });
 }
 
-// ------------------------------------------------------------------ Puffer
+// ------------------------------------------------------------------ Veröffentlichen
 
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let lastFlush = 0;
 
 /** Pausen zwischen zwei Veröffentlichungen: je größer die Sitzung, desto seltener rechnet die Oberfläche neu. */
 function flushGap(n: number): number {
-  return n > 20_000 ? 900 : n > 3_000 ? 450 : 120;
+  return n > 500_000 ? 2500 : n > 100_000 ? 1500 : n > 20_000 ? 900 : n > 3_000 ? 450 : 120;
 }
 
 function scheduleFlush(): void {
   if (flushTimer) return;
-  const wait = Math.max(0, lastFlush + flushGap(session.value?.pulls.length ?? 0) - Date.now());
+  const wait = Math.max(0, lastFlush + flushGap(store.n) - Date.now());
   flushTimer = setTimeout(flush, wait);
 }
 
-/** Übernimmt alles Gepufferte in die Sitzung. */
+/** Nimmt alles seit dem letzten Mal in die Zeitordnung auf und meldet der Oberfläche eine neue Version. */
 function flush(): void {
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
-  const s = session.value;
-  const b = buffer;
-  if (!s || (!b.pulls.length && !b.outcomeCount && !b.seen.length)) return;
-  buffer = emptyBuffer();
+  store.publish();
   lastFlush = Date.now();
-  // Die Ergebnisse werden in das vorhandene Objekt geschrieben statt kopiert: bei 100.000 Einträgen kostete das Kopieren
-  // bei jeder Veröffentlichung gut 40 ms. Die Sitzung bekommt trotzdem ein neues Objekt, daran erkennt die Oberfläche die Änderung.
-  if (b.outcomeCount) Object.assign(s.outcomes, b.outcomes);
-  batchSignals(() => {
-    session.value = {
-      ...s,
-      pulls: b.pulls.length ? mergeSorted(s.pulls, b.pulls.sort(byTime), byTime) : s.pulls,
-      seen: b.seen.length ? [...s.seen, ...b.seen] : s.seen,
-    };
-  });
-  persist();
+  storeVersion.value++;
 }
 
-function collect(found: Found): void {
-  for (const id in found) {
-    buffer.outcomes[id] = found[id];
-    buffer.outcomeCount++;
-  }
-}
+// ------------------------------------------------------------------ Aufnahme
 
-function markSeen(ids: string[]): void {
-  for (const id of ids) {
-    if (knownIds.has(id)) continue;
-    knownIds.add(id);
-    buffer.seen.push(id);
-  }
-  if (buffer.seen.length) scheduleFlush();
-}
-
-/** Nimmt neue Ziehungen auf (gleiche ID zählt nur einmal) und ordnet vorhandene Ergebnisse zu. */
-function addPulls(fresh: Pull[]): void {
-  if (!session.value || !fresh.length) return;
-  const add: Pull[] = [];
-  for (const p of fresh) {
-    if (knownIds.has(p.id)) continue;
-    knownIds.add(p.id);
-    codeSet.add(p.itemCode);
-    add.push(p);
-  }
-  if (!add.length) return;
-  pullCount += add.length;
-  for (const p of add) buffer.pulls.push(p);
-  collect(matcher.addPulls(add));
-  scheduleFlush();
-  void ensureSales();
-}
-
-/** Seiten aus dem Nachladen in die Sitzung übernehmen. Nachgeladene Ziehungen tragen keinen Kistenpreis (siehe Pull.cost). */
+/** Seiten aus dem Nachladen in den Speicher übernehmen. Nachgeladene Ziehungen tragen keinen Kistenpreis (siehe PullStore.cost). */
 function ingest(pages: Pages): void {
-  const s = session.value;
-  if (!s) return;
-  const fresh: Pull[] = [];
-  for (const tx of pages.open) {
-    const p = toPull(tx, s.userId, rarityOf);
-    if (p) fresh.push({ ...p, cost: null });
-  }
-  addPulls(fresh);
-  collect(matcher.addScraps(pages.scrap));
-  collect(matcher.addSales(pages.sale));
+  for (const tx of pages.open) intake.addOpen(tx, NaN);
+  intake.addScraps(pages.scrap);
+  intake.addSales(pages.sale);
+  void ensureSales();
   scheduleFlush();
+}
+
+/**
+ * Legt fest, ab wann die Live-Abfrage etwas als neu ansieht: Alles, was nicht jünger ist als die neueste bisher gelesene
+ * Öffnung, gehört dem Nachladen. Das schützt vor Doppelten, auch wenn die Live-Abfrage erst nach dem ersten Lesen oder nach
+ * einer Pause (Neuladen, Fortsetzen) anläuft.
+ */
+function armLive(): void {
+  const newest = loader?.state.open.newest ?? null;
+  if (newest) {
+    liveFloor = newest;
+    liveFloorInclusive = true;
+  }
 }
 
 // ------------------------------------------------------------------ Fehler
@@ -294,13 +246,14 @@ export interface StartOptions {
   demo?: boolean;
 }
 
-function makeLoader(userId: string, since: string | null, startedAt: number): HistoryLoader {
+function makeLoader(userId: string, since: string | null, startedAt: number, planFrom: number | null): HistoryLoader {
   return new HistoryLoader({
     userId,
     since,
     startedAt,
+    planFrom,
     maxOpen: LOAD_LIMIT,
-    fetch: (queries) => fetchTx<RawTransaction>(queries, key!),
+    fetch: (queries) => fetchTx(queries, key!),
   });
 }
 
@@ -320,15 +273,17 @@ export async function startSession(opts: StartOptions): Promise<void> {
   if (!opts.demo) {
     try {
       if (range === 'now') {
-        const [page] = await fetchTx<RawTransaction>([{ userId: opts.userId, types: ['openCase'], limit: 25 }], opts.key!);
+        const [page] = await fetchTx<OpenTx>([{ userId: opts.userId, types: ['openCase'], limit: 25 }], opts.key!);
         const sorted = [...page.items].filter((tx) => tx.createdAt).sort((a, b) => (a.createdAt! < b.createdAt! ? -1 : 1));
         since = sorted.length ? sorted[sorted.length - 1].createdAt! : null;
         seen = sorted.map((tx) => tx._id!).filter(Boolean);
       } else {
         since = sinceFor(range, startedAt, opts.date);
         if (range === 'date' && since === null) throw new ApiError('date', -1);
+        // Bei „alles“ gibt der Anfang der Aufzeichnung die Untergrenze für die Planung paralleler Zeitscheiben
+        const planFrom = since === null ? await fetchAccountStart(opts.userId, opts.key) : null;
         // Die erste Seite kommt sofort, damit die Sitzung nicht leer erscheint; der Rest läuft im Hintergrund
-        fresh = makeLoader(opts.userId, since, startedAt);
+        fresh = makeLoader(opts.userId, since, startedAt, planFrom);
         first = await fresh.step();
       }
     } catch (err) {
@@ -341,15 +296,20 @@ export async function startSession(opts: StartOptions): Promise<void> {
   }
   if (gen !== generation || mine !== epoch) return;
   loader = fresh;
-  session.value = { userId: opts.userId, name: opts.name, startedAt, since, range, seen, pulls: [], outcomes: {}, live: true, demo: !!opts.demo };
-  for (const id of seen) knownIds.add(id);
+  session.value = { userId: opts.userId, name: opts.name, startedAt, since, range, seen, live: true, demo: !!opts.demo };
+  for (const id of seen) headIds.add(id);
   status.value = { state: 'live', message: null, lastOkAt: Date.now() };
   if (first && fresh) {
     // Das Nachladen deckt alles bis zum Start ab; danach schauen nur noch die Ergebnisabfragen nach
     outcomeWatermark = new Date(startedAt - 60_000).toISOString();
+    liveFloor = since;
     ingest(first);
+    armLive();
     flush();
-    publishLoad(fresh);
+    // Passt der ganze Zeitraum schon in die erste Anfrage (wenige oder gar keine Kisten), ist das Nachladen damit fertig
+    publishLoad(fresh, fresh.done ? 'done' : 'loading');
+  } else {
+    liveFloor = since;
   }
   persist(true);
   void ensureSales();
@@ -357,43 +317,50 @@ export async function startSession(opts: StartOptions): Promise<void> {
   else startLoops(gen);
 }
 
-/** Setzt eine gespeicherte Sitzung nach dem Neuladen fort. */
+/** Setzt eine gespeicherte Sitzung nach dem Neuladen fort; die Ziehungen werden dabei frisch gelesen. */
 export function resumeSession(k: string | null): boolean {
-  let stored: Session | null = null;
+  let stored: (Session & { v?: number }) | null = null;
   try {
     stored = JSON.parse(localStorage.getItem(SESSION_KEY) ?? 'null');
   } catch {
     stored = null;
   }
-  if (!stored?.userId || !Array.isArray(stored.pulls)) return false;
+  if (!stored?.userId || typeof stored.startedAt !== 'number') return false;
   key = k;
   const gen = ++generation;
   resetRuntime(stored.userId);
-  const pulls = stored.pulls;
-  const outcomes = stored.outcomes ?? {};
-  session.value = { ...stored, outcomes, partial: undefined };
-  for (const id of stored.seen ?? []) knownIds.add(id);
-  for (const p of pulls) {
-    knownIds.add(p.id);
-    codeSet.add(p.itemCode);
-  }
-  pullCount = pulls.length;
-  matcher.addPulls(pulls, outcomes);
-  if (stored.partial && !stored.demo) {
-    // Es fehlt etwas: den Zeitraum neu laden, bereits Gespeichertes zählt dabei nicht doppelt
-    const startedAt = Date.now();
-    loader = makeLoader(stored.userId, lowerBound(stored), startedAt);
-    outcomeWatermark = new Date(startedAt - 60_000).toISOString();
-    loading.value = { ...IDLE_LOAD, phase: 'loading', pulls: pullCount };
-  }
+  const meta: Session = {
+    userId: stored.userId,
+    name: stored.name ?? '',
+    startedAt: stored.startedAt,
+    since: stored.since ?? null,
+    range: stored.range,
+    seen: Array.isArray(stored.seen) ? stored.seen : [],
+    live: !!stored.live,
+    demo: !!stored.demo,
+  };
+  session.value = meta;
+  for (const id of meta.seen) headIds.add(id);
+  liveFloor = meta.since;
   void ensureSales();
-  if (stored.live && (stored.demo || k)) {
-    status.value = { state: 'live', message: null, lastOkAt: 0 };
-    if (stored.demo) void demoLoop(gen);
-    else startLoops(gen);
-  } else if (stored.live) {
-    patch({ live: false });
+  if (meta.demo) {
+    if (meta.live) {
+      status.value = { state: 'live', message: null, lastOkAt: 0 };
+      void demoLoop(gen);
+    }
+    return true;
   }
+  if (!k) {
+    if (meta.live) patch({ live: false });
+    return true;
+  }
+  // Der Zeitraum wird neu gelesen, die Live-Abfrage läuft nur, wenn die Sitzung live war
+  const startedAt = Date.now();
+  loader = makeLoader(meta.userId, lowerBound(meta), startedAt, null);
+  outcomeWatermark = new Date(startedAt - 60_000).toISOString();
+  loading.value = { ...IDLE_LOAD, phase: 'loading' };
+  if (meta.live) status.value = { state: 'live', message: null, lastOkAt: 0 };
+  startLoops(gen);
   return true;
 }
 
@@ -432,15 +399,20 @@ export function clearSession(): void {
   status.value = { state: 'idle', message: null, lastOkAt: 0 };
 }
 
-/** Startet Live-Abfrage und Ergebnisabfrage; ein noch unfertiges Nachladen läuft daneben. */
+/**
+ * Startet Live-Abfrage und Ergebnisabfrage; ein noch unfertiges Nachladen läuft daneben. Ist die Sitzung angehalten, läuft nur
+ * das Nachladen (nach einem Neuladen sind ja die Ziehungen weg).
+ */
 function startLoops(gen: number): void {
   const l = loader;
+  const live = !!session.value?.live;
   const pending = !!l && !l.done;
   // Wurde noch keine Seite gelesen (nach dem Neuladen), kommt die Live-Abfrage erst danach: sonst blättert sie
   // durch die ganze Vergangenheit, die das Nachladen ohnehin gleich holt
   const gated = pending && l!.requests === 0;
-  if (pending) void backfillLoop(gen, gated);
-  if (!gated) {
+  if (pending) void backfillLoop(gen, gated && live);
+  if (live && !gated) {
+    armLive();
     void pollLoop(gen);
     void outcomeLoop(gen);
   }
@@ -449,7 +421,7 @@ function startLoops(gen: number): void {
 // ------------------------------------------------------------------ Nachladen
 
 function publishLoad(l: HistoryLoader, phase: LoadState['phase'] = 'loading', message: string | null = null): void {
-  loading.value = { phase, fraction: l.progress(), oldest: l.oldestOpen, pulls: pullCount, truncated: l.truncated, message };
+  loading.value = { phase, fraction: l.progress(), oldest: l.oldestOpen, pulls: store.n, slices: l.active, truncated: l.truncated, message };
 }
 
 /** Beendet das Nachladen, behält aber alles bisher Geladene und die Live-Abfrage. */
@@ -484,6 +456,7 @@ async function backfillLoop(gen: number, gated: boolean): Promise<void> {
     if (first) {
       first = false;
       if (alive()) {
+        armLive();
         void pollLoop(gen);
         void outcomeLoop(gen);
       }
@@ -493,13 +466,10 @@ async function backfillLoop(gen: number, gated: boolean): Promise<void> {
   }
   if (born !== epoch) return;
   flush();
-  if (l.done) {
-    publishLoad(l, 'done');
-    persist();
-  }
+  if (l.done) publishLoad(l, 'done');
 }
 
-/** Eine Seite holen; bei Fehlern mit wachsenden Pausen wiederholen. Der Loader behält dabei seinen Stand. */
+/** Eine Anfrage mit mehreren Scheiben; bei Fehlern mit wachsenden Pausen wiederholen. Der Loader behält dabei seinen Stand. */
 async function stepWithRetry(l: HistoryLoader, alive: () => boolean): Promise<Pages | null> {
   for (let attempt = 0; ; attempt++) {
     if (!alive()) return null;
@@ -539,29 +509,48 @@ async function pollLoop(gen: number): Promise<void> {
   }
 }
 
+/** Erkennt, was die Live-Abfrage schon kennt oder nicht mehr anfassen darf. */
+function isOld(tx: OpenTx): boolean {
+  if (!tx._id || !tx.createdAt) return true;
+  if (headIds.has(tx._id) || recent.has(tx._id)) return true;
+  if (liveFloor === null) return false;
+  return liveFloorInclusive ? tx.createdAt <= liveFloor : tx.createdAt < liveFloor;
+}
+
 async function pollOnce(gen: number): Promise<void> {
   const s = session.value;
   if (!s || !key) return;
   try {
-    const [page] = await fetchTx<RawTransaction>([{ userId: s.userId, types: ['openCase'], limit: 25 }], key);
+    const [page] = await fetchTx<OpenTx>([{ userId: s.userId, types: ['openCase'], limit: 25 }], key);
     if (gen !== generation) return;
-    const isOld = (tx: RawTransaction) => !tx._id || knownIds.has(tx._id) || (!!s.since && !!tx.createdAt && tx.createdAt < s.since);
     let items = page.items.filter((tx) => !isOld(tx));
     // Ganze Seite neu (etwa "Alle öffnen"): weiter zurückblättern, bis Bekanntes auftaucht
     if (items.length === page.items.length && page.nextCursor && items.length) {
-      const more = await fetchTxUntil<RawTransaction>({ userId: s.userId, types: ['openCase'], limit: 100, cursor: page.nextCursor }, key, isOld, 60);
+      const more = await fetchTxUntil<OpenTx>({ userId: s.userId, types: ['openCase'], limit: 100, cursor: page.nextCursor }, key, isOld, 60);
       if (gen !== generation) return;
       items = [...items, ...more.items];
     }
-    const cost = (c: CaseCode) => market.value.prices[c] ?? null;
-    const fresh = items
-      .map((tx) => toPull(tx, s.userId, rarityOf))
-      .filter((p): p is Omit<Pull, 'cost'> => !!p)
-      .map((p) => ({ ...p, cost: cost(p.caseCode) }));
-    // Andere Kisten (Holzkiste, Werkzeugkasten) nur als gesehen merken
-    const taken = new Set(fresh.map((p) => p.id));
-    markSeen(items.filter((tx) => tx._id && !taken.has(tx._id)).map((tx) => tx._id!));
-    addPulls(fresh);
+    let added = 0;
+    for (const tx of items) {
+      const slot = intake.addOpen(tx, priceOf(tx.itemCode));
+      // Andere Kisten (Holzkiste, Werkzeugkasten) nur als gesehen merken
+      if (tx._id) recent.add(tx._id);
+      if (slot >= 0) {
+        added++;
+        if (Number.isNaN(store.cost[slot])) needsPrice.push(slot);
+      }
+    }
+    if (recent.size > 100_000) {
+      let drop = 50_000;
+      for (const id of recent) {
+        if (drop-- <= 0) break;
+        recent.delete(id);
+      }
+    }
+    if (added) {
+      void ensureSales();
+      scheduleFlush();
+    }
     throttle = Math.max(0, throttle - 1);
     status.value = { state: 'live', message: null, lastOkAt: Date.now() };
   } catch (err) {
@@ -578,6 +567,11 @@ async function pollOnce(gen: number): Promise<void> {
   }
 }
 
+/** Marktpreis einer Kiste von jetzt, NaN solange die Preise nicht geladen sind. */
+function priceOf(code: string | undefined): number {
+  return (code && market.value.prices[code]) || NaN;
+}
+
 // ------------------------------------------------------------------ Zerlegt oder verkauft?
 
 const OUTCOME_MS = 12_000;
@@ -588,22 +582,22 @@ async function outcomeLoop(gen: number): Promise<void> {
   while (gen === generation) {
     const s = session.value;
     // Ohne offene Ziehung gibt es nichts zuzuordnen
-    if (s && key && matcher.open > 0) await outcomeSweep(gen, outcomeWatermark ?? lowerBound(s));
+    if (s && key && intake.open > 0) await outcomeSweep(gen, outcomeWatermark ?? lowerBound(s));
     await sleep(OUTCOME_MS * 2 ** throttle);
   }
 }
 
-/** Einmal abfragen, etwa nach dem Neuladen einer beendeten Sitzung; liest Zerlegungen und Verkäufe ab Sitzungsbeginn neu. */
+/** Einmal nachsehen, etwa in einer angehaltenen Sitzung: liest Zerlegungen und Verkäufe seit dem letzten Stand. */
 export async function refreshOutcomes(): Promise<void> {
   const s = session.value;
   if (!key || !s) return;
-  await outcomeSweep(generation, lowerBound(s));
+  await outcomeSweep(generation, outcomeWatermark ?? lowerBound(s));
 }
 
 /**
- * Liest Zerlegungen und Verkäufe von neu bis zur Grenze `floor` und ordnet sie zu. Meist ist das eine einzige Anfrage,
- * weil die Grenze nur wenige Minuten zurückliegt; nach langer Pause oder bei „Neu abgleichen“ sind es entsprechend mehr.
- * Verkäufe können Tage nach der Öffnung eintreffen, deshalb bleiben offene Ziehungen dauerhaft im Blick.
+ * Liest Zerlegungen und Verkäufe von neu bis zur Grenze `floor` und ordnet sie zu. Meist ist das eine einzige Anfrage, weil die
+ * Grenze nur wenige Minuten zurückliegt; nach langer Pause sind es entsprechend mehr. Verkäufe können Tage nach der Öffnung
+ * eintreffen, deshalb bleiben offene Ziehungen dauerhaft im Blick.
  */
 async function outcomeSweep(gen: number, floor: string | null): Promise<void> {
   const s = session.value;
@@ -615,14 +609,14 @@ async function outcomeSweep(gen: number, floor: string | null): Promise<void> {
       userId: s.userId,
       since: floor,
       streams: ['scrap', 'sale'],
-      fetch: (queries) => fetchTx<RawTransaction>(queries, key!),
+      fetch: (queries) => fetchTx(queries, key!),
     });
     while (!sweeper.done && gen === generation) {
       await budget.take();
       const pages = await sweeper.step();
       if (born !== epoch) return;
-      collect(matcher.addScraps(pages.scrap));
-      collect(matcher.addSales(pages.sale));
+      intake.addScraps(pages.scrap);
+      intake.addSales(pages.sale);
       scheduleFlush();
     }
     if (sweeper.done && born === epoch && sweeper.newestOutcome) {
@@ -650,7 +644,7 @@ export async function ensureSales(): Promise<void> {
   if (salesBusy) return;
   salesBusy = true;
   try {
-    const wanted = [...new Set([...caseCodes('case2'), ...caseCodes('case1'), ...codeSet])];
+    const wanted = [...new Set([...caseCodes('case2'), ...caseCodes('case1'), ...store.dict.codes])];
     const now = Date.now();
     if (!key) {
       const stale = wanted.filter((c) => now - (avgAt.get(c) ?? 0) > SALES_TTL && !sales.value[c]);
@@ -711,12 +705,18 @@ export function watchMarket(): void {
       batchSignals(() => {
         market.value = { prices, books, history, at: prices === m.prices ? m.at : now };
       });
-      // Kistenpreis für Ziehungen nachtragen, die live ohne Preis erkannt wurden. Nachgeladene ältere Ziehungen
-      // behalten null: sie werden mit dem Tagesmittel ihres Tages bewertet, nicht mit dem Preis von jetzt.
-      const s = session.value;
-      const recent = Date.now() - 15 * 60_000;
-      const needsPrice = (p: Pull) => p.cost === null && Date.parse(p.at) > recent;
-      if (s && s.pulls.some(needsPrice)) patch({ pulls: s.pulls.map((p) => (needsPrice(p) ? { ...p, cost: prices[p.caseCode] ?? null } : p)) });
+      // Kistenpreis für Ziehungen nachtragen, die live ohne Preis erkannt wurden. Nachgeladene ältere Ziehungen behalten NaN:
+      // sie werden mit dem Tagesmittel ihres Tages bewertet, nicht mit dem Preis von jetzt.
+      if (needsPrice.length) {
+        const rest: number[] = [];
+        for (const slot of needsPrice) {
+          const price = prices[store.kase[slot] === 1 ? 'case2' : 'case1'];
+          if (price) store.cost[slot] = price;
+          else rest.push(slot);
+        }
+        needsPrice = rest;
+        scheduleFlush();
+      }
     } catch {
       /* nächster Versuch beim nächsten Takt */
     }
@@ -742,7 +742,7 @@ async function demoLoop(gen: number): Promise<void> {
     const s = session.value;
     if (!s) return;
     const burst = Math.random() < 0.15 ? 10 + Math.floor(Math.random() * 30) : 1;
-    const fresh: Pull[] = [];
+    let added = 0;
     for (let i = 0; i < burst; i++) {
       const caseCode: CaseCode = Math.random() < 0.6 ? 'case2' : 'case1';
       let roll = Math.random();
@@ -763,18 +763,22 @@ async function demoLoop(gen: number): Promise<void> {
       const ranges = statRangesOf(code) ?? {};
       const skills = Object.fromEntries(Object.entries(ranges).map(([k, [lo, hi]]) => [k, Math.round(lo + Math.random() * (hi - lo))]));
       const id = `demo${Date.now().toString(16)}${(seq++).toString(16).padStart(5, '0')}`;
-      fresh.push({
-        id,
-        itemId: id,
-        at: new Date(Date.now() + i).toISOString(),
-        caseCode,
-        itemCode: code,
-        rarity,
-        skills,
-        cost: market.value.prices[caseCode] ?? null,
-      });
+      const at = new Date(Date.now() + i).toISOString();
+      const tx: OpenTx = {
+        _id: id,
+        transactionType: 'openCase',
+        itemCode: caseCode,
+        buyerId: s.userId,
+        sellerId: s.userId,
+        createdAt: at,
+        item: { _id: `${id}i`, code, skills, lastAcquisitionAt: at },
+      };
+      if (intake.addOpen(tx, priceOf(caseCode)) >= 0) added++;
     }
-    addPulls(fresh);
+    if (added) {
+      void ensureSales();
+      scheduleFlush();
+    }
     status.value = { state: 'live', message: null, lastOkAt: Date.now() };
     await sleep(500 + Math.random() * 900);
   }

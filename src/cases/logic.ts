@@ -9,7 +9,7 @@
 // - Schrott beim Zerlegen: aus 1.500 dismantleItem-Transaktionen abgelesen, 6 · 3^Stufe bei vollem Zustand,
 //   abgenutzte Stücke linear bis auf ein Drittel (abgerundet).
 
-import { RARITIES, rarityRank, type Rarity, type RawTransaction, type Sale, type StatRanges, estimateValue } from '../battle/logic';
+import { RARITIES, rarityRank, type Rarity, type Sale, type StatRanges, estimateValue } from '../battle/logic';
 
 export type CaseCode = 'case1' | 'case2';
 export const CASE_CODES: CaseCode[] = ['case2', 'case1'];
@@ -70,73 +70,20 @@ export function expectedScrap(caseCode: CaseCode): number {
 
 // ------------------------------------------------------------------ Ziehungen
 
+/**
+ * Eine Ziehung als Objekt, so wie die Oberfläche sie für Listen und Hinweise braucht. Im Speicher (store.ts) liegen
+ * Ziehungen als Spalten; dieses Objekt entsteht nur für die wenigen Zeilen, die gerade zu sehen sind.
+ */
 export interface Pull {
-  /** Transaktions-ID der Öffnung. */
+  /** Nummer der Ziehung im Speicher. */
   id: string;
-  /** ID des gezogenen Items (bleibt beim Zerlegen gleich, beim Verkauf bekommt der Käufer eine neue). */
-  itemId: string;
   at: string;
-  /**
-   * Zeitpunkt, an dem der Spieler das Item bekam (lastAcquisitionAt, Millisekunden seit 1970). Ein Verkauf trägt
-   * ihn unverändert und lässt sich damit genau der Ziehung zuordnen. Fehlt bei alten gespeicherten Sitzungen.
-   */
-  acq?: number;
   caseCode: CaseCode;
   itemCode: string;
   rarity: Rarity | null;
   skills: Record<string, number>;
-  /**
-   * Marktpreis der Kiste, als die Öffnung live erkannt wurde. Nachgeladene Ziehungen tragen null und werden
-   * mit dem Tagesmittel ihres Tages bewertet (siehe priceOn).
-   */
+  /** Kistenpreis, wie er für diese Ziehung gilt, null ohne Preis. */
   cost: number | null;
-}
-
-export function toPull(
-  tx: RawTransaction & { item?: (RawTransaction['item'] & { _id?: string; createdAt?: string; lastAcquisitionAt?: string }) | null },
-  userId: string,
-  rarityOf: (code: string) => Rarity | null,
-): Omit<Pull, 'cost'> | null {
-  if (!tx?._id || tx.transactionType !== 'openCase' || !tx.createdAt) return null;
-  if (tx.buyerId !== userId && tx.sellerId !== userId) return null;
-  if (!isCaseCode(tx.itemCode)) return null;
-  const item = tx.item;
-  if (!item?.code) return null;
-  const acq = Date.parse(item.lastAcquisitionAt ?? '');
-  return {
-    id: tx._id,
-    itemId: item._id ?? tx._id,
-    at: tx.createdAt,
-    ...(Number.isFinite(acq) ? { acq } : {}),
-    caseCode: tx.itemCode,
-    itemCode: item.code,
-    rarity: rarityOf(item.code),
-    skills: item.skills ?? {},
-  };
-}
-
-export function byTime<T extends { at: string; id: string }>(a: T, b: T): number {
-  return a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-}
-
-/**
- * Führt zwei nach `cmp` sortierte Listen zu einer zusammen, ohne die große Liste neu zu sortieren. Beim Nachladen
- * liegen die neuen Ziehungen fast immer ganz vor oder ganz hinter den vorhandenen; dann genügt das Aneinanderhängen.
- * Gleiche Elemente behalten die Reihenfolge `a` vor `b`.
- */
-export function mergeSorted<T>(a: readonly T[], b: readonly T[], cmp: (x: T, y: T) => number): T[] {
-  if (!b.length) return a.slice();
-  if (!a.length) return b.slice();
-  if (cmp(a[a.length - 1], b[0]) <= 0) return [...a, ...b];
-  if (cmp(b[b.length - 1], a[0]) < 0) return [...b, ...a];
-  const out: T[] = new Array(a.length + b.length);
-  let i = 0;
-  let j = 0;
-  let k = 0;
-  while (i < a.length && j < b.length) out[k++] = cmp(a[i], b[j]) <= 0 ? a[i++] : b[j++];
-  while (i < a.length) out[k++] = a[i++];
-  while (j < b.length) out[k++] = b[j++];
-  return out;
 }
 
 // ------------------------------------------------------------------ Zeiträume
@@ -180,30 +127,14 @@ export function dayStart(text: string | null | undefined): number | null {
 
 // ------------------------------------------------------------------ Was später mit dem Item geschah
 
+/** Was aus einer Ziehung wurde: zerlegt (Schrott) oder verkauft (Erlös). Die Zuordnung steht in intake.ts. */
 export interface Outcome {
   kind: 'scrapped' | 'sold';
+  /** Zeitpunkt (Tag genau). */
   at: string;
   /** Erhaltener Schrott bzw. Verkaufserlös. */
   amount: number;
 }
-
-export interface DismantleTx {
-  _id?: string;
-  transactionType?: string;
-  createdAt?: string;
-  quantity?: number;
-  buyerId?: string;
-  item?: { _id?: string; code?: string } | null;
-}
-
-export interface MarketTx extends RawTransaction {
-  offerCreatedAt?: string;
-  item?: (RawTransaction['item'] & { _id?: string; lastAcquisitionAt?: string; createdAt?: string }) | null;
-}
-
-// Die Zuordnung steht in outcomes.ts (OutcomeMatcher, auch für Ströme in beliebiger Reihenfolge);
-// matchOutcomes ordnet eine fertige Menge auf einen Schlag zu.
-export { matchOutcomes, OutcomeMatcher, itemSignature } from './outcomes';
 
 // ------------------------------------------------------------------ Empfehlung
 
@@ -473,18 +404,28 @@ export interface RarityStat {
   chance: number;
 }
 
-export function rarityStats(pulls: { caseCode: CaseCode; rarity: Rarity | null }[]): RarityStat[] {
-  const counts: Record<CaseCode, number> = { case1: 0, case2: 0 };
-  for (const p of pulls) counts[p.caseCode]++;
-  const n = pulls.length;
-  return RARITIES.map((rarity) => {
-    const count = pulls.filter((p) => p.rarity === rarity).length;
+/** Seltenheiten gegen die Erwartung, aus Zählwerten statt aus einer Liste: so genügt ein Durchlauf, auch bei Millionen Kisten. */
+export function rarityStatsFromCounts(counts: Record<CaseCode, number>, byRarity: readonly number[]): RarityStat[] {
+  const n = counts.case1 + counts.case2;
+  return RARITIES.map((rarity, r) => {
+    const count = byRarity[r] ?? 0;
     const expected = CASE_CODES.reduce((s, c) => s + counts[c] * CASE_ODDS[c][rarity], 0);
     // gemischte Sitzungen: mittlere Chance als Näherung
     const p = n ? expected / n : 0;
     const chance = count >= expected ? binomialTail(n, count, p, 'atLeast') : binomialTail(n, count, p, 'atMost');
     return { rarity, count, expected, chance };
   }).filter((s) => s.expected > 0 || s.count > 0);
+}
+
+export function rarityStats(pulls: { caseCode: CaseCode; rarity: Rarity | null }[]): RarityStat[] {
+  const counts: Record<CaseCode, number> = { case1: 0, case2: 0 };
+  const byRarity = [0, 0, 0, 0, 0, 0];
+  for (const p of pulls) {
+    counts[p.caseCode]++;
+    const r = rarityRank(p.rarity);
+    if (r >= 0) byRarity[r]++;
+  }
+  return rarityStatsFromCounts(counts, byRarity);
 }
 
 /** Ziehungen seit dem letzten Item ab dieser Seltenheit (null: noch keins in der Sitzung). */

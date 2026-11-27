@@ -58,9 +58,13 @@
 - [x] Zerlegungen und Verkäufe über den ganzen Zeitraum den Ziehungen zuordnen, in beliebiger Ankunftsreihenfolge (Item-ID, bei Verkäufen Code, Werte und `lastAcquisitionAt`); an 3Dsus geprüft: 40.812 von 40.836 Zerlegungen und 587 von 590 Verkäufen von Items aus dem Fenster passten
 - [x] Kosten zum Tagesmittel des Öffnungstags, Schrott zum Tagespreis der Zerlegung (die rote Kiste stieg in 30 Tagen um etwa 20 %)
 - [x] Für zehntausende Kisten: Zeilen-Cache, ausgedünnter Verlauf, begrenztes Zellband und Verkaufsliste, Glück per Normalnäherung mit Schiefekorrektur, Speicherung ohne Ziehungen bei großen Sitzungen
-- [ ] Nachladen beschleunigen: mehrere Zeitscheiben parallel lesen. Der Cursor der API ist ein Schlüssel aus Zeit und ID (`v2.` + Base64 von `[{"t":"date",…},{"t":"str",…}]`), ein selbst gebauter Cursor ließe sich für Scheiben nutzen, ist aber undokumentiert und bräuchte einen Rückfall
+- [x] Nachladen beschleunigen: mehrere Zeitscheiben parallel lesen, mit selbst gebauten Cursorn (Zeit, `000…`) und bis zu 24 Aufrufen je Anfrage; fällt auf sequentielles Lesen zurück, wenn der Server die Cursor ablehnt. 7 Tage bei 3Dsus: 62 s statt 8,5 min
+- [x] Eine Million Kisten: Spaltenspeicher (32 Byte je Ziehung), Zuordnung über Hash-Tabellen, Aggregation in einem Durchlauf, Verlauf in 1.200 Fächern mit Hülle und Zellband auf Canvas, alles ohne Ausdünnen. 958.542 echte Kisten von 3Dsus in 5,3 min geladen, 1,04 Millionen virtuelle in 5 min bei 350 MB im Renderer
+- [x] Zerlegung (eindeutige Item-ID) hat Vorrang vor einem Verkauf gleichwertiger Ziehungen, das Ergebnis hängt nicht von der Ankunftsreihenfolge ab
+- [ ] Zwei gebündelte Anfragen gleichzeitig: das Limit von 360 je Minute ist beim Nachladen nur zu rund 70 % ausgelastet, bei einer Million Kisten ließen sich so etwa anderthalb Minuten sparen
 - [ ] Nachgeladene Sitzungen in IndexedDB zwischenspeichern, damit ein Neuladen nicht alles neu holt
 - [ ] Schwedische Texte des Nachladens gegenlesen lassen
+- [ ] Info-Blasen (`InfoTip`) ragen auf dem Handy bis zu 24 px über den rechten Seitenrand und erzeugen waagerechtes Scrollen (schon vor dem Nachladen vorhanden)
 
 ## Ideen für später
 - [ ] Kisten-Battle mit Cardera verbinden: Gems setzen und auf den Sieger wetten (Ereignisse und Schlüsselweitergabe sind vorbereitet)

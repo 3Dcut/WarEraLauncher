@@ -1,10 +1,9 @@
-// Kleine SVG-Grafiken ohne Bibliothek: Verlauf mit Erwartungsband, Balken mit Erwartungsstrich,
-// Band aus Zellen (eine je Ziehung) und Streudiagramm. Jede Grafik hat eine Hover-/Fokus-Anzeige;
-// Texte stehen in Textfarben, nur die Marken tragen Farbe.
+// Kleine Grafiken ohne Bibliothek: Verlauf mit Erwartungsband und Min/Max-Hülle (SVG), Balken mit Erwartungsstrich, ein
+// Zellband auf einer Canvas-Fläche, das jede einzelne Ziehung darstellt, und ein Streudiagramm. Jede Grafik hat eine
+// Hover-/Fokus-Anzeige; Texte stehen in Textfarben, nur die Marken tragen Farbe.
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { pickIndices, sampleIndices } from './series';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 /** Breite des Containers in Pixeln, damit Schrift und Linien nicht mitskalieren. */
 function useWidth(fallback = 640) {
@@ -53,58 +52,84 @@ export function niceTicks(min: number, max: number, count = 4): number[] {
 
 export interface LineSeries {
   label: string;
-  values: number[];
+  /** Wert am Ende jedes Fachs, mit dem Anfangswert davor (Länge Fächer + 1). */
+  values: ArrayLike<number>;
   tone: 'accent' | 'muted';
+  /** Kleinster und größter Wert innerhalb jedes Fachs (Länge Fächer): die Hülle hinter der Linie. */
+  min?: ArrayLike<number>;
+  max?: ArrayLike<number>;
 }
 
+/**
+ * Verlauf über Fächer: Jedes Fach bündelt gleich viele Ziehungen, Linie und Band zeigen die Werte an den Fachgrenzen, die
+ * Hülle den kleinsten und größten Wert innerhalb. So fließt jede Kiste ein, auch wenn es eine Million sind.
+ */
 export function LineChart({
-  series: fullSeries,
-  band: fullBand,
+  series,
+  band,
+  end,
   height = 180,
-  maxPoints = 600,
   format,
   axisFormat,
   xLabel,
 }: {
   series: LineSeries[];
-  /** Untere und obere Grenze je Punkt, als Fläche hinter den Linien. */
-  band?: { lo: number[]; hi: number[]; label: string };
+  /** Untere und obere Grenze je Fachende, als Fläche hinter den Linien. */
+  band?: { lo: ArrayLike<number>; hi: ArrayLike<number>; label: string };
+  /** Ziehungen bis zum Ende jedes Fachs (Länge Fächer + 1, erster Eintrag 0). */
+  end: ArrayLike<number>;
   height?: number;
-  /** Mehr Punkte als das werden ausgedünnt gezeichnet; die Beschriftung nennt weiter den echten Index. */
-  maxPoints?: number;
   format: (v: number) => string;
   /** Kürzere Beschriftung der Achse, sonst wie format. */
   axisFormat?: (v: number) => string;
-  /** Beschriftung zum Punkt mit diesem Index in den ungekürzten Reihen. */
-  xLabel: (i: number) => string;
+  /** Beschriftung zu einer Zahl von Ziehungen. */
+  xLabel: (count: number) => string;
 }) {
   const ref = useRef<SVGSVGElement>(null);
   const [wrap, width] = useWidth();
   const [hover, setHover] = useState<number | null>(null);
   const pad = { l: 52, r: 10, t: 8, b: 10 };
-  // Bei sehr langen Verläufen nur so viele Punkte zeichnen, wie die Breite hergibt
-  let total = 0;
-  for (const s of fullSeries) total = Math.max(total, s.values.length);
-  const idx = useMemo(() => sampleIndices(total, maxPoints), [total, maxPoints]);
-  const series = useMemo(() => fullSeries.map((s) => ({ ...s, values: pickIndices(s.values, idx) })), [fullSeries, idx]);
-  const band = useMemo(() => (fullBand ? { label: fullBand.label, lo: pickIndices(fullBand.lo, idx), hi: pickIndices(fullBand.hi, idx) } : undefined), [fullBand, idx]);
-  const n = idx.length;
-  const all = [...series.flatMap((s) => s.values), ...(band ? [...band.lo, ...band.hi] : []), 0];
-  const lo = Math.min(...all);
-  const hi = Math.max(...all);
+  const n = end.length;
+  let lo = 0;
+  let hi = 0;
+  const widen = (v: number) => {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  };
+  for (const s of series) {
+    for (let i = 0; i < s.values.length; i++) widen(s.values[i]);
+    if (s.min) for (let i = 0; i < s.min.length; i++) widen(s.min[i]);
+    if (s.max) for (let i = 0; i < s.max.length; i++) widen(s.max[i]);
+  }
+  if (band) for (let i = 0; i < band.lo.length; i++) {
+    widen(band.lo[i]);
+    widen(band.hi[i]);
+  }
   const span = hi - lo || 1;
   const ticks = niceTicks(lo, hi, 4);
   const x = (i: number) => pad.l + (n <= 1 ? 0 : (i / (n - 1)) * (width - pad.l - pad.r));
   const y = (v: number) => pad.t + (1 - (v - lo) / span) * (height - pad.t - pad.b);
-  const path = (vals: number[]) => vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');
+  const path = (vals: ArrayLike<number>) => {
+    let d = '';
+    for (let i = 0; i < vals.length; i++) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(vals[i]).toFixed(1)}`;
+    return d;
+  };
   const area = band
-    ? `${band.hi.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')}${band.lo
-        .map((_, j) => {
-          const i = band.lo.length - 1 - j;
-          return `L${x(i).toFixed(1)},${y(band.lo[i]).toFixed(1)}`;
-        })
-        .join('')}Z`
+    ? (() => {
+        let d = '';
+        for (let i = 0; i < band.hi.length; i++) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(band.hi[i]).toFixed(1)}`;
+        for (let i = band.lo.length - 1; i >= 0; i--) d += `L${x(i).toFixed(1)},${y(band.lo[i]).toFixed(1)}`;
+        return `${d}Z`;
+      })()
     : '';
+  // Hülle: oben die Maxima, unten die Minima, jeweils in der Mitte ihres Fachs
+  const envelope = (s: LineSeries) => {
+    if (!s.min || !s.max || !s.min.length) return '';
+    let d = '';
+    for (let b = 0; b < s.max.length; b++) d += `${b ? 'L' : 'M'}${x(b + 0.5).toFixed(1)},${y(s.max[b]).toFixed(1)}`;
+    for (let b = s.min.length - 1; b >= 0; b--) d += `L${x(b + 0.5).toFixed(1)},${y(s.min[b]).toFixed(1)}`;
+    return `${d}Z`;
+  };
 
   const onMove = (e: PointerEvent) => {
     const svg = ref.current;
@@ -145,6 +170,7 @@ export function LineChart({
           </g>
         ))}
         {band && <path class="c-band" d={area} />}
+        {series.map((s) => (s.min && s.max ? <path class={`c-envelope c-envelope--${s.tone}`} d={envelope(s)} /> : null))}
         {series.map((s) => (
           <path class={`c-line c-line--${s.tone}`} d={path(s.values)} />
         ))}
@@ -153,13 +179,21 @@ export function LineChart({
       </svg>
       {hover !== null && (
         <div class="c-tip c-tip--top" style={{ left: `${Math.min(78, Math.max(4, tipLeft))}%`, top: '6px' }}>
-          <span class="c-tip__head">{xLabel(idx[hover] ?? hover)}</span>
+          <span class="c-tip__head">{xLabel(end[hover])}</span>
           {series.map((s) => (
             <span class="c-tip__row">
               <i class={`c-key c-key--${s.tone}`} />
               <strong>{format(s.values[hover] ?? 0)}</strong> {s.label}
             </span>
           ))}
+          {hover > 0 &&
+            series.map((s) =>
+              s.min && s.max && (s.max[hover - 1] !== s.values[hover] || s.min[hover - 1] !== s.values[hover]) ? (
+                <span class="c-tip__row muted">
+                  {format(s.min[hover - 1])} … {format(s.max[hover - 1])}
+                </span>
+              ) : null,
+            )}
           {band && (
             <span class="c-tip__row muted">
               {band.label}: {format(band.lo[hover])} … {format(band.hi[hover])}
@@ -245,33 +279,127 @@ export function BarList({ rows, legend }: { rows: BarRow[]; legend: [string, str
 
 // ------------------------------------------------------------------ Band aus Zellen
 
-export interface Cell {
-  color: string;
-  tip: ComponentChildren;
+/** "#rrggbb" als 32-Bit-Wert in der Byte-Reihenfolge von ImageData (R, G, B, A little-endian). */
+function packColor(hex: string): number {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  return ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
 }
 
-/** Eine Zelle je Ziehung, älteste links oben; bei vielen Ziehungen schmaler. */
-export function CellStrip({ cells, legend }: { cells: Cell[]; legend: { label: string; color: string }[] }) {
-  const [tip, setTip] = useState<Tip | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
-  const size = cells.length > 1500 ? 4 : cells.length > 600 ? 6 : cells.length > 200 ? 9 : 13;
+/** Zellgrößen von groß nach klein (Kantenlänge in Pixeln); darunter fasst eine Zelle mehrere Ziehungen zusammen. */
+const CELL_SIZES = [13, 9, 6, 4, 3, 2, 1];
+/** Höchstzahl Zeilen: mehr Höhe als das wäre bei einer Million Ziehungen kaum noch lesbar. */
+const MAX_ROWS = 260;
+
+interface Layout {
+  size: number;
+  pitch: number;
+  cols: number;
+  rows: number;
+  /** Ziehungen je Zelle. */
+  per: number;
+}
+
+function layoutFor(n: number, width: number): Layout {
+  for (const size of CELL_SIZES) {
+    const gap = size >= 4 ? 2 : 0;
+    const pitch = size + gap;
+    const cols = Math.max(1, Math.floor((width + gap) / pitch));
+    if (n <= cols * MAX_ROWS) return { size, pitch, cols, rows: Math.max(1, Math.ceil(n / cols)), per: 1 };
+  }
+  const cols = Math.max(1, Math.floor(width));
+  const per = Math.ceil(n / (cols * MAX_ROWS));
+  const cells = Math.ceil(n / per);
+  return { size: 1, pitch: 1, cols, rows: Math.max(1, Math.ceil(cells / cols)), per };
+}
+
+/**
+ * Eine Zelle je Ziehung, älteste links oben. Reicht der Platz nicht (bei Hunderttausenden Ziehungen), fasst eine Zelle mehrere
+ * zusammen und zeigt die seltenste darunter, damit auch dann jede Kiste in die Grafik einfließt und kein Treffer untergeht.
+ */
+export function RarityStrip({
+  ranks,
+  colors,
+  tip,
+  legend,
+  label,
+  note,
+}: {
+  /** Seltenheit + 1 je Ziehung in zeitlicher Reihenfolge (0 unbekannt). */
+  ranks: Uint8Array;
+  /** Farbe je Wert aus ranks (Index 0 bis 6, "#rrggbb"). */
+  colors: string[];
+  /** Hinweis zu den Ziehungen ab Stelle `from`, `count` Stück. */
+  tip: (from: number, count: number) => ComponentChildren;
+  legend: { label: string; color: string }[];
+  label: string;
+  /** Zusatzzeile, wenn eine Zelle mehrere Ziehungen vertritt. */
+  note?: (per: number) => ComponentChildren;
+}) {
+  const [wrap, width] = useWidth();
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [hover, setHover] = useState<{ x: number; y: number; from: number; count: number } | null>(null);
+  const n = ranks.length;
+  const lay = layoutFor(n, width);
+
+  useEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    const dpr = lay.size >= 3 ? Math.min(2, window.devicePixelRatio || 1) : 1;
+    const cssW = Math.ceil(lay.cols * lay.pitch);
+    const cssH = lay.rows * lay.pitch;
+    el.width = Math.max(1, Math.round(cssW * dpr));
+    el.height = Math.max(1, Math.round(cssH * dpr));
+    const ctx = el.getContext('2d');
+    if (!ctx) return;
+    const packed = colors.map(packColor);
+    const cells = Math.ceil(n / lay.per);
+    if (lay.size >= 3) {
+      ctx.scale(dpr, dpr);
+      for (let c = 0; c < cells; c++) {
+        let best = 0;
+        for (let k = c * lay.per, stop = Math.min(n, k + lay.per); k < stop; k++) if (ranks[k] > best) best = ranks[k];
+        ctx.fillStyle = colors[best];
+        ctx.fillRect((c % lay.cols) * lay.pitch, Math.floor(c / lay.cols) * lay.pitch, lay.size, lay.size);
+      }
+    } else {
+      // Zellen von 1 bis 2 Pixeln: direkt in die Pixel schreiben, das ist bei hunderttausenden Zellen viel schneller
+      const image = ctx.createImageData(el.width, el.height);
+      const px = new Uint32Array(image.data.buffer);
+      for (let c = 0; c < cells; c++) {
+        let best = 0;
+        for (let k = c * lay.per, stop = Math.min(n, k + lay.per); k < stop; k++) if (ranks[k] > best) best = ranks[k];
+        const color = packed[best];
+        const x0 = (c % lay.cols) * lay.pitch;
+        const y0 = Math.floor(c / lay.cols) * lay.pitch;
+        for (let dy = 0; dy < lay.size; dy++) {
+          const row = (y0 + dy) * el.width + x0;
+          for (let dx = 0; dx < lay.size; dx++) px[row + dx] = color;
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+    }
+  }, [ranks, colors, lay.size, lay.cols, lay.rows, lay.per, lay.pitch, n]);
+
   const onMove = (e: PointerEvent) => {
-    const target = (e.target as HTMLElement).closest<HTMLElement>('[data-i]');
-    const box = ref.current?.getBoundingClientRect();
-    if (!target || !box) return setTip(null);
-    const i = Number(target.dataset.i);
-    const own = target.getBoundingClientRect();
-    setTip({ x: Math.min(box.width - 180, Math.max(0, own.left - box.left - 60)), y: own.top - box.top - 8, content: cells[i]?.tip });
+    const el = canvas.current;
+    const box = wrap.current?.getBoundingClientRect();
+    if (!el || !box) return;
+    const rect = el.getBoundingClientRect();
+    const cx = Math.floor((e.clientX - rect.left) / lay.pitch);
+    const cy = Math.floor((e.clientY - rect.top) / lay.pitch);
+    const cell = cy * lay.cols + cx;
+    const from = cell * lay.per;
+    if (cx < 0 || cx >= lay.cols || cy < 0 || from < 0 || from >= n) return setHover(null);
+    setHover({ x: Math.min(box.width - 190, Math.max(0, e.clientX - box.left - 60)), y: e.clientY - box.top - 12, from, count: Math.min(lay.per, n - from) });
   };
-  const cellEls = useMemo(
-    () => cells.map((c, i) => <span class="c-cell" data-i={i} style={{ background: c.color, width: `${size}px`, height: `${size}px` }} />),
-    [cells, size],
-  );
+
   return (
-    <div class="c-wrap" ref={ref}>
-      <div class="c-cells" onPointerMove={onMove} onPointerLeave={() => setTip(null)}>
-        {cellEls}
-      </div>
+    <div class="c-wrap" ref={wrap}>
+      <canvas ref={canvas} class="c-canvas" role="img" aria-label={label} onPointerMove={onMove} onPointerLeave={() => setHover(null)} />
+      {note && lay.per > 1 && <p class="a-note muted">{note(lay.per)}</p>}
       <div class="c-legend">
         {legend.map((l) => (
           <span>
@@ -280,7 +408,11 @@ export function CellStrip({ cells, legend }: { cells: Cell[]; legend: { label: s
           </span>
         ))}
       </div>
-      <TipBox tip={tip} />
+      {hover && (
+        <div class="c-tip" style={{ left: `${hover.x}px`, top: `${hover.y}px` }} role="status">
+          {tip(hover.from, hover.count)}
+        </div>
+      )}
     </div>
   );
 }

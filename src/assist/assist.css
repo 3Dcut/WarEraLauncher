@@ -872,20 +872,23 @@ body.is-embedded .a-app {
   font-size: 0.9em;
 }
 
-.c-cells {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-
-.c-cell {
+.c-canvas {
   display: block;
-  border-radius: 2px;
+  max-width: 100%;
+  image-rendering: pixelated;
 }
 
-.c-cell:hover {
-  outline: 2px solid var(--text);
-  outline-offset: 1px;
+.c-envelope {
+  stroke: none;
+  opacity: 0.22;
+}
+
+.c-envelope--accent {
+  fill: var(--accent);
+}
+
+.c-envelope--muted {
+  fill: var(--text-muted);
 }
 
 /* ---------- Zeitraum und Nachladen ---------- */
@@ -1005,9 +1008,19 @@ body.is-embedded .a-app {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Zahlen wie „155.263 erledigt“ aus langen Zeiträumen dürfen umbrechen, statt die Seite zu verbreitern */
+  /* Zahlen wie „642.350 erledigt“ aus langen Zeiträumen dürfen umbrechen, statt die Seite zu verbreitern; bei einer Million
+     Kisten haben die Spalten siebenstellige Zahlen, deshalb auch etwas engere Zellen */
   .a-table td.muted {
     white-space: normal;
+  }
+
+  .a-table {
+    font-size: 0.85em;
+  }
+
+  .a-table th,
+  .a-table td {
+    padding: 6px 3px;
   }
 
   .a-kpis {

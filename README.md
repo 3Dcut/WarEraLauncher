@@ -100,31 +100,57 @@ Code: `src/battle/` (Logik in `logic.ts` mit Tests in `tests/battle-logic.test.t
 
 Beobachtet live, welche roten (`case2`) und grünen (`case1`) Kisten der Spieler öffnet, und wertet die Sitzung aus. Der Spieler
 kommt aus „Mein Charakter“ im Launcher (`wl2:settings`), wer ihn hier wechselt, wechselt ihn dort mit. Gezählt wird ab jetzt
-oder rückwirkend: letzte Stunde, 24 Stunden, 7 Tage, 30 Tage, ab einem Datum oder ab Beginn der Aufzeichnung. Eine Sitzung
-übersteht Neuladen und lässt sich anhalten und fortsetzen.
+oder rückwirkend: letzte Stunde, 24 Stunden, 7 Tage, 30 Tage, ab einem Datum oder ab Beginn der Aufzeichnung. Auch eine
+Million Kisten und mehr (Obergrenze 2.000.000 je Sitzung) gehen vollständig in alle Grafiken ein. Eine Sitzung übersteht
+Neuladen und lässt sich anhalten und fortsetzen.
 
 - **Kennzahlen**: Kisten, Kosten (Marktpreis beim Öffnen), Erwartung, Wert nach Empfehlung (darunter „alles Schrott“ und
   „alles Verkauf“), Ergebnis und Glück. Dazu ein Verlauf mit Erwartung und üblichem Bereich (±1σ), Seltenheiten gegen
-  Erwartung mit Wahrscheinlichkeit, Durststrecken und ein Band mit einer Zelle je Ziehung. Eine Zeile darunter nennt, wie
-  viele Ziehungen ein echtes Ergebnis haben (zerlegt oder verkauft) und wie viele noch mit der Schätzung von jetzt zählen.
-- **Rückwirkend nachladen**: Die Sitzung erscheint nach der ersten Seite und füllt sich im Hintergrund von neu nach alt; eine
-  Leiste zeigt Kisten, Stand und Fortschritt, „Laden beenden“ behält das Geladene, „Weiter laden“ macht dort weiter. Je Schritt
-  geht eine gebündelte Anfrage hinaus (`loader.ts`): eine Seite Öffnungen, Zerlegungen und Verkäufe zusammen, die nur einmal
-  gegen das Limit von 500 Anfragen je Minute zählt; die Seite selbst nimmt höchstens 360 je Minute (`assist/limiter.ts`) und
-  wartet bei 429 mit wachsenden Pausen. Neue Ziehungen und Ergebnisse sammeln sich in einem Puffer und gehen höchstens alle
-  0,1 bis 0,9 s in die Sitzung, je größer sie ist. Gemessen mit 3Dsus (Stand 2026-11-27, Chromium gegen die Live-API, erstes
-  Dashboard jeweils nach unter zwei Sekunden): die letzte Stunde mit 3.632 Kisten in 16 s, 24 Stunden mit 14.391 Kisten in 45 s
-  (längste Blockade des Hauptthreads 119 ms) und 7 Tage mit 155.156 Kisten in 8,5 Minuten bei 1.896 Anfragen ohne eine 429;
-  danach belegte die Seite 90 MB JS-Speicher, der Hauptthread war zu 7 % blockiert, die längste Blockade dauerte 223 ms.
-  Sitzungen bis 3.000 Kisten speichert der Browser vollständig; größere liegen nur mit Zeitraum und Grenzen im Speicher und
-  werden nach dem Neuladen neu geladen (fünf MB Speicher reichen sonst nicht). Obergrenze: 250.000 Kisten je Sitzung.
+  Erwartung mit Wahrscheinlichkeit, Durststrecken und ein Band mit einer Zelle je Ziehung (bei mehr Ziehungen als Pixeln
+  eine Zelle je n Ziehungen, in der Farbe der seltensten). Eine Zeile darunter nennt, wie viele Ziehungen ein echtes
+  Ergebnis haben (zerlegt oder verkauft) und wie viele noch mit der Schätzung von jetzt zählen.
+- **Rückwirkend nachladen**: Die Sitzung erscheint nach der ersten Anfrage und füllt sich im Hintergrund von neu nach alt;
+  eine Leiste zeigt Kisten und, solange der Zeitraum eine Untergrenze hat, den Fortschritt. „Laden beenden“ behält das
+  Geladene, „Weiter laden“ macht dort weiter. Der Loader (`loader.ts`) liest den Zeitraum in Zeitscheiben parallel. Eine Seite
+  hat höchstens 100 Einträge, und der Cursor führt nur von Seite zu Seite; er ist aber ein Schlüssel aus Zeit und ID (`v2.` +
+  Base64 von `[{"t":"date",…},{"t":"str",…}]`, ausgelesen am 2026-11-27), und ein selbst gebauter Cursor (Zeit, `000…`) setzt
+  an jeder Stelle der Zeit auf. An 3Dsus lieferten acht Scheiben mit Grenzen mitten in Bursts von 50 gleichzeitigen Einträgen
+  genau die 11.653 Einträge der Referenz ohne Duplikate. Jede Scheibe nimmt nur Einträge ihres Zeitfensters an; wird eine
+  fertig, teilt der Loader die mit der größten geschätzten Restmenge in der Mitte. Je Anfrage gehen bis zu 24 Aufrufe
+  gebündelt hinaus (ab 48 antwortet der Server mit HTTP 431), das zählt einmal gegen das Limit von 500 Anfragen je Minute;
+  die Seite nimmt höchstens 360 je Minute (`assist/limiter.ts`) und wartet bei 429 mit wachsenden Pausen. Lehnt der Server
+  gebaute Cursor ab (HTTP 400, oder HTTP 500 mit Cursor-Meldung), liest der Loader sequentiell weiter. Neue Ziehungen und
+  Ergebnisse sammeln sich in einem Puffer und gehen höchstens alle 0,1 bis 2,5 s in die Sitzung, je größer sie ist.
+- **Eine Million Kisten und mehr**: Die Ziehungen liegen in einem Spaltenspeicher aus Typed Arrays (`store.ts`): 32 Byte
+  je Ziehung (Zeit, Erwerbsabstand, Kistenart, Kombination aus Itemcode und Werten, Kistenpreis, Ergebnis, Betrag, Tag) statt
+  über 580 Byte als Objekt. Zerlegungen und Verkäufe ordnet `intake.ts` über offen adressierte Hash-Tabellen zu, in beliebiger
+  Ankunftsreihenfolge und ohne quadratischen Aufwand. `aggregate.ts` rechnet Summen, Seltenheiten, Durststrecken, Verlauf und
+  Zellband in einem Durchlauf über alle Ziehungen; nichts wird ausgedünnt. Der Verlauf fasst die Ziehungen in höchstens 1.200
+  Fächer (Endwert, Erwartung, ±1σ-Bereich und als Hülle die Spanne zwischen niedrigstem und höchstem Stand im Fach), das
+  Zellband zeichnet auf einem Canvas. Der Browser speichert nur die Metadaten der Sitzung (rund 150 Byte); nach einem
+  Neuladen wird der Zeitraum frisch gelesen. Gemessen (Stand 2026-11-27):
+  - 3Dsus gegen die Live-API (Chromium): 24 Stunden mit 14.391 Kisten in 13 s und 52 Anfragen (vorher 45 s); 7 Tage mit
+    152.607 Kisten in 62 s und 210 Anfragen (vorher 155.156 Kisten in 8,5 min und 1.896 Anfragen), längste Blockade des
+    Hauptthreads 87 ms. Ab Beginn der Aufzeichnung (26.01.2026) kamen 958.542 Kisten in 5,3 min mit 1.060 Anfragen ohne eine
+    429: 955.653 davon hatten ein echtes Ergebnis (918.857 zerlegt, 36.796 verkauft), das erste Dashboard stand nach 1,8 s,
+    der Hauptthread war zu 2,8 % blockiert (106 Blockaden, die längste 179 ms).
+  - 1,04 Millionen virtuelle Kisten: 25 Kopien der 62 Stunden von 3Dsus (41.640 Öffnungen, 40.836 Zerlegungen, 753
+    Marktgeschäfte) hinter einer virtuellen API mit 0,15 s plus 6 ms je Aufruf (die Live-API beantwortet 24 Aufrufe in 0,3
+    bis 0,5 s). Dashboard nach 0,8 s, 100.000 Kisten nach 58 s, 500.000 nach 174 s, 1 Million nach 283 s, vollständig nach
+    301 s mit 1.206 Anfragen; das Ergebnis stimmt auf die Ziehung mit der Zuordnung der Reihe nach überein (1.020.300 zerlegt,
+    14.675 verkauft, 5.750 offen). Der Hauptthread war zu 2,7 % blockiert (längste Blockade 169 ms). Ein Chromium ohne
+    Fernsteuerung belegte im Renderer-Prozess 350 MB (210 MB vor dem Laden, Spitze 476 MB beim Laden); in Node blieben nach
+    dem Laden 64 MB Typed Arrays und 7 MB Heap. Die Aggregation über 1,04 Millionen Ziehungen dauert rund 60 ms, ein Wechsel
+    des Kistenfilters bis zur neuen Anzeige 110 bis 255 ms.
 - **Verschrotten oder verkaufen**: Jedes Item wird wie im Kisten-Battle aus den letzten 100 Verkäufen desselben Codes
   geschätzt. Auf die Verkaufsliste kommt es nur, wenn die Schätzung den Schrottwert um beide einstellbaren Margen übertrifft
   (Prozent und fester Betrag, Standard 15 % und 1), weil Zerlegen weniger Arbeit macht; „ab …“ nennt den Preis, unter dem
   Zerlegen besser ist.
 - **Echte Ergebnisse**: Zerlegungen (`dismantleItem`, gleiche Item-ID) und Verkäufe (`itemMarket`, gleicher Code, gleiche Werte,
   gleiche `lastAcquisitionAt`) werden erkannt und zählen mit dem tatsächlichen Ergebnis, auch wenn sie vor ihrer Ziehung
-  ankommen (`outcomes.ts`). Bei 3Dsus passten 40.812 von 40.836 Zerlegungen und 587 von 590 Verkäufen von Items aus dem Fenster
+  ankommen (`intake.ts`). Gleichwertige Ziehungen (gleicher Code, gleiche Werte, gleiche Millisekunde, bei 14 von 41.615
+  Schlüsseln) zählt jede Verkaufstransaktion einzeln; die eindeutige Item-ID einer Zerlegung hat dabei Vorrang, sodass das
+  Ergebnis nicht von der Ankunftsreihenfolge abhängt. Bei 3Dsus passten 40.812 von 40.836 Zerlegungen und 587 von 590 Verkäufen von Items aus dem Fenster
   auf die Millisekunde (drei fanden keine Ziehung, die übrigen 24 Zerlegungen und 163 Verkäufe betrafen Items aus der Zeit davor);
   ein Verkauf kann Tage nach der Öffnung liegen (dort bis zu 178 Stunden), deshalb liest das Nachladen
   die Verkäufe über den ganzen Zeitraum, und offene Ziehungen bleiben danach dauerhaft im Blick. Die Schätzung aus den letzten
@@ -152,9 +178,10 @@ Zahlen (Stand 2026-11-27):
 
 Je Seltenheit sind 30 % Waffen (`gameConfig.loot.weaponChancePercent`), der Rest verteilt sich gleich auf Helm, Brust, Hose,
 Stiefel und Handschuhe. Link-Parameter: `?demo=1` startet eine Demo mit diesen Quoten, `?lang=de|en|sv` wie im Launcher.
-Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Zuordnung in `outcomes.ts`, Nachladen in `loader.ts`,
-Ablauf in `engine.ts` (Integrationstest gegen eine Fake-API in `tests/cases-engine.test.ts`), Ableitungen mit Zeilen-Cache in
-`stats.ts`. Für Lasttests eignet sich ein Spieler mit sehr vielen Kisten, etwa 3Dsus.
+Code: Logik in `src/cases/logic.ts` (Tests in `tests/cases-logic.test.ts`), Spaltenspeicher in `store.ts`, Zuordnung in
+`intake.ts`, Verlauf und Summen in `aggregate.ts`, Nachladen in `loader.ts`, Ablauf in `engine.ts` (Integrationstest gegen eine
+Fake-API mit dem Cursorformat der echten in `tests/cases-engine.test.ts`), Ableitungen in `stats.ts`, Grafiken in
+`assist/charts.tsx`. Für Lasttests eignet sich ein Spieler mit sehr vielen Kisten, etwa 3Dsus (958.542 Kisten).
 
 ## Marktcheck (`/items`)
 

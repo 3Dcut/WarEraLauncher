@@ -7,8 +7,6 @@ import {
   scrapBase,
   scrapYield,
   expectedScrap,
-  toPull,
-  matchOutcomes,
   sellThreshold,
   advise,
   rollGrid,
@@ -23,8 +21,7 @@ import {
   longestDrought,
   chanceAtLeast,
   recentAverage,
-  mergeSorted,
-  byTime,
+  rarityStatsFromCounts,
   sinceFor,
   dayStart,
   priceIndex,
@@ -39,11 +36,9 @@ import { RARITIES, type Rarity, type Sale } from '../src/battle/logic';
 import { fallbackRarity } from '../src/battle/logic';
 import casesMessages from '../src/i18n/messages/cases';
 
-const ME = 'u1';
 let seq = 0;
 const pull = (rarity: Rarity | null, extra: Partial<Pull> = {}): Pull => ({
   id: `p${++seq}`,
-  itemId: `i${seq}`,
   at: new Date(Date.UTC(2026, 10, 27, 0, 0, seq)).toISOString(),
   caseCode: 'case2',
   itemCode: 'helmet2',
@@ -100,71 +95,6 @@ describe('Schrott', () => {
   it('erwartet je Kiste 14,67 (grün) bzw. 70,02 (rot) Schrott', () => {
     expect(expectedScrap('case1')).toBeCloseTo(14.6712, 3);
     expect(expectedScrap('case2')).toBeCloseTo(70.02, 2);
-  });
-});
-
-describe('toPull', () => {
-  const rarityOf = (code: string) => fallbackRarity(code);
-  const tx = (over: Record<string, unknown> = {}) => ({
-    _id: 't1',
-    transactionType: 'openCase',
-    itemCode: 'case1',
-    buyerId: ME,
-    sellerId: ME,
-    createdAt: '2026-11-27T00:30:41.971Z',
-    item: { _id: 'item1', code: 'flask3', skills: { production: 17 } },
-    ...over,
-  });
-
-  it('übernimmt rote und grüne Kisten mit Item-ID', () => {
-    const p = toPull(tx({ item: { _id: 'item1', code: 'boots5', skills: { dodge: 33 } } }), ME, rarityOf);
-    expect(p).toMatchObject({ id: 't1', itemId: 'item1', caseCode: 'case1', itemCode: 'boots5', rarity: 'legendary', skills: { dodge: 33 } });
-  });
-
-  it('merkt sich die Erwerbszeit des Items, mit der sich ein späterer Verkauf wiederfindet', () => {
-    const p = toPull(tx({ item: { _id: 'item1', code: 'boots5', skills: { dodge: 33 }, lastAcquisitionAt: '2026-11-27T00:30:41.966Z' } }), ME, rarityOf);
-    expect(p?.acq).toBe(Date.parse('2026-11-27T00:30:41.966Z'));
-    expect(toPull(tx(), ME, rarityOf)).not.toHaveProperty('acq');
-  });
-
-  it('übergeht Holzkisten, Werkzeugkästen und fremde Spieler', () => {
-    expect(toPull(tx({ itemCode: 'toolbox' }), ME, rarityOf)).toBeNull();
-    expect(toPull(tx({ itemCode: 'woodenCase' }), ME, rarityOf)).toBeNull();
-    expect(toPull(tx({ buyerId: 'x', sellerId: 'x' }), ME, rarityOf)).toBeNull();
-    expect(toPull(tx({ transactionType: 'trading' }), ME, rarityOf)).toBeNull();
-  });
-});
-
-describe('matchOutcomes', () => {
-  it('erkennt Zerlegungen an der Item-ID und Verkäufe an Code, Werten und Erwerbszeit', () => {
-    const a = pull('rare', { itemCode: 'rifle', itemId: 'A', skills: { attack: 80, criticalChance: 12 } });
-    const b = pull('epic', { itemCode: 'boots4', itemId: 'B', skills: { dodge: 23 } });
-    const c = pull('epic', { itemCode: 'boots4', itemId: 'C', skills: { dodge: 25 } });
-    const out = matchOutcomes(
-      [a, b, c],
-      ME,
-      [{ transactionType: 'dismantleItem', buyerId: ME, createdAt: '2026-11-27T01:00:00Z', quantity: 54, item: { _id: 'A' } }],
-      [
-        {
-          transactionType: 'itemMarket',
-          sellerId: ME,
-          createdAt: '2026-11-27T02:00:00Z',
-          money: 61.5,
-          item: { _id: 'new', code: 'boots4', skills: { dodge: 25 }, lastAcquisitionAt: new Date(Date.parse(c.at) - 3).toISOString() },
-        },
-        // gleiche Werte, aber zu einer ganz anderen Zeit erworben: gehört nicht zur Sitzung
-        {
-          transactionType: 'itemMarket',
-          sellerId: ME,
-          createdAt: '2026-11-27T02:00:00Z',
-          money: 50,
-          item: { _id: 'old', code: 'boots4', skills: { dodge: 23 }, lastAcquisitionAt: '2026-11-01T00:00:00Z' },
-        },
-      ],
-    );
-    expect(out[a.id]).toEqual({ kind: 'scrapped', at: '2026-11-27T01:00:00Z', amount: 54 });
-    expect(out[c.id]).toEqual({ kind: 'sold', at: '2026-11-27T02:00:00Z', amount: 61.5 });
-    expect(out[b.id]).toBeUndefined();
   });
 });
 
@@ -296,33 +226,6 @@ describe('Texte', () => {
   });
 });
 
-describe('mergeSorted', () => {
-  const n = (a: number, b: number) => a - b;
-
-  it('hängt Älteres vor und Neueres hinten an, ohne zu sortieren', () => {
-    expect(mergeSorted([5, 6, 7], [1, 2], n)).toEqual([1, 2, 5, 6, 7]);
-    expect(mergeSorted([1, 2], [5, 6, 7], n)).toEqual([1, 2, 5, 6, 7]);
-    expect(mergeSorted([], [1], n)).toEqual([1]);
-    expect(mergeSorted([1], [], n)).toEqual([1]);
-  });
-
-  it('mischt überlappende Listen und behält bei Gleichstand die erste vorn', () => {
-    expect(mergeSorted([1, 4, 8], [2, 3, 9], n)).toEqual([1, 2, 3, 4, 8, 9]);
-    const a = [{ k: 1, from: 'a' }, { k: 2, from: 'a' }];
-    const b = [{ k: 2, from: 'b' }, { k: 3, from: 'b' }];
-    expect(mergeSorted(a, b, (x, y) => x.k - y.k).map((v) => v.from)).toEqual(['a', 'a', 'b', 'b']);
-  });
-
-  it('verändert die Eingaben nicht und passt zur Reihenfolge der Ziehungen', () => {
-    const a = [pull('rare'), pull('epic')];
-    const b = [pull('rare', { at: '2026-11-26T00:00:00.000Z' })];
-    const copy = [...a];
-    const merged = mergeSorted(a, b, byTime);
-    expect(a).toEqual(copy);
-    expect(merged.map((p) => p.id)).toEqual([b[0].id, a[0].id, a[1].id]);
-  });
-});
-
 describe('Zeiträume', () => {
   const now = Date.UTC(2026, 10, 27, 12, 0, 0);
 
@@ -433,5 +336,18 @@ describe('Glück bei sehr vielen Kisten', () => {
     expect(luckPercentile(big, score, 300)).not.toBe(luckNormal(big, score));
     const small = { case1: 500, case2: 0 };
     expect(luckPercentile(small, 7000)).toBe(luckPercentile(small, 7000, Math.max(300, Math.min(4000, Math.floor(3_000_000 / 500)))));
+  });
+});
+
+describe('rarityStatsFromCounts', () => {
+  it('liefert dieselbe Tabelle wie die Liste, nur aus Zählwerten', () => {
+    const list = [...Array(120)].map((_, i) => pull(i % 7 === 0 ? 'rare' : i % 3 === 0 ? 'epic' : 'uncommon', { caseCode: i % 4 === 0 ? 'case2' : 'case1' }));
+    const byRarity = [0, 0, 0, 0, 0, 0];
+    const counts = { case1: 0, case2: 0 };
+    for (const p of list) {
+      counts[p.caseCode]++;
+      byRarity[RARITIES.indexOf(p.rarity!)]++;
+    }
+    expect(rarityStatsFromCounts(counts, byRarity)).toEqual(rarityStats(list));
   });
 });

@@ -4,9 +4,9 @@ import { InfoTip } from '../ui/InfoTip';
 import { t, tn, formatNumber, formatDate } from '../i18n';
 import { PlayerPicker, player } from '../assist/player';
 import { embedded } from '../assist/page';
-import { LineChart, BarList, CellStrip } from '../assist/charts';
+import { LineChart, BarList, RarityStrip } from '../assist/charts';
 import { checkKey } from '../battle/api';
-import { itemInfo, type Rarity } from '../battle/logic';
+import { itemInfo, RARITIES, type Rarity } from '../battle/logic';
 import { itemName, rarityLabel, skillsText, money, signedMoney, valueBasis, caseLabel } from '../battle/text';
 import { RARITY_COLOR } from '../battle/colors';
 import {
@@ -30,8 +30,8 @@ import {
   updatePrefs,
   totals,
   luck,
-  rows,
   series,
+  strip,
   rarityTable,
   droughts,
   caseMarkets,
@@ -40,6 +40,8 @@ import {
   scrapTrend,
   toSell,
   toScrap,
+  rowAt,
+  stripSlot,
   type CaseFilter,
   type Row,
 } from './stats';
@@ -298,7 +300,7 @@ function LoadBanner() {
       <section class="a-card a-load" role="status">
         <div class="a-load__row">
           <span class="a-load__text">
-            {ld.phase === 'stopped' ? tn('cases.load.stopped', ld.pulls, { date: when(ld.oldest) }) : t('cases.load.paused', { date: when(ld.oldest) })}
+            {ld.phase === 'stopped' ? tn('cases.load.stopped', ld.pulls) : t('cases.load.paused')}
           </span>
           {ld.phase === 'stopped' && (
             <button type="button" class="btn btn--sm" onClick={() => continueLoading()}>
@@ -313,7 +315,7 @@ function LoadBanner() {
   return (
     <section class="a-card a-load" role="status" aria-live="polite">
       <div class="a-load__row">
-        <span class="a-load__text">{ld.oldest ? tn('cases.load.running', ld.pulls, { date: when(ld.oldest) }) : t('cases.load.starting')}</span>
+        <span class="a-load__text">{ld.pulls ? tn('cases.load.running', ld.pulls) : t('cases.load.starting')}</span>
         {pct !== null && <strong class="mono">{t('cases.load.percent', { pct: formatNumber(pct) })}</strong>}
         <InfoTip text={t('cases.load.info')} label={t('cases.load.starting')} />
         <button type="button" class="btn btn--sm btn--ghost a-load__stop" onClick={() => stopLoading()}>
@@ -497,14 +499,15 @@ function Course() {
     <section class="a-card">
       <h2 class="a-h2">{t('cases.course.title')}</h2>
       <LineChart
+        end={sr.end}
         series={[
-          { label: t('cases.course.actual'), values: sr.actual, tone: 'accent' },
+          { label: t('cases.course.actual'), values: sr.actual, min: sr.min, max: sr.max, tone: 'accent' },
           { label: t('cases.course.expected'), values: sr.expected, tone: 'muted' },
         ]}
         band={{ lo: sr.lo, hi: sr.hi, label: t('cases.course.band') }}
         format={(v) => signedMoney(v)}
         axisFormat={(v) => formatNumber(v, { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 2, signDisplay: 'exceptZero' }).replace('-', '−')}
-        xLabel={(i) => tn('cases.course.after', i)}
+        xLabel={(count) => tn('cases.course.after', count)}
       />
     </section>
   );
@@ -624,17 +627,18 @@ const SELL_FIRST = 12;
 const SELL_STEP = 100;
 
 function SellList() {
-  const list = toSell.value;
+  const { slots, open } = toSell.value;
+  const size = slots.length;
   const [limit, setLimit] = useState(SELL_FIRST);
-  const shown = list.slice(0, limit);
-  const open = list.filter((r) => !r.outcome).length;
+  // Zeilen entstehen nur für die sichtbaren Einträge, nicht für alle zehntausend
+  const shown = Array.from(slots.subarray(0, limit), (slot) => rowAt(slot));
   return (
     <section class="a-card">
       <h2 class="a-h2">
-        {t('cases.sell.title')} <span class="muted">{formatNumber(list.length)}</span>
-        {list.length > 0 && open < list.length && <span class="badge badge--tiny">{t('cases.sell.open', { open: formatNumber(open) })}</span>}
+        {t('cases.sell.title')} <span class="muted">{formatNumber(size)}</span>
+        {size > 0 && open < size && <span class="badge badge--tiny">{t('cases.sell.open', { open: formatNumber(open) })}</span>}
       </h2>
-      {!list.length ? (
+      {!size ? (
         <p class="muted">{t('cases.sell.none')}</p>
       ) : (
         <ul class="a-items">
@@ -643,11 +647,11 @@ function SellList() {
           ))}
         </ul>
       )}
-      {list.length > SELL_FIRST && (
+      {size > SELL_FIRST && (
         <div class="a-more">
-          {limit < list.length && (
+          {limit < size && (
             <button type="button" class="link-btn" onClick={() => setLimit(limit + SELL_STEP)}>
-              {t('cases.sell.more', { count: formatNumber(Math.min(SELL_STEP, list.length - limit)) })}
+              {t('cases.sell.more', { count: formatNumber(Math.min(SELL_STEP, size - limit)) })}
             </button>
           )}
           {limit > SELL_FIRST && (
@@ -725,40 +729,70 @@ function ScrapList() {
   );
 }
 
-/** Mehr Zellen als das zeichnet das Band nicht: zehntausende Elemente würden die Seite lähmen. */
-const CELL_LIMIT = 1500;
+/** Farbe je Wert des Zellbands: Index 0 unbekannt, 1 bis 6 gewöhnlich bis mythisch. */
+const RANK_COLORS = [unknownColor, ...RARITIES.map((r) => RARITY_COLOR[r])];
+
+/** Hinweis zu einer einzelnen Ziehung. */
+function pullTip(slot: number) {
+  const r = rowAt(slot);
+  return (
+    <>
+      <strong>
+        {itemInfo(r.pull.itemCode).emoji} {itemName(r.pull.itemCode)}
+      </strong>
+      <span class="muted">
+        {rarityLabel(r.pull.rarity)} · {caseLabel(r.pull.caseCode)}
+      </span>
+      <span class="mono">{skillsText(r.pull.skills)}</span>
+      <span class="mono">
+        {r.advice.action === 'sell'
+          ? t('cases.pulls.sell', { price: money(r.advice.sale ?? 0) })
+          : t('cases.pulls.scrap', { units: formatNumber(r.advice.scrapUnits) })}
+      </span>
+    </>
+  );
+}
+
+/** Hinweis zu einer Zelle, die mehrere Ziehungen vertritt: Zahl, Seltenheiten und das seltenste Item. */
+function groupTip(ranks: Uint8Array, from: number, count: number) {
+  const tally = new Array(7).fill(0) as number[];
+  let best = 0;
+  let bestAt = from;
+  for (let k = from; k < from + count; k++) {
+    tally[ranks[k]]++;
+    if (ranks[k] > best) {
+      best = ranks[k];
+      bestAt = k;
+    }
+  }
+  const slot = stripSlot(bestAt);
+  return (
+    <>
+      <strong>{tn('cases.pulls.group', count)}</strong>
+      <span class="muted">
+        {RARITIES.map((r, i) => (tally[i + 1] ? `${rarityLabel(r)} ${formatNumber(tally[i + 1])}` : '')).filter(Boolean).join(' · ')}
+        {tally[0] ? ` · ${rarityLabel(null)} ${formatNumber(tally[0])}` : ''}
+      </span>
+      {slot >= 0 && best > 0 && pullTip(slot)}
+    </>
+  );
+}
 
 function Pulls() {
-  const all = rows.value;
-  const list = all.length > CELL_LIMIT ? all.slice(-CELL_LIMIT) : all;
+  const ranks = strip.value;
   return (
     <section class="a-card">
       <h2 class="a-h2">{t('cases.pulls.title')}</h2>
-      <CellStrip
-        cells={list.map((r) => ({
-          color: colorOf(r.pull.rarity),
-          tip: (
-            <>
-              <strong>
-                {itemInfo(r.pull.itemCode).emoji} {itemName(r.pull.itemCode)}
-              </strong>
-              <span class="muted">
-                {rarityLabel(r.pull.rarity)} · {caseLabel(r.pull.caseCode)}
-              </span>
-              <span class="mono">{skillsText(r.pull.skills)}</span>
-              <span class="mono">
-                {r.advice.action === 'sell'
-                  ? t('cases.pulls.sell', { price: money(r.advice.sale ?? 0) })
-                  : t('cases.pulls.scrap', { units: formatNumber(r.advice.scrapUnits) })}
-              </span>
-            </>
-          ),
-        }))}
+      <RarityStrip
+        ranks={ranks}
+        colors={RANK_COLORS}
+        label={`${t('cases.pulls.title')}: ${formatNumber(ranks.length)}`}
+        tip={(from, count) => (count === 1 ? pullTip(stripSlot(from)) : groupTip(ranks, from, count))}
+        note={(per) => t('cases.pulls.bucket', { per: formatNumber(per) })}
         legend={(['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'] as Rarity[])
           .filter((r) => (Object.keys(CASE_ODDS) as CaseCode[]).some((c) => CASE_ODDS[c][r] > 0))
           .map((r) => ({ label: rarityLabel(r), color: RARITY_COLOR[r] }))}
       />
-      {all.length > CELL_LIMIT && <p class="a-note muted">{t('cases.pulls.capped', { shown: formatNumber(CELL_LIMIT), total: formatNumber(all.length) })}</p>}
     </section>
   );
 }

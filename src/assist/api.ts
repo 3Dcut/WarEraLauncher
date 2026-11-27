@@ -148,6 +148,20 @@ export async function fetchOwnOrders(userId: string, key: string | null): Promis
   };
 }
 
+/**
+ * Anfang der Aufzeichnung eines Spielers: die Kontoerstellung (ms), null wenn sie sich nicht lesen lässt. Davor kann es
+ * keine Transaktion geben; bei „alles“ dient sie als Untergrenze für die Planung paralleler Zeitscheiben.
+ */
+export async function fetchAccountStart(userId: string, key: string | null): Promise<number | null> {
+  try {
+    const [user] = await batch<{ createdAt?: string }>([{ path: 'user.getUserLite', input: { userId } }], key, 10_000);
+    const at = Date.parse(unwrap(user)?.createdAt ?? '');
+    return Number.isFinite(at) ? at : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Durchschnittspreise aller handelbaren Waren und Kisten (öffentlich). */
 export async function fetchPrices(): Promise<Record<string, number>> {
   const [prices] = await batch<Record<string, number>>([{ path: 'itemTrading.getPrices', input: {} }], null);
