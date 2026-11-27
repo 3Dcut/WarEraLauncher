@@ -16,7 +16,11 @@ import {
   TARGET,
   caseType,
   caseFromParam,
+  toSale,
+  estimateValue,
+  balance,
   type Opening,
+  type Sale,
   type Rarity,
   type RawTransaction,
 } from '../src/battle/logic';
@@ -187,5 +191,80 @@ describe('Kisten und Format', () => {
     expect(caseFromParam('grün')).toBe('case1');
     expect(caseFromParam('Red')).toBe('case2');
     expect(caseFromParam('holz')).toBe(null);
+  });
+});
+
+describe('Bilanz', () => {
+  const sale = (price: number, skills: Record<string, number>, minute: number): Sale => ({
+    id: `s${minute}`,
+    at: new Date(Date.UTC(2026, 10, 26, 22, minute)).toISOString(),
+    price,
+    skills,
+  });
+  // Ausschnitt echter Verkäufe von boots5 (Ausweichen 31–40), neueste zuerst
+  const boots = [
+    sale(194.3, { dodge: 37 }, 59),
+    sale(160, { dodge: 31 }, 58),
+    sale(193, { dodge: 36 }, 57),
+    sale(175, { dodge: 33 }, 56),
+    sale(219, { dodge: 40 }, 55),
+    sale(156, { dodge: 31 }, 54),
+    sale(210, { dodge: 39 }, 53),
+    sale(159.99, { dodge: 31 }, 52),
+  ];
+  const range = { dodge: [31, 40] as [number, number] };
+
+  it('liest Verkäufe vom Itemmarkt und lässt Abgenutztes und Fremdes weg', () => {
+    const tx: RawTransaction = {
+      _id: 'x1',
+      transactionType: 'itemMarket',
+      createdAt: '2026-11-27T00:08:23.529Z',
+      money: 159.992,
+      quantity: 1,
+      marketAvgPrice: 183.88,
+      item: { code: 'boots5', skills: { dodge: 31 }, state: 100, maxState: 100 },
+    };
+    expect(toSale(tx)).toEqual({ id: 'x1', at: tx.createdAt, price: 159.992, skills: { dodge: 31 }, avg: 183.88 });
+    expect(toSale({ ...tx, item: { ...tx.item, state: 60 } })).toBe(null);
+    expect(toSale({ ...tx, transactionType: 'openCase' })).toBe(null);
+    expect(toSale({ ...tx, money: 0 })).toBe(null);
+    expect(toSale({ ...tx, quantity: 2, money: 10 })?.price).toBe(5);
+  });
+
+  it('nimmt bei identischem Wurf den Median der gleichen Verkäufe', () => {
+    expect(estimateValue({ dodge: 31 }, boots, range)).toEqual({ price: 159.99, basis: 'identical', samples: 3 });
+  });
+
+  it('weicht ohne identischen Wurf auf die nächsten Werte aus', () => {
+    const v = estimateValue({ dodge: 38 }, boots, range)!;
+    expect(v.basis).toBe('similar');
+    expect(v.price).toBeGreaterThan(190);
+    expect(v.price).toBeLessThan(215);
+  });
+
+  it('gewichtet bei Waffen beide Werte über ihre Spanne', () => {
+    const jets = [
+      sale(785, { attack: 291, criticalChance: 50 }, 50),
+      sale(460, { attack: 265, criticalChance: 43 }, 49),
+      sale(466, { attack: 294, criticalChance: 41 }, 48),
+      sale(470, { attack: 262, criticalChance: 44 }, 47),
+      sale(455, { attack: 268, criticalChance: 42 }, 46),
+    ];
+    const v = estimateValue({ attack: 266, criticalChance: 43 }, jets, { attack: [221, 300], criticalChance: [41, 50] })!;
+    expect(v.price).toBe(460);
+  });
+
+  it('kommt ohne Spielkonfiguration mit den Spannen aus den Verkäufen aus', () => {
+    expect(estimateValue({ dodge: 40 }, boots, null)?.basis).toBe('similar');
+    expect(estimateValue({ dodge: 31 }, [], range)).toBe(null);
+  });
+
+  it('rechnet Einsatz, Beute und Bilanz über die gewerteten Öffnungen', () => {
+    const a = op('legendary', t(1), 'boots5');
+    const b = op('rare', t(2), 'helmet3');
+    const values = { [a.id]: { price: 160, basis: 'identical' as const, samples: 3 } };
+    expect(balance([a, b], 29.88, values)).toEqual({ opened: 2, cost: 59.76, loot: 160, missing: 1, net: 160 - 59.76 });
+    expect(balance([a], null, values).net).toBe(null);
+    expect(balance([], 29.88, {})).toEqual({ opened: 0, cost: 0, loot: 0, missing: 0, net: 0 });
   });
 });

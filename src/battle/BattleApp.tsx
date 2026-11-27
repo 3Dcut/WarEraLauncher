@@ -13,11 +13,12 @@ import {
   startMatch,
   stopMatch,
   keyRejected,
+  balances,
   type Slot,
 } from './engine';
 import { findPlayer, checkKey, type Player, type Lookup } from './api';
-import { CASE_TYPES, itemInfo, rarityRank, type Opening, type Rarity, type Side } from './logic';
-import { rarityLabel, itemName, skillsText, caseLabel, sideLabel } from './text';
+import { CASE_TYPES, itemInfo, rarityRank, type Balance, type Opening, type Rarity, type Side } from './logic';
+import { rarityLabel, itemName, skillsText, caseLabel, sideLabel, money, signedMoney, valueBasis } from './text';
 import { savePrefs, type BattlePrefs } from './prefs';
 import { apiKey, setApiKey } from '../core/apiKey';
 import { InfoTip } from '../ui/InfoTip';
@@ -215,7 +216,7 @@ function Setup({
         }
         setRejected(false);
       }
-      await startMatch({ players: duo, caseCode: prefs.caseCode, key: demo ? null : key, demo });
+      await startMatch({ players: duo, caseCode: prefs.caseCode, key: key || null, demo });
     } finally {
       setBusy(false);
     }
@@ -425,6 +426,10 @@ function Arena({ prefs }: { prefs: BattlePrefs }) {
         {m.caseCode === 'case1' && <span class="badge badge--green">{t('battle.case.greenNote')}</span>}
         {m.demo && <span class="badge badge--warn">{t('battle.arena.demo')}</span>}
         {ph === 'arming' && <span class="badge badge--accent">{t('battle.arena.arming')}</span>}
+        <span class="badge case-price">
+          {typeof m.casePrice === 'number' ? t('battle.ledger.casePrice', { price: money(m.casePrice) }) : t('battle.ledger.noCasePrice')}
+          <InfoTip text={t('battle.ledger.info')} label={t('battle.ledger.title')} />
+        </span>
       </div>
 
       <div class="arena__duel">
@@ -468,7 +473,7 @@ async function rematch(prefs: BattlePrefs): Promise<void> {
   if (!m) return;
   unlockAudio();
   void prefs;
-  await startMatch({ players: m.players, caseCode: m.caseCode ?? 'case2', key: m.demo ? null : apiKey.value, demo: m.demo });
+  await startMatch({ players: m.players, caseCode: m.caseCode ?? 'case2', key: apiKey.value || null, demo: m.demo });
 }
 
 function PlayerPanel({ side }: { side: Side }) {
@@ -517,8 +522,44 @@ function PlayerPanel({ side }: { side: Side }) {
           </span>
         ) : null}
       </div>
+      <Ledger side={side} />
     </section>
   );
+}
+
+/** Einsatz, Beute und Bilanz eines Spielers. */
+function Ledger({ side }: { side: Side }) {
+  const b = balances.value?.[side];
+  if (!b) return null;
+  const pending = b.missing > 0 ? tn('battle.ledger.pending', b.missing) : undefined;
+  return (
+    <dl class="ledger" aria-label={t('battle.ledger.label', { name: match.value!.players[side].name })}>
+      <div class="ledger__cell">
+        <dt>{t('battle.ledger.cost')}</dt>
+        <dd class="mono" title={tn('battle.ledger.costTitle', b.opened)}>
+          {b.cost === null ? '–' : money(b.cost)}
+        </dd>
+      </div>
+      <div class="ledger__cell">
+        <dt>{t('battle.ledger.loot')}</dt>
+        <dd class="mono" title={pending}>
+          {money(b.loot)}
+          {pending ? <span class="ledger__more">+?</span> : null}
+        </dd>
+      </div>
+      <div class={`ledger__cell ledger__net ${netClass(b)}`}>
+        <dt>{t('battle.ledger.net')}</dt>
+        <dd class="mono" title={pending}>
+          {b.net === null ? '–' : signedMoney(b.net)}
+        </dd>
+      </div>
+    </dl>
+  );
+}
+
+function netClass(b: Balance): string {
+  if (b.net === null || b.opened === 0) return '';
+  return b.net >= 0 ? 'is-plus' : 'is-minus';
 }
 
 function Pips({ count, filled, side }: { count: number; filled: number; side: Side }) {
@@ -581,12 +622,16 @@ function MiniCrate() {
 
 function ItemCard({ opening }: { opening: Opening }) {
   const stats = skillsText(opening.skills);
+  const value = match.value?.values?.[opening.id];
   return (
     <div class={`item-card ${opening.rarity ? `rar-${opening.rarity}` : 'rar-unknown'}`}>
       <span class="item-card__emoji">{itemInfo(opening.itemCode).emoji}</span>
       <strong class="item-card__name">{itemName(opening.itemCode)}</strong>
       <span class="item-card__rarity">{rarityLabel(opening.rarity)}</span>
       {stats && <span class="item-card__stats mono">{stats}</span>}
+      <span class={`item-card__value mono ${value ? '' : 'is-pending'}`} title={valueBasis(value)}>
+        {value ? `≈ ${money(value.price)}` : value === null ? '–' : '…'}
+      </span>
     </div>
   );
 }
@@ -613,8 +658,12 @@ function History() {
 }
 
 function HItem({ opening, win }: { opening: Opening; win: boolean }) {
+  const value = match.value?.values?.[opening.id];
+  const title = [itemName(opening.itemCode), rarityLabel(opening.rarity), skillsText(opening.skills), value ? `≈ ${money(value.price)}` : '']
+    .filter(Boolean)
+    .join(' · ');
   return (
-    <span class={`hitem ${opening.rarity ? `rar-${opening.rarity}` : ''} ${win ? 'is-win' : ''}`} title={`${itemName(opening.itemCode)} · ${rarityLabel(opening.rarity)}`}>
+    <span class={`hitem ${opening.rarity ? `rar-${opening.rarity}` : ''} ${win ? 'is-win' : ''}`} title={title}>
       <span>{itemInfo(opening.itemCode).emoji}</span>
       <span class="hitem__label">{rarityLabel(opening.rarity)}</span>
     </span>
@@ -657,6 +706,7 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
           {tn('battle.victory.after', s.rounds.length)}
           {best ? ` · ${t('battle.victory.best', { item: itemName(best.itemCode), rarity: rarityLabel(best.rarity) })}` : ''}
         </p>
+        <VictoryLedger />
         <div class="victory__actions">
           <button type="button" class="btn btn--primary btn--big" onClick={() => void rematch(prefs)}>
             {t('battle.arena.rematch')}
@@ -670,6 +720,23 @@ function Victory({ prefs }: { prefs: BattlePrefs }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function VictoryLedger() {
+  const m = match.value!;
+  const b = balances.value;
+  if (!b || (b[0].net === null && b[1].net === null)) return null;
+  return (
+    <p class="victory__ledger">
+      <span class="muted">{t('battle.ledger.net')}</span>
+      {([0, 1] as Side[]).map((side) => (
+        <span class={`victory__net victory__net--${side} ${netClass(b[side])}`}>
+          {m.players[side].name} <strong class="mono">{b[side].net === null ? '–' : signedMoney(b[side].net!)}</strong>
+          {b[side].missing > 0 ? <span class="ledger__more">+?</span> : null}
+        </span>
+      ))}
+    </p>
   );
 }
 

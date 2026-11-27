@@ -9,7 +9,7 @@ import './battle.css';
 
 import { render } from 'preact';
 import { BattleApp } from './BattleApp';
-import { loadRarities } from './api';
+import { loadItemConfig } from './api';
 import { resumeStored, setReducedMotion } from './engine';
 import { setFxReduced } from './fx';
 import { loadPrefs, savePrefs } from './prefs';
@@ -62,7 +62,7 @@ effect(() => {
   document.title = `${t('battle.title')} · WarEra Launcher`;
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('battle.docDescription'));
 });
-void loadRarities();
+void loadItemConfig();
 if (!demo && !(a || b)) resumeStored(apiKey.value || null);
 
 const root = document.getElementById('battle')!;

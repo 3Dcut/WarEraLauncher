@@ -1081,6 +1081,93 @@ body.battle {
   }
 }
 
+/* ---------- Bilanz ---------- */
+.item-card__value {
+  font-size: 0.86em;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.item-card__value.is-pending {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.case-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+}
+
+.ledger__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+}
+
+.ledger dt {
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ledger dd {
+  margin: 0;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ledger__net.is-plus dd,
+.victory__net.is-plus strong {
+  color: var(--ok);
+}
+
+.ledger__net.is-minus dd,
+.victory__net.is-minus strong {
+  color: var(--danger);
+}
+
+.ledger__more {
+  margin-left: 3px;
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.victory__ledger {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 0;
+}
+
+.victory__net--0 {
+  color: var(--side-0);
+}
+
+.victory__net--1 {
+  color: var(--side-1);
+}
+
 /* ---------- Verlauf ---------- */
 .history {
   margin: 0;

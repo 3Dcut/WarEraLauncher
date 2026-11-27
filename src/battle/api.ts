@@ -2,7 +2,7 @@
 // Schlüssel heraus (Header X-API-Key, CORS erlaubt ihn). Mehrere Abfragen werden per tRPC-Batch
 // in einer HTTP-Anfrage gebündelt; die zählt gegen das Limit (mit Schlüssel 500 pro Minute) nur einmal.
 
-import { fallbackRarity, isRarity, toOpening, type Opening, type Rarity, type RawTransaction } from './logic';
+import { fallbackRarity, isRarity, toOpening, toSale, type Opening, type Rarity, type RawTransaction, type Sale, type StatRanges } from './logic';
 
 const BASE = 'https://api2.warera.io/trpc';
 const TX = 'transaction.getPaginatedTransactions';
@@ -60,30 +60,47 @@ function unwrap<T>(value: T | ApiError): T {
   return value;
 }
 
-// ------------------------------------------------------------------ Seltenheiten
+// ------------------------------------------------------------------ Seltenheiten und Wertespannen
 
 let rarityTable: Record<string, Rarity> = {};
+let statTable: Record<string, StatRanges> = {};
 
-/** Lädt die Seltenheiten aller Items aus der Spielkonfiguration (einmal pro Tag zwischengespeichert). */
-export async function loadRarities(): Promise<void> {
-  const KEY = 'wb:rarities';
+interface ItemConfig {
+  rarity?: string;
+  dynamicStats?: Record<string, unknown>;
+}
+
+/** Lädt Seltenheit und Wertespannen aller Items aus der Spielkonfiguration (einmal pro Tag zwischengespeichert). */
+export async function loadItemConfig(): Promise<void> {
+  const KEY = 'wb:items';
   try {
-    const cached = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { at: number; table: Record<string, Rarity> } | null;
-    if (cached && Date.now() - cached.at < 24 * 3600_000) {
-      rarityTable = cached.table;
+    localStorage.removeItem('wb:rarities');
+    const cached = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { at: number; rarity: Record<string, Rarity>; stats: Record<string, StatRanges> } | null;
+    if (cached?.rarity && cached.stats && Date.now() - cached.at < 24 * 3600_000) {
+      rarityTable = cached.rarity;
+      statTable = cached.stats;
       return;
     }
   } catch {
     /* gesperrter Speicher */
   }
   try {
-    const [cfg] = await batch<{ items?: Record<string, { rarity?: string }> }>([{ path: 'gameConfig.getGameConfig', input: {} }], null, 15_000);
+    const [cfg] = await batch<{ items?: Record<string, ItemConfig> }>([{ path: 'gameConfig.getGameConfig', input: {} }], null, 15_000);
     const items = unwrap(cfg).items ?? {};
-    const table: Record<string, Rarity> = {};
-    for (const [code, item] of Object.entries(items)) if (isRarity(item.rarity)) table[code] = item.rarity;
-    rarityTable = table;
+    const rarity: Record<string, Rarity> = {};
+    const stats: Record<string, StatRanges> = {};
+    for (const [code, item] of Object.entries(items)) {
+      if (isRarity(item.rarity)) rarity[code] = item.rarity;
+      const ranges: StatRanges = {};
+      for (const [stat, span] of Object.entries(item.dynamicStats ?? {})) {
+        if (Array.isArray(span) && span.length === 2 && span.every((v) => typeof v === 'number')) ranges[stat] = [span[0], span[1]];
+      }
+      if (Object.keys(ranges).length) stats[code] = ranges;
+    }
+    rarityTable = rarity;
+    statTable = stats;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), table }));
+      localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), rarity, stats }));
     } catch {
       /* ignoriert */
     }
@@ -94,6 +111,41 @@ export async function loadRarities(): Promise<void> {
 
 export function rarityOf(code: string): Rarity | null {
   return rarityTable[code] ?? fallbackRarity(code);
+}
+
+export function statRangesOf(code: string): StatRanges | null {
+  return statTable[code] ?? null;
+}
+
+// ------------------------------------------------------------------ Preise
+
+/** Aktuelle Marktpreise der handelbaren Rohstoffe und Kisten (öffentlich, ohne Schlüssel). */
+export async function fetchCasePrices(): Promise<Record<string, number>> {
+  const [prices] = await batch<Record<string, number>>([{ path: 'itemTrading.getPrices', input: {} }], null);
+  return unwrap(prices) ?? {};
+}
+
+/** Wie viele Verkäufe je Itemcode geholt werden: reicht selbst bei mythischen Helmen für gut einen Tag. */
+const SALES_LIMIT = 100;
+
+/** Jüngste Verkäufe mehrerer Itemcodes auf dem Itemmarkt, neueste zuerst, in einer Anfrage. */
+export async function fetchSales(codes: string[], key: string): Promise<(Sale[] | ApiError)[]> {
+  const results = await batch<{ items?: RawTransaction[] }>(
+    codes.map((itemCode) => ({ path: TX, input: { transactionType: 'itemMarket', itemCode, limit: SALES_LIMIT } })),
+    key,
+    15_000,
+  );
+  return results.map((r) =>
+    r instanceof ApiError ? r : (r?.items ?? []).map(toSale).filter((s): s is Sale => !!s),
+  );
+}
+
+/** Durchschnittspreis je Itemcode laut Server (öffentlich); Rückfall ohne Schlüssel. */
+export async function fetchAverages(codes: string[]): Promise<(number | ApiError)[]> {
+  return batch<number>(
+    codes.map((itemCode) => ({ path: 'gameStat.getEquipmentAvgByCode', input: { itemCode } })),
+    null,
+  );
 }
 
 // ------------------------------------------------------------------ Spieler

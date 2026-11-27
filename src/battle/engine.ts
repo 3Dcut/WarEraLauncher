@@ -1,6 +1,7 @@
 // Ablauf eines Kisten-Battles: Stand vor dem Start festhalten, beide Spieler laufend abfragen,
-// neue Öffnungen nacheinander mit Animation aufdecken und werten. Der Zustand liegt in Signals,
-// damit die Oberfläche nur abbildet, was hier entschieden wird.
+// neue Öffnungen nacheinander mit Animation aufdecken und werten, nebenher jedes gezogene Item
+// am Markt bewerten. Der Zustand liegt in Signals, damit die Oberfläche nur abbildet, was hier
+// entschieden wird.
 
 import { signal, computed, batch as batchSignals } from '@preact/signals';
 import {
@@ -10,12 +11,27 @@ import {
   rarityRank,
   rollEliteItem,
   byTime,
+  balance,
+  estimateValue,
+  type Balance,
   type Baseline,
   type Opening,
   type Round,
+  type Sale,
   type Side,
+  type Valuation,
 } from './logic';
-import { ApiError, fetchOpenings, rarityOf, type OpeningsQuery, type Player } from './api';
+import {
+  ApiError,
+  fetchAverages,
+  fetchCasePrices,
+  fetchOpenings,
+  fetchSales,
+  rarityOf,
+  statRangesOf,
+  type OpeningsQuery,
+  type Player,
+} from './api';
 import { sfx } from './sound';
 import { emit } from './events';
 import { TARGET } from './logic';
@@ -33,6 +49,10 @@ export interface Match {
   demo: boolean;
   /** Tipp der Zuschauerin bzw. des Zuschauers an diesem Gerät (Vorstufe für Cardera-Wetten). */
   tip: Side | null;
+  /** Marktpreis einer Kiste beim Start; null, solange er fehlt. */
+  casePrice?: number | null;
+  /** Geschätzter Verkaufswert je Öffnung (ID); null heißt: kein Marktpreis gefunden. */
+  values?: Record<string, Valuation | null>;
 }
 
 export type Slot =
@@ -53,8 +73,11 @@ export interface PollInfo {
 
 const MATCH_KEY = 'wb:match';
 
-/** Abfragen pro Sekunde: knapp unter dem Limit von 500 pro Minute, das WarEra mit Schlüssel erlaubt. */
-const RATE = 8;
+/**
+ * Abfragen pro Sekunde. Drei reichen, damit eine Öffnung praktisch sofort erscheint, und lassen
+ * vom Limit (500 pro Minute mit Schlüssel) genug für die Preisabfragen und andere Tools übrig.
+ */
+const RATE = 3;
 
 // ------------------------------------------------------------------ Zustand
 
@@ -85,10 +108,24 @@ export const backlog = computed<[number, number]>(() => {
   return [m.openings[0].length - revealed.value[0], m.openings[1].length - revealed.value[1]];
 });
 
+/** Einsatz, Beute und Bilanz je Seite über die gewerteten Öffnungen. */
+export const balances = computed<[Balance, Balance] | null>(() => {
+  const m = match.value;
+  if (!m) return null;
+  const s = standing.value;
+  const counted = (side: Side): Opening[] =>
+    s.winner !== null ? s.rounds.map((r) => (side === 0 ? r.a : r.b)) : m.openings[side].slice(0, revealed.value[side]);
+  const values = m.values ?? {};
+  return [balance(counted(0), m.casePrice, values), balance(counted(1), m.casePrice, values)];
+});
+
 // ------------------------------------------------------------------ Hilfen
 
 let generation = 0;
+/** Schlüssel für die Abfrage der Öffnungen (nur im echten Spiel). */
 let apiKey: string | null = null;
+/** Schlüssel für die Bewertung am Markt; auch in der Demo, falls einer hinterlegt ist. */
+let valueKey: string | null = null;
 let reduced = false;
 
 export function setReducedMotion(value: boolean): void {
@@ -127,13 +164,15 @@ function showBanner(tone: 'legendary' | 'mythic'): void {
 export interface StartOptions {
   players: [Player, Player];
   caseCode: string;
+  /** Hinterlegter Schlüssel; in der Demo nur für die Bewertung genutzt. */
   key: string | null;
   demo: boolean;
 }
 
 export async function startMatch(opts: StartOptions): Promise<void> {
   const gen = ++generation;
-  apiKey = opts.key;
+  apiKey = opts.demo ? null : opts.key;
+  valueKey = opts.key;
   fatal.value = null;
   keyRejected.value = false;
   phase.value = 'arming';
@@ -162,6 +201,8 @@ export async function startMatch(opts: StartOptions): Promise<void> {
       startedAt: Date.now(),
       demo: opts.demo,
       tip: null,
+      casePrice: null,
+      values: {},
     };
     revealed.value = [0, 0];
     slots.value = [{ kind: 'idle' }, { kind: 'idle' }];
@@ -169,6 +210,7 @@ export async function startMatch(opts: StartOptions): Promise<void> {
     phase.value = 'live';
   });
   persist();
+  void loadCasePrice(match.value!.startedAt, opts.caseCode);
   sfx.start();
   emit('start', { players: opts.players.map((p) => p.name), target: TARGET, caseCode: opts.caseCode });
   if (opts.demo) void demoLoop(gen);
@@ -186,7 +228,8 @@ export function resumeStored(key: string | null): boolean {
   if (!stored?.players || !stored.openings) return false;
   if (!stored.demo && !key) return false;
   const gen = ++generation;
-  apiKey = key;
+  apiKey = stored.demo ? null : key;
+  valueKey = key;
   const { phase: storedPhase, ...m } = stored;
   const s = evaluate(m.openings[0], m.openings[1], m.target);
   batchSignals(() => {
@@ -200,6 +243,8 @@ export function resumeStored(key: string | null): boolean {
     if (m.demo) void demoLoop(gen);
     else void pollLoop(gen);
   }
+  if (typeof m.casePrice !== 'number') void loadCasePrice(m.startedAt, m.caseCode ?? 'case2');
+  requestValues();
   return true;
 }
 
@@ -336,7 +381,101 @@ function addOpenings(side: Side, fresh: Opening[]): void {
   const openings: [Opening[], Opening[]] = [m.openings[0], m.openings[1]];
   openings[side] = [...openings[side], ...fresh].sort(byTime);
   updateMatch({ openings });
+  requestValues();
   void runReveals();
+}
+
+// ------------------------------------------------------------------ Bewertung am Markt
+
+/** Gehört der laufende Zustand noch zu dem Spiel, für das eine Abfrage gestartet wurde? */
+const sameMatch = (startedAt: number) => match.value?.startedAt === startedAt;
+
+let casePrices: { at: number; table: Record<string, number> } | null = null;
+
+async function loadCasePrice(startedAt: number, caseCode: string): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (!casePrices || Date.now() - casePrices.at > 3 * 60_000) casePrices = { at: Date.now(), table: await fetchCasePrices() };
+      const price = casePrices.table[caseCode];
+      if (sameMatch(startedAt)) updateMatch({ casePrice: typeof price === 'number' && price > 0 ? price : null });
+      return;
+    } catch {
+      await new Promise((r) => setTimeout(r, 4000 * (attempt + 1)));
+      if (!sameMatch(startedAt)) return;
+    }
+  }
+}
+
+const salesCache = new Map<string, { at: number; sales: Sale[] }>();
+const SALES_TTL = 10 * 60_000;
+/** Höchstens so viele Itemcodes je Anfrage (jeder bringt bis zu 100 Verkäufe mit). */
+const SALES_BATCH = 6;
+const valuing = new Set<string>();
+let valueTimer: ReturnType<typeof setTimeout> | null = null;
+let valueFailures = 0;
+
+/** Bewertet alle Öffnungen ohne Wert, gebündelt und leicht verzögert. */
+function requestValues(delay = 250): void {
+  if (valueTimer) return;
+  valueTimer = setTimeout(() => {
+    valueTimer = null;
+    void valueRound();
+  }, delay);
+}
+
+async function valueRound(): Promise<void> {
+  const m = match.value;
+  if (!m) return;
+  const known = m.values ?? {};
+  const todo = [...m.openings[0], ...m.openings[1]].filter((o) => !(o.id in known) && !valuing.has(o.id));
+  if (!todo.length) return;
+  const startedAt = m.startedAt;
+  todo.forEach((o) => valuing.add(o.id));
+  const resolved: Record<string, Valuation | null> = {};
+  let retry = false;
+  try {
+    const now = Date.now();
+    const codes = [...new Set(todo.map((o) => o.itemCode))];
+    const stale = codes.filter((c) => !salesCache.has(c) || now - salesCache.get(c)!.at > SALES_TTL).slice(0, SALES_BATCH);
+    const noSales = new Set<string>();
+    if (stale.length && valueKey) {
+      const results = await fetchSales(stale, valueKey);
+      results.forEach((r, i) => {
+        if (r instanceof ApiError) noSales.add(stale[i]);
+        else salesCache.set(stale[i], { at: Date.now(), sales: r });
+      });
+    } else stale.forEach((c) => noSales.add(c));
+
+    // Ohne Schlüssel oder ohne Verkäufe: Durchschnittspreis des Codes, sonst aus den jüngsten Verkäufen
+    const avgCodes = codes.filter((c) => noSales.has(c) || salesCache.get(c)?.sales.length === 0);
+    const averages: Record<string, number> = {};
+    if (avgCodes.length) {
+      const res = await fetchAverages(avgCodes);
+      res.forEach((r, i) => {
+        if (typeof r === 'number' && r > 0) averages[avgCodes[i]] = r;
+      });
+    }
+    for (const o of todo) {
+      const cached = salesCache.get(o.itemCode);
+      if (!cached && !noSales.has(o.itemCode)) continue; // Code passte nicht mehr in diese Anfrage
+      const sales = cached?.sales ?? [];
+      const v = sales.length ? estimateValue(o.skills, sales, statRangesOf(o.itemCode)) : null;
+      const avg = averages[o.itemCode];
+      resolved[o.id] = v ?? (avg ? { price: avg, basis: 'average', samples: 0 } : null);
+    }
+    valueFailures = 0;
+  } catch (err) {
+    // Netz oder Drosselung: später erneut, mit wachsender Pause
+    retry = true;
+    valueFailures++;
+    if (!(err instanceof ApiError && err.status === 429)) console.warn('[Battle] Bewertung fehlgeschlagen', err);
+  } finally {
+    todo.forEach((o) => valuing.delete(o.id));
+  }
+  if (!sameMatch(startedAt)) return;
+  if (Object.keys(resolved).length) updateMatch({ values: { ...(match.value!.values ?? {}), ...resolved } });
+  const left = [...match.value!.openings[0], ...match.value!.openings[1]].some((o) => !(o.id in (match.value!.values ?? {})));
+  if (left && (!retry || valueFailures < 6)) requestValues(retry ? Math.min(30_000, 2000 * 2 ** valueFailures) : 250);
 }
 
 // ------------------------------------------------------------------ Aufdecken mit Animation
@@ -446,6 +585,9 @@ async function demoLoop(gen: number): Promise<void> {
 
 function demoSkills(code: string, rank: number): Record<string, number> {
   const roll = (lo: number, hi: number) => Math.round(lo + Math.random() * (hi - lo));
+  // Echte Spannen aus der Spielkonfiguration, damit auch die Demo-Preise stimmen
+  const ranges = statRangesOf(code);
+  if (ranges) return Object.fromEntries(Object.entries(ranges).map(([stat, [lo, hi]]) => [stat, roll(lo, hi)]));
   if (/^(gun|rifle|sniper|tank|jet|knife)$/.test(code)) return { attack: roll(30 + rank * 25, 50 + rank * 30), criticalChance: roll(2 + rank * 2, 6 + rank * 3) };
   const stat = code.startsWith('helmet') ? 'criticalDamages' : code.startsWith('gloves') ? 'precision' : code.startsWith('boots') ? 'dodge' : 'armor';
   return { [stat]: roll(1 + rank * 5, 5 + rank * 6) };

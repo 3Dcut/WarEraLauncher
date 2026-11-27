@@ -71,8 +71,15 @@ FT3 und der Abfragetakt sind feste Regeln, keine Einstellungen.
 
 - **Datenquelle**: `transaction.getPaginatedTransactions` mit `transactionType: "openCase"` und `itemCode` `case2` (rot) bzw.
   `case1` (grün) je Spieler. Die API gibt Transaktionen nur mit persönlichem Schlüssel heraus (Header `X-API-Key`).
-- **Takt**: Beide Spieler stecken in einer gebündelten tRPC-Anfrage. Mit Schlüssel erlaubt WarEra 500 Anfragen pro Minute,
-  daher 8 pro Sekunde (bis zu vier gleichzeitig); bei HTTP 429 wird automatisch langsamer abgefragt.
+- **Takt**: Beide Spieler stecken in einer gebündelten tRPC-Anfrage, 3 pro Sekunde (bis zu vier gleichzeitig). Mit Schlüssel
+  erlaubt WarEra 500 Anfragen pro Minute, so bleibt Luft für die Preisabfragen; bei HTTP 429 wird automatisch langsamer abgefragt.
+- **Bilanz** (Einsatz, Beute, Bilanz je Spieler): Einsatz ist der Kistenpreis beim Start (`itemTrading.getPrices`) mal gewertete
+  Öffnungen. Ausrüstung hat keinen Marktpreis, sie wird Stück für Stück verkauft und kostet je nach Wurf deutlich mehr oder
+  weniger. Jedes gezogene Item wird deshalb aus den letzten 100 Verkäufen desselben Codes geschätzt
+  (`transactionType: "itemMarket"`, `itemCode`; jeder Verkauf trägt Preis, Werte und Zustand): Median der drei Verkäufe mit den
+  nächsten Werten, Abstände bezogen auf die Spannen aus `gameConfig.items[code].dynamicStats`, identische Würfe zuerst. Ein
+  Rückblicktest über 960 echte Verkäufe ergab im Median 0,3 % Abweichung (Durchschnittspreis je Code: 7,6 %). Ohne Schlüssel
+  dient `gameStat.getEquipmentAvgByCode` als Rückfall. Marktsteuern sind nicht abgezogen.
 - **Start**: Beim Start werden die letzten Öffnungen beider Spieler als Stand gemerkt (IDs und Serverzeit), nur Neues zählt.
   Mehrere auf einmal geöffnete Kisten werden der Reihe nach gewertet. Ein laufendes Battle übersteht Neuladen.
 - **Link-Parameter** (etwa für OBS): `?a=Name&b=Name&kiste=rot|gruen&start=1`, `?demo=1` startet eine Demo mit den Quoten der
