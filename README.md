@@ -145,9 +145,10 @@ Neuladen und lässt sich anhalten und fortsetzen.
 - **Neuladen ohne erneutes Laden**: Sobald alles geladen ist, und danach höchstens alle 30 s, beim Anhalten und beim Verlassen
   der Seite, legt `snapshot.ts` den Spaltenspeicher verdichtet in IndexedDB ab. Die Spalten stehen in Zeitordnung als Abstände
   und Varints, danach folgt deflate (`CompressionStream`); dazu kommen das Wörterbuch der Kombinationen, die Item-IDs der noch
-  offenen Ziehungen und die schon verarbeiteten Verkäufe. Eine Zusammenfassung zu Zählern je Tag und Kombination wäre kaum
-  kleiner, kostete aber die Reihenfolge, die Verlauf, Zellband und Durststrecken brauchen, und die Neubewertung offener
-  Ziehungen bei geänderten Marktpreisen; deshalb ist die Verdichtung verlustfrei. Nach einem Neuladen kommt der Stand sofort
+  offenen Ziehungen und die schon verarbeiteten Verkäufe. Eine Zusammenfassung zu Zählern je Kistenart, Kombination, Öffnungstag
+  und Ergebnis ergäbe bei den 958.542 echten Kisten 69.104 Zellen und 0,22 MB (gemessen), also rund ein Elftel; sie verlöre aber
+  die Reihenfolge, von der Zellband, Durststrecken und der Verlauf innerhalb eines Tages leben, und die einzelnen Ziehungen
+  für die Hinweise. Deshalb bleibt die Verdichtung verlustfrei. Nach einem Neuladen kommt der Stand sofort
   zurück, und das Nachladen holt nur die Lücke: Öffnungen ab der neuesten abgelegten Millisekunde (sie bleibt beim Ablegen
   draußen, damit nichts doppelt zählt) sowie Zerlegungen und Verkäufe ab dem letzten Abgleich (erneut gelesene Verkäufe zählen
   nicht doppelt, weil die verarbeiteten mitgespeichert sind). Ein halb geladener Stand wird nicht abgelegt; fehlt der

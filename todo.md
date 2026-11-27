@@ -61,6 +61,7 @@
 - [x] Nachladen beschleunigen: mehrere Zeitscheiben parallel lesen, mit selbst gebauten Cursorn (Zeit, `000…`) und bis zu 24 Aufrufen je Anfrage; fällt auf sequentielles Lesen zurück, wenn der Server die Cursor ablehnt. 7 Tage bei 3Dsus: 62 s statt 8,5 min
 - [x] Eine Million Kisten: Spaltenspeicher (32 Byte je Ziehung), Zuordnung über Hash-Tabellen, Aggregation in einem Durchlauf, Verlauf in 1.200 Fächern mit Hülle und Zellband auf Canvas, alles ohne Ausdünnen. 958.542 echte Kisten von 3Dsus in 5,3 min geladen, 1,04 Millionen virtuelle in 5 min bei 350 MB im Renderer
 - [x] Zerlegung (eindeutige Item-ID) hat Vorrang vor einem Verkauf gleichwertiger Ziehungen, das Ergebnis hängt nicht von der Ankunftsreihenfolge ab
+- [ ] Für sehr alte Ziehungen zusätzlich eine zählende Verdichtung (Kistenart, Kombination, Öffnungstag, Ergebnis): bei 958.542 echten Kisten 69.104 Zellen und 0,22 MB statt 2,5 MB, dafür ohne Reihenfolge innerhalb eines Tages (Zellband, Durststrecken) und ohne einzelne Ziehungen
 - [ ] Zwei gebündelte Anfragen gleichzeitig: das Limit von 360 je Minute ist beim Nachladen nur zu rund 70 % ausgelastet, bei einer Million Kisten ließen sich so etwa anderthalb Minuten sparen
 - [x] Nachgeladene Sitzungen verdichtet in IndexedDB zwischenspeichern (2,5 MB für 958.542 echte Kisten), damit ein Neuladen nicht alles neu holt: Stand nach 0,8 s zurück, nur die Lücke wird nachgeladen
 - [ ] Schwedische Texte des Nachladens gegenlesen lassen
