@@ -55,7 +55,7 @@
 ## v2.5 – Kisten-Assistent: lange Zeiträume
 - [x] Zeiträume 7 Tage, 30 Tage, ab Datum und ab Beginn der Aufzeichnung; Nachladen im Hintergrund von neu nach alt mit Fortschritt, „Laden beenden“ und „Weiter laden“
 - [x] Die Sitzung erscheint nach der ersten Seite und füllt sich laufend; je Schritt eine gebündelte Anfrage für Öffnungen, Zerlegungen und Verkäufe (zählt einmal gegen das Limit von 500 je Minute)
-- [x] Zerlegungen und Verkäufe über den ganzen Zeitraum den Ziehungen zuordnen, in beliebiger Ankunftsreihenfolge (Item-ID, bei Verkäufen Code, Werte und `lastAcquisitionAt`); an 3Dsus geprüft: 40.812 von 40.836 Zerlegungen und alle 587 Verkäufe von Items aus dem Fenster passten
+- [x] Zerlegungen und Verkäufe über den ganzen Zeitraum den Ziehungen zuordnen, in beliebiger Ankunftsreihenfolge (Item-ID, bei Verkäufen Code, Werte und `lastAcquisitionAt`); an 3Dsus geprüft: 40.812 von 40.836 Zerlegungen und 587 von 590 Verkäufen von Items aus dem Fenster passten
 - [x] Kosten zum Tagesmittel des Öffnungstags, Schrott zum Tagespreis der Zerlegung (die rote Kiste stieg in 30 Tagen um etwa 20 %)
 - [x] Für zehntausende Kisten: Zeilen-Cache, ausgedünnter Verlauf, begrenztes Zellband und Verkaufsliste, Glück per Normalnäherung mit Schiefekorrektur, Speicherung ohne Ziehungen bei großen Sitzungen
 - [ ] Nachladen beschleunigen: mehrere Zeitscheiben parallel lesen. Der Cursor der API ist ein Schlüssel aus Zeit und ID (`v2.` + Base64 von `[{"t":"date",…},{"t":"str",…}]`), ein selbst gebauter Cursor ließe sich für Scheiben nutzen, ist aber undokumentiert und bräuchte einen Rückfall

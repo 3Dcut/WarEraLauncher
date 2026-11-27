@@ -124,8 +124,9 @@ oder rückwirkend: letzte Stunde, 24 Stunden, 7 Tage, 30 Tage, ab einem Datum od
   Zerlegen besser ist.
 - **Echte Ergebnisse**: Zerlegungen (`dismantleItem`, gleiche Item-ID) und Verkäufe (`itemMarket`, gleicher Code, gleiche Werte,
   gleiche `lastAcquisitionAt`) werden erkannt und zählen mit dem tatsächlichen Ergebnis, auch wenn sie vor ihrer Ziehung
-  ankommen (`outcomes.ts`). Bei 3Dsus passten 40.812 von 40.836 Zerlegungen und alle 587 Verkäufe von Items aus dem Fenster
-  auf die Millisekunde; ein Verkauf kann Tage nach der Öffnung liegen (dort bis zu 178 Stunden), deshalb liest das Nachladen
+  ankommen (`outcomes.ts`). Bei 3Dsus passten 40.812 von 40.836 Zerlegungen und 587 von 590 Verkäufen von Items aus dem Fenster
+  auf die Millisekunde (drei fanden keine Ziehung, die übrigen 24 Zerlegungen und 163 Verkäufe betrafen Items aus der Zeit davor);
+  ein Verkauf kann Tage nach der Öffnung liegen (dort bis zu 178 Stunden), deshalb liest das Nachladen
   die Verkäufe über den ganzen Zeitraum, und offene Ziehungen bleiben danach dauerhaft im Blick. Die Schätzung aus den letzten
   100 Verkäufen lag bei diesen 587 Verkäufen in der Summe 1,3 % über dem echten Erlös (je Item im Median 3,6 % daneben,
   90 % der Items innerhalb von 15 %); über alle 41.629 Ziehungen wich „Wert nach Empfehlung“ nur um 0,1 % vom echten Ergebnis
